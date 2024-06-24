@@ -1,4 +1,4 @@
-version: '3.8'
+version: "3.9"
 
 services:
   db:
@@ -12,15 +12,34 @@ services:
     ports:
       - "5432:5432"
 
-  app:
-    build: .
-    command: sh -c "python app/db.py && uvicorn main:app --host 0.0.0.0 --port 8000"
+  server:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+
     volumes:
-      - .:/app
+      - .:/project
     ports:
       - "8000:8000"
     depends_on:
       - db
+
+    # command: sh -c "uvicorn app:application --host 0.0.0.0 --port 8000"
+
+  shell:
+    extends: server
+    container_name: server-shell
+
+    ports:
+      - 8000:8000
+      - 5678:5678
+
+    volumes:
+      - ..:/project:delegated
+      - /tmp:/tmp
+      - ~/.ssh:/home/devel/.ssh
+
+    command: "/usr/bin/tmux -L server"
 
 volumes:
   postgres_data:

@@ -1,14 +1,22 @@
-.PHONY: init-db start-server run-tests deploy
+SHELL := /bin/bash
+.PHONY: start stop
 
-init-db:
-    python app/db.py
+build:
+	docker compose -f docker/docker-compose.yml build
 
-start-server:
-    docker-compose up --build
+start:
+	docker compose -f docker/docker-compose.yml up -d
+stop:
+	docker compose -f docker/docker-compose.yml down
 
-run-tests:
-    pytest tests/
+run-server-service-command = \
+	docker-compose -f docker/docker-compose.yml run --rm --name server --service-ports shell
 
-deploy:
-    # Add your deployment commands here
-    echo "Deploying application..."
+shell:
+	- $(run-server-service-command)
+	- docker compose -f docker/docker-compose.yml down
+	- docker system prune -f
+
+serve:
+	@echo "Staring DHC Scada Backend Server..."
+	@uvicorn app:application --host 0.0.0.0 --reload

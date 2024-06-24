@@ -4,8 +4,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import SQLModel, select
 
 from app.connection_manager import connection_manager
-from app.handlers.base_handler.py import BaseHandler
-from app.models import Author, Genre, ResponseModel
+from app.handlers.base_handler import BaseHandler
+
+# from app.models import Author, Genre
+from app.schemas import ResponseModel
 
 
 class SubmoduleAHandler(BaseHandler):
@@ -68,9 +70,9 @@ class SubmoduleAHandler(BaseHandler):
         Raises:
             Exception: Any exception that occurs during the author creation process.
         """
-        author_data = Author(**data)
-        async with self.session.begin():
-            self.session.add(author_data)
+        # author_data = Author(**data)
+        # async with self.session.begin():
+        #     self.session.add(author_data)
         response = ResponseModel.ok_msg(
             pkg_id=1,
             req_id=data.get("req_id"),
@@ -94,9 +96,9 @@ class SubmoduleAHandler(BaseHandler):
         Raises:
             Exception: Any exception that occurs during the genre creation process.
         """
-        genre_data = Genre(**data)
-        async with self.session.begin():
-            self.session.add(genre_data)
+        # genre_data = Genre(**data)
+        # async with self.session.begin():
+        #     self.session.add(genre_data)
         response = ResponseModel.ok_msg(
             pkg_id=2,
             req_id=data.get("req_id"),

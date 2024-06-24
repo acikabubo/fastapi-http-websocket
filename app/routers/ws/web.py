@@ -3,21 +3,11 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
 from app.connection_manager import connection_manager
+from app.db import get_session
 from app.handlers.submodule_a import SubmoduleAHandler
-from app.models import RequestModel, ResponseModel
-
-DATABASE_URL = "postgresql+asyncpg://postgres:postgres@db:5432/app_db"
-engine = create_async_engine(DATABASE_URL, echo=True, future=True)
-async_session = sessionmaker(
-    engine, expire_on_commit=False, class_=AsyncSession
-)
+from app.schemas import RequestModel, ResponseModel
 
 router = APIRouter()
-
-
-async def get_session() -> AsyncSession:
-    async with async_session() as session:
-        yield session
 
 
 @router.websocket("/ws")

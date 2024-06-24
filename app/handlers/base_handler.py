@@ -1,6 +1,6 @@
 from typing import Any, Dict
 
-from app.models import ResponseModel
+from app.schemas import ResponseModel
 
 
 class BaseHandler:
