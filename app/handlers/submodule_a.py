@@ -7,7 +7,7 @@ from app.connection_manager import connection_manager
 from app.handlers.base_handler import BaseHandler
 
 # from app.models import Author, Genre
-from app.schemas import ResponseModel
+from app.schemas import RequestModel, ResponseModel
 
 
 class SubmoduleAHandler(BaseHandler):
@@ -20,9 +20,7 @@ class SubmoduleAHandler(BaseHandler):
         """
         self.session = session
 
-    async def handle_request(
-        self, pkg_id: int, data: Dict[str, Any]
-    ) -> ResponseModel:
+    async def handle_request(self, request: RequestModel) -> ResponseModel:
         """
         Handles a request to the Submodule A of the application.
 
@@ -37,22 +35,26 @@ class SubmoduleAHandler(BaseHandler):
             Exception: Any exception that occurs during the request handling.
         """
         try:
-            match pkg_id:
+            match request.pkg_id:
                 case 1:
-                    return await self.function_a(data)
+                    resp_data = await self.function_a(request.data)
                 case 2:
-                    return await self.function_b(data)
+                    resp_data = await self.function_b(request.data)
                 case _:
                     return ResponseModel(
-                        pkg_id=pkg_id,
-                        req_id=None,
+                        pkg_id=request.pkg_id,
+                        req_id=request.req_id,
                         status_code=-1,
                         data={"msg": "Invalid pkg_id for Submodule A"},
                     )
+
+            return ResponseModel(
+                pkg_id=request.pkg_id, req_id=request.req_id, data=resp_data
+            )
         except Exception as e:
             return ResponseModel(
-                pkg_id=pkg_id,
-                req_id=None,
+                pkg_id=request.pkg_id,
+                req_id=request.req_id,
                 status_code=-2,
                 data={"msg": str(e)},
             )
@@ -73,9 +75,12 @@ class SubmoduleAHandler(BaseHandler):
         # author_data = Author(**data)
         # async with self.session.begin():
         #     self.session.add(author_data)
+        print()
+        print("FUNCTION A")
+        print()
         response = ResponseModel.ok_msg(
             pkg_id=1,
-            req_id=data.get("req_id"),
+            req_id=data.get("req_id", ""),
             data={"message": "Author created"},
         )
         await connection_manager.broadcast(

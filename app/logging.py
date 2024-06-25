@@ -45,5 +45,5 @@ logger = logging.getLogger("HandlersApp")
 if sys.argv[0].split("/")[-1] in ["pytest"]:
     logging.disable(logging.ERROR)
 
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.DEBUG)
 logger.addHandler(handler)

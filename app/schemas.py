@@ -1,7 +1,7 @@
-from typing import Dict, List, Optional
+from typing import Any, Optional
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 
 class AuthorCreateSchema(BaseModel):
@@ -19,23 +19,23 @@ class GenreCreateSchema(BaseModel):
 
 class RequestModel(BaseModel):
     pkg_id: int
-    req_id: Optional[UUID]
-    method: str
-    data: Dict
+    req_id: str
+    method: Optional[str] = ""
+    data: Optional[dict[str, Any]] = {}
 
 
 class ResponseModel(BaseModel):
     pkg_id: int
-    req_id: Optional[UUID]
-    status_code: int
-    data: Optional[Dict]
+    req_id: str
+    status_code: Optional[int] = 0
+    # data: Optional[dict] = {}
 
     @classmethod
     def ok_msg(
         cls,
         pkg_id: int,
         req_id: Optional[UUID],
-        data: Dict,
+        data: dict,
         msg: Optional[str] = None,
     ) -> "ResponseModel":
         if msg:
@@ -47,7 +47,7 @@ class ResponseModel(BaseModel):
         cls,
         pkg_id: int,
         req_id: Optional[UUID],
-        data: Dict,
+        data: dict,
         msg: Optional[str] = None,
     ) -> "ResponseModel":
         if msg:

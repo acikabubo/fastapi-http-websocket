@@ -15,7 +15,7 @@ class BaseModel(SQLModel):
 #     genre_id: Optional[int] = Field(default=None, foreign_key="genre.id")
 
 
-class Author(BaseModel, table=True):
+class Author(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     name: str
     # books: List["Book"] = Relationship(back_populates="author")

@@ -1,23 +1,22 @@
 from typing import Any, Dict
 
-from app.schemas import ResponseModel
+from app.schemas import RequestModel, ResponseModel
 
 
 class BaseHandler:
     async def handle_request(
-        self, pkg_id: int, data: Dict[str, Any]
+        self,
+        request: RequestModel,
     ) -> ResponseModel:
         """
-        Handles an asynchronous request for a specific package ID, with the provided data.
+        Handles a request by processing the provided data.
 
         Args:
-            pkg_id (int): The ID of the package to handle the request for.
-            data (Dict[str, Any]): The data associated with the request.
+            req_id (int): The unique identifier for the request.
+            pkg_id (int): The unique identifier for the package associated with the request.
+            data (Dict[str, Any]): The data to be processed for the request.
 
         Returns:
-            ResponseModel: The response model containing the result of the request handling.
-
-        Raises:
-            NotImplementedError: This method must be implemented by a subclass.
+            ResponseModel: The response model containing the processed data.
         """
         raise NotImplementedError
