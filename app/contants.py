@@ -35,3 +35,6 @@ class PkgID(CustomIntEnum):
     FIRST = 1
     SECOND = 2
     THIRD = 3
+
+    def __str__(self):
+        return f"{__class__.__name__}.{self.name}<{self.value}>"

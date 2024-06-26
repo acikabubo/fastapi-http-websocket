@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.contants import PkgID
 from app.handlers.base_handler import BaseHandler
+from app.logging import logger
 
 # Create a registry dictionary to map pkg_id to handler classes
 handler_registry: Dict[int, Type[BaseHandler]] = {}
@@ -53,4 +54,21 @@ def get_handler(pkg_id: int, session: AsyncSession) -> BaseHandler:
     if handler_class is None:
         raise ValueError(f"No handler found for pkg_id {pkg_id}")
 
-    return handler_class(session)
+    # Get pkg ids related with handler class
+    keys = set(
+        key
+        for key, value in handler_registry.items()
+        if value == handler_class
+    )
+
+    obj = handler_class(session)
+
+    if missing_handlers_for_pkgs := keys - set(obj.handlers.keys()):
+        logger.error(
+            (
+                f"Missing handlers for ({", ".join(str(item) for item in missing_handlers_for_pkgs)}) "
+                f"in class {handler_class.__name__})"
+            )
+        )
+
+    return obj
