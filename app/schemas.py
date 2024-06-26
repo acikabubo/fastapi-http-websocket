@@ -28,7 +28,7 @@ class ResponseModel(BaseModel):
     pkg_id: int
     req_id: str
     status_code: Optional[int] = 0
-    # data: Optional[dict] = {}
+    data: Optional[dict[str, Any]] = {}
 
     @classmethod
     def ok_msg(
@@ -47,7 +47,7 @@ class ResponseModel(BaseModel):
         cls,
         pkg_id: int,
         req_id: Optional[UUID],
-        data: dict,
+        data: dict[str, Any],
         msg: Optional[str] = None,
     ) -> "ResponseModel":
         if msg:

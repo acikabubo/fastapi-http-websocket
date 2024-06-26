@@ -35,6 +35,9 @@ async def web_websocket_endpoint(
                 print()
 
             except Exception:
+                import traceback
+
+                traceback.print_exc()
                 break
                 # await websocket.send_json(
                 #     ResponseModel(

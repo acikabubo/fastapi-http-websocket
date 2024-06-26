@@ -1,9 +1,14 @@
 from typing import Any, Dict
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.schemas import RequestModel, ResponseModel
 
 
 class BaseHandler:
+    def __init__(self, session: AsyncSession):
+        self.session = session
+
     async def handle_request(
         self,
         request: RequestModel,

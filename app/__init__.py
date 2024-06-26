@@ -1,6 +1,5 @@
 # Uvicorn application factory <https://www.uvicorn.org/#application-factories>
 from fastapi import FastAPI
-from sqlmodel import SQLModel
 
 from app.db import init_db
 from app.logging import logger

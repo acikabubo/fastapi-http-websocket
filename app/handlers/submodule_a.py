@@ -1,26 +1,46 @@
-from typing import Any, Dict
+from typing import Annotated, Any, Dict
 
+from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import SQLModel, select
 
 from app.connection_manager import connection_manager
+from app.contants import PkgID
+from app.db import get_session
 from app.handlers.base_handler import BaseHandler
-
-# from app.models import Author, Genre
+from app.handlers.registry import register_handler
+from app.logging import logger
+from app.models import Author
 from app.schemas import RequestModel, ResponseModel
 
 
+@register_handler(PkgID.FIRST, PkgID.THIRD)
 class SubmoduleAHandler(BaseHandler):
+    """
+    Handles a request to the Submodule A of the application.
+
+    Args:
+        request (RequestModel): The request model containing the necessary information to handle the request.
+
+    Returns:
+        ResponseModel: The response model containing the result of the request handling.
+
+    Raises:
+        Exception: Any exception that occurs during the request handling.
+    """
+
     def __init__(self, session: AsyncSession):
-        """
-        Initializes the SubmoduleAHandler class with an AsyncSession instance.
+        super().__init__(session)
 
-        Args:
-            session (AsyncSession): The SQLAlchemy AsyncSession instance to be used for database operations.
-        """
-        self.session = session
+        self.handlers: dict[PkgID, Callable] = {
+            PkgID.FIRST: self.function_a,
+            PkgID.THIRD: self.function_b,
+        }
 
-    async def handle_request(self, request: RequestModel) -> ResponseModel:
+    async def handle_request(
+        self,
+        request: RequestModel,
+    ) -> ResponseModel:
         """
         Handles a request to the Submodule A of the application.
 
@@ -35,17 +55,23 @@ class SubmoduleAHandler(BaseHandler):
             Exception: Any exception that occurs during the request handling.
         """
         try:
+            # TODO: WHERE TO PUT DATA VALIDATION
             match request.pkg_id:
-                case 1:
+                case PkgID.FIRST:
                     resp_data = await self.function_a(request.data)
-                case 2:
+                case PkgID.THIRD:
                     resp_data = await self.function_b(request.data)
                 case _:
+                    logger.debug(
+                        f"Missing handler method for PkgID {request.pkg_id} in {__class__.__name__}"
+                    )
                     return ResponseModel(
                         pkg_id=request.pkg_id,
                         req_id=request.req_id,
                         status_code=-1,
-                        data={"msg": "Invalid pkg_id for Submodule A"},
+                        data={
+                            "msg": f"Missing handler for PkgID {request.pkg_id}"
+                        },
                     )
 
             return ResponseModel(
@@ -59,7 +85,7 @@ class SubmoduleAHandler(BaseHandler):
                 data={"msg": str(e)},
             )
 
-    async def function_a(self, data: Dict[str, Any]) -> ResponseModel:
+    async def function_a(self, data: Dict[str, Any]) -> dict[str, Any]:
         """
         Handles a request to create a new author in the application.
 
@@ -72,21 +98,27 @@ class SubmoduleAHandler(BaseHandler):
         Raises:
             Exception: Any exception that occurs during the author creation process.
         """
-        # author_data = Author(**data)
-        # async with self.session.begin():
-        #     self.session.add(author_data)
-        print()
-        print("FUNCTION A")
-        print()
-        response = ResponseModel.ok_msg(
-            pkg_id=1,
-            req_id=data.get("req_id", ""),
-            data={"message": "Author created"},
-        )
+        try:
+            author = Author(**data)
+
+            # self.session.add(author)
+            # await self.session.commit()
+            # await self.session.refresh(author)
+
+            print()
+            print(author)
+            print()
+        except Exception as ex:
+            print()
+            print(ex)
+            print()
+
         await connection_manager.broadcast(
-            {"message": "Broadcast message from Submodule A"}
+            {
+                "message": f"Broadcast message from Submodule A PkgID: {PkgID.FIRST}"
+            }
         )
-        return response
+        return {"message": "Author created"}
 
     async def function_b(self, data: Dict[str, Any]) -> ResponseModel:
         """
@@ -104,9 +136,18 @@ class SubmoduleAHandler(BaseHandler):
         # genre_data = Genre(**data)
         # async with self.session.begin():
         #     self.session.add(genre_data)
-        response = ResponseModel.ok_msg(
-            pkg_id=2,
-            req_id=data.get("req_id"),
-            data={"message": "Genre created"},
+
+        await connection_manager.broadcast(
+            {
+                "message": f"Broadcast message from Submodule A PkgID: {PkgID.THIRD}"
+            }
         )
-        return response
+        # response = ResponseModel.ok_msg(
+        #     pkg_id=3,
+        #     req_id=data.get("req_id"),
+        #     data={"message": "Genre created"},
+        # )
+        # await connection_manager.broadcast(
+        #     {"message": "Broadcast message from Submodule B"}
+        # )
+        # return response
