@@ -9,7 +9,7 @@ router = APIRouter()
 
 
 @router.post("/author")
-async def create_author(
+async def create_author_endpoint(
     author: Author = Author, session: AsyncSession = Depends(get_session)
 ) -> Author:
     """
@@ -22,6 +22,8 @@ async def create_author(
     Returns:
         Author: The created author object.
     """
+    # TODO: create create_author method in Author model and use like Depends here
+
     session.add(author)
     await session.commit()
     await session.refresh(author)
