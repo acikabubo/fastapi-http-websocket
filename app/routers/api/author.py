@@ -1,9 +1,12 @@
+import math
+
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
-from app.db import get_session
+from app.db import get_paginated_results, get_session, get_total_count
 from app.models import Author
+from app.schemas import PaginatedResponseModel
 
 router = APIRouter()
 
@@ -30,19 +33,52 @@ async def create_author_endpoint(
     return author
 
 
-@router.get("/author", response_model=list[Author])
+@router.get("/authors", response_model=list[Author])
 async def get_authors(
     session: AsyncSession = Depends(get_session),
 ) -> list[Author]:
+    # TODO: add filters
     """
     Retrieves a list of all authors from the database.
 
     Args:
-        session (AsyncSession): The database session to use for the query.
+        session (AsyncSession): The database session to use for the operation.
 
     Returns:
-        list[Author]: A list of all Author objects in the database.
+        list[Author]: A list of all authors in the database.
     """
-    result = await session.execute(select(Author))
-    authors = result.scalars().all()
+    result = await session.exec(select(Author))
+    authors = result.all()
     return authors
+
+
+@router.get(
+    "/authors_paginated", response_model=PaginatedResponseModel[Author]
+)
+async def get_paginated_authors(
+    page: int = 1,
+    per_page: int = 20,
+    session: AsyncSession = Depends(get_session),
+) -> PaginatedResponseModel[Author]:
+    # TODO: add filters
+    """
+    Retrieves a paginated list of authors from the database.
+
+    Args:
+        page (int): The page number to retrieve. Defaults to 1.
+        per_page (int): The number of items to retrieve per page. Defaults to 20.
+        session (AsyncSession): The database session to use for the operation.
+
+    Returns:
+        PaginatedResponseModel[Author]: A paginated response containing the requested authors.
+    """
+    items = await get_paginated_results(session, Author, page, per_page)
+    total = await get_total_count(session, Author)
+
+    return PaginatedResponseModel(
+        items=items,
+        page=page,
+        per_page=per_page,
+        total=total,
+        pages=math.ceil(total / per_page),
+    )

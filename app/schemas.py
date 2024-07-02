@@ -1,7 +1,10 @@
-from typing import Any, Optional
+from typing import Any, Generic, Optional, TypeVar
 from uuid import UUID
 
 from pydantic import BaseModel
+from sqlmodel import SQLModel
+
+GenericSQLModelType = TypeVar("GenericSQLModelType", bound=SQLModel)
 
 
 class AuthorCreateSchema(BaseModel):
@@ -35,7 +38,7 @@ class ResponseModel(BaseModel):
         cls,
         pkg_id: int,
         req_id: Optional[UUID],
-        data: dict,
+        data: dict[str, Any],
         msg: Optional[str] = None,
     ) -> "ResponseModel":
         if msg:
@@ -53,3 +56,11 @@ class ResponseModel(BaseModel):
         if msg:
             data["msg"] = msg
         return cls(pkg_id=pkg_id, req_id=req_id, status_code=-1, data=data)
+
+
+class PaginatedResponseModel(BaseModel, Generic[GenericSQLModelType]):
+    items: list[GenericSQLModelType]
+    page: int
+    per_page: int
+    total: int
+    pages: int
