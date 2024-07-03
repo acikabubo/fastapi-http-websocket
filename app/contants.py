@@ -32,7 +32,7 @@ class RSPCode(CustomIntEnum):
 
 
 class PkgID(CustomIntEnum):
-    FIRST = 1
+    GET_AUTHORS = 1
     SECOND = 2
     THIRD = 3
 

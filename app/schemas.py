@@ -27,11 +27,11 @@ class RequestModel(BaseModel):
     data: Optional[dict[str, Any]] = {}
 
 
-class ResponseModel(BaseModel):
+class ResponseModel[GenericSQLModelType](BaseModel):
     pkg_id: int
     req_id: str
     status_code: Optional[int] = 0
-    data: Optional[dict[str, Any]] = {}
+    data: Optional[dict[str, Any] | list[GenericSQLModelType]] = {}
 
     @classmethod
     def ok_msg(

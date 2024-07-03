@@ -1,8 +1,10 @@
-from typing import Annotated, Any, Dict
+import json
+from typing import Annotated, Any, Callable
 
 from fastapi import Depends
-from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi.encoders import jsonable_encoder
 from sqlmodel import SQLModel, select
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.connection_manager import connection_manager
 from app.contants import PkgID
@@ -14,7 +16,7 @@ from app.models import Author
 from app.schemas import RequestModel, ResponseModel
 
 
-@register_handler(PkgID.FIRST, PkgID.THIRD)
+@register_handler(PkgID.GET_AUTHORS, PkgID.THIRD)
 class SubmoduleAHandler(BaseHandler):
     """
     Handles a request to the Submodule A of the application.
@@ -31,9 +33,12 @@ class SubmoduleAHandler(BaseHandler):
 
     def __init__(self, session: AsyncSession):
         super().__init__(session)
+        logger.debug(
+            f"Attach db session to the handler {__class__.__name__} object"
+        )
 
         self.handlers: dict[PkgID, Callable] = {
-            PkgID.FIRST: self.function_a,
+            PkgID.GET_AUTHORS: self.get_authors_handler,
             PkgID.THIRD: self.function_b,
         }
 
@@ -57,8 +62,8 @@ class SubmoduleAHandler(BaseHandler):
         try:
             # TODO: WHERE TO PUT DATA VALIDATION
             match request.pkg_id:
-                case PkgID.FIRST:
-                    resp_data = await self.function_a(request.data)
+                case PkgID.GET_AUTHORS:
+                    resp_data = await self.get_authors_handler(request.data)
                 case PkgID.THIRD:
                     resp_data = await self.function_b(request.data)
                 case _:
@@ -74,7 +79,7 @@ class SubmoduleAHandler(BaseHandler):
                         },
                     )
 
-            return ResponseModel(
+            return ResponseModel[Author](
                 pkg_id=request.pkg_id, req_id=request.req_id, data=resp_data
             )
         except Exception as e:
@@ -85,42 +90,31 @@ class SubmoduleAHandler(BaseHandler):
                 data={"msg": str(e)},
             )
 
-    async def function_a(self, data: Dict[str, Any]) -> dict[str, Any]:
-        """
-        Handles a request to create a new author in the application.
-
-        Args:
-            data (Dict[str, Any]): The data payload for the request, which should contain the necessary information to create a new author.
-
-        Returns:
-            ResponseModel: The response model containing the result of the author creation, including a success message and the created author data.
-
-        Raises:
-            Exception: Any exception that occurs during the author creation process.
-        """
+    async def get_authors_handler(
+        self, data: dict[str, Any] | None = {}
+    ) -> list[dict[str, Any]]:
         try:
-            author = Author(**data)
-
+            # author = Author(**data)
             # self.session.add(author)
             # await self.session.commit()
             # await self.session.refresh(author)
 
-            print()
-            print(author)
-            print()
+            result = await self.session.exec(select(Author))
+            authors = result.all()
+            return authors
+
         except Exception as ex:
             print()
             print(ex)
             print()
 
-        await connection_manager.broadcast(
-            {
-                "message": f"Broadcast message from Submodule A PkgID: {PkgID.FIRST}"
-            }
-        )
-        return {"message": "Author created"}
+        # await connection_manager.broadcast(
+        #     {
+        #         "message": f"Broadcast message from Submodule A PkgID: {PkgID.GET_AUTHORS}"
+        #     }
+        # )
 
-    async def function_b(self, data: Dict[str, Any]) -> ResponseModel:
+    async def function_b(self, data: dict[str, Any]) -> ResponseModel:
         """
         Handles a request to create a new genre in the application.
 
