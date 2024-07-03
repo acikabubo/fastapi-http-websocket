@@ -33,7 +33,7 @@ class RSPCode(CustomIntEnum):
 
 class PkgID(CustomIntEnum):
     GET_AUTHORS = 1
-    SECOND = 2
+    GET_PAGINATED_AUTHORS = 2
     THIRD = 3
 
     def __str__(self):

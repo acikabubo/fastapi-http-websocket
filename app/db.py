@@ -1,3 +1,4 @@
+import math
 from typing import Type
 
 from sqlalchemy.ext.asyncio import (
@@ -10,7 +11,7 @@ from sqlalchemy.pool import NullPool
 from sqlmodel import SQLModel, func, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.schemas import GenericSQLModelType
+from app.schemas import GenericSQLModelType, MetadataModel
 
 DB_URL = "postgresql+asyncpg://postgres:postgres@db:5432/app_db"
 
@@ -35,38 +36,37 @@ async def get_session() -> AsyncSession:
 async def get_paginated_results(
     session: AsyncSession,
     model: Type[GenericSQLModelType],
-    page: int,
-    per_page: int,
-) -> list[GenericSQLModelType]:
+    page: int = 1,
+    per_page: int = 20,
+) -> tuple[list[GenericSQLModelType], MetadataModel]:
     """
-    Get a paginated list of results from the database for the given model.
+    Get a paginated set of results from the database.
 
     Args:
         session (AsyncSession): The database session to use.
         model (Type[GenericSQLModelType]): The SQLModel class to query.
-        page (int): The page number to retrieve (starting from 1).
+        page (int): The page number to retrieve.
         per_page (int): The number of results to return per page.
 
     Returns:
-        list[GenericSQLModelType]: A list of the requested page of results.
+        Tuple[List[GenericSQLModelType], MetadataModel]: The paginated results and metadata about the pagination.
     """
     # TODO: Add filter
-    query = select(model).offset((page - 1) * per_page).limit(per_page)
-    results = await session.exec(query)
-    return results.all()
+    # Calculate total
+    total_result = await session.exec(select(func.count()).select_from(model))
+    total = total_result.one()
 
+    # Collect/format meta data
+    meta_data = MetadataModel(
+        page=page,
+        per_page=per_page,
+        total=total,
+        pages=math.ceil(total / per_page),
+    )
 
-async def get_total_count(session: AsyncSession, model: SQLModel) -> int:
-    """
-    Get the total count of records for the given SQLModel class.
+    # Get items
+    results = await session.exec(
+        select(model).offset((page - 1) * per_page).limit(per_page)
+    )
 
-    Args:
-        session (AsyncSession): The database session to use.
-        model (SQLModel): The SQLModel class to get the total count for.
-
-    Returns:
-        int: The total count of records for the given model.
-    """
-    query = select(func.count()).select_from(model)
-    result = await session.exec(query)
-    return result.one()
+    return results.all(), meta_data

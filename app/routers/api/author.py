@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
-from app.db import get_paginated_results, get_session, get_total_count
+from app.db import get_paginated_results, get_session
 from app.models import Author
 from app.schemas import PaginatedResponseModel
 
@@ -72,13 +72,6 @@ async def get_paginated_authors(
     Returns:
         PaginatedResponseModel[Author]: A paginated response containing the requested authors.
     """
-    items = await get_paginated_results(session, Author, page, per_page)
-    total = await get_total_count(session, Author)
+    items, meta = await get_paginated_results(session, Author, page, per_page)
 
-    return PaginatedResponseModel(
-        items=items,
-        page=page,
-        per_page=per_page,
-        total=total,
-        pages=math.ceil(total / per_page),
-    )
+    return PaginatedResponseModel(items=items, meta=meta)

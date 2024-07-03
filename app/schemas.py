@@ -27,10 +27,23 @@ class RequestModel(BaseModel):
     data: Optional[dict[str, Any]] = {}
 
 
+class PaginatedRequestModel(BaseModel):
+    page: int = 1
+    per_page: int = 2
+
+
+class MetadataModel(BaseModel):
+    page: int
+    per_page: int
+    total: int
+    pages: int
+
+
 class ResponseModel[GenericSQLModelType](BaseModel):
     pkg_id: int
     req_id: str
     status_code: Optional[int] = 0
+    meta: Optional[MetadataModel | dict] = {}
     data: Optional[dict[str, Any] | list[GenericSQLModelType]] = {}
 
     @classmethod
@@ -60,7 +73,4 @@ class ResponseModel[GenericSQLModelType](BaseModel):
 
 class PaginatedResponseModel(BaseModel, Generic[GenericSQLModelType]):
     items: list[GenericSQLModelType]
-    page: int
-    per_page: int
-    total: int
-    pages: int
+    meta: MetadataModel
