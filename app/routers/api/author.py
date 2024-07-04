@@ -11,7 +11,7 @@ from app.schemas import PaginatedResponseModel
 router = APIRouter()
 
 
-@router.post("/author")
+@router.post("/authors")
 async def create_author_endpoint(
     author: Author = Author, session: AsyncSession = Depends(get_session)
 ) -> Author:

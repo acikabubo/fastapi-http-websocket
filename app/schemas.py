@@ -51,7 +51,7 @@ class ResponseModel[GenericSQLModelType](BaseModel):
         cls,
         pkg_id: int,
         req_id: Optional[UUID],
-        data: dict[str, Any],
+        data: Optional[dict[str, Any]] = {},
         msg: Optional[str] = None,
     ) -> "ResponseModel":
         if msg:
@@ -62,8 +62,8 @@ class ResponseModel[GenericSQLModelType](BaseModel):
     def err_msg(
         cls,
         pkg_id: int,
-        req_id: Optional[UUID],
-        data: dict[str, Any],
+        req_id: Optional[UUID | str] = "",
+        data: Optional[dict[str, Any]] = {},
         msg: Optional[str] = None,
     ) -> "ResponseModel":
         if msg:
