@@ -1,11 +1,13 @@
+from jsonschema import ValidationError
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.contants import PkgID
+from app.contants import PkgID, RSPCode
 from app.db import get_paginated_results
 from app.logging import logger
 from app.models import Author
 from app.routers.ws.handlers.registry import register_handler
+from app.routers.ws.handlers.validation import is_request_data_valid
 from app.schemas import RequestModel, ResponseModel
 
 
@@ -24,6 +26,9 @@ async def get_authors_handler(
         ResponseModel[Author]: The response model containing the list of authors.
     """
     try:
+        if (response := is_request_data_valid(request)) is not None:
+            return response
+
         # author = Author(**data)
         # self.session.add(author)
         # await self.session.commit()
@@ -36,6 +41,12 @@ async def get_authors_handler(
             pkg_id=request.pkg_id,
             req_id=request.req_id,
             data=authors,
+        )
+    except ValidationError as ex:
+        logger.error(f"Invalid data for PkgID {request.pkg_id}: \n{ex}")
+
+        return ResponseModel.err_msg(
+            request.pkg_id, status_code=RSPCode.INVALID_DATA
         )
     except Exception as ex:
         logger.error(ex)

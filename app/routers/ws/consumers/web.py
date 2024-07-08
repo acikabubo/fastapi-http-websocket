@@ -1,15 +1,11 @@
 from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
-from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.connection_manager import connection_manager
-from app.contants import RSPCode
 from app.db import get_session
 from app.logging import logger
 from app.routers.ws.handlers.registry import get_handler
-from app.routers.ws.handlers.validation import is_request_data_valid
 from app.schemas import RequestModel, ResponseModel
-from jsonschema import ValidationError
 
 router = APIRouter()
 
@@ -21,19 +17,22 @@ async def web_websocket_endpoint(
     """
     Handles the WebSocket connection for the web client.
 
-    This function is the main entry point for the WebSocket connection. It connects the client to the connection manager, and then enters a loop to handle incoming requests from the client.
+    This function is the main entry point for the web client WebSocket connection. It manages the connection lifecycle, including connecting, receiving and processing client requests, and handling disconnections.
 
-    For each incoming request, it:
-    - Deserializes the request data into a `RequestModel` object
-    - Retrieves the appropriate handler for the request
-    - Calls the handler with the request and the database session
-    - Sends the response back to the client as JSON
+    The function performs the following steps:
+    1. Connects the WebSocket to the connection manager.
+    2. Enters a loop to continuously receive and process client requests.
+    3. For each request:
+       - Deserializes the request data into a `RequestModel` instance.
+       - Retrieves the appropriate request handler based on the `pkg_id` in the request.
+       - Calls the request handler with the request and the database session.
+       - Sends the response back to the client.
+    4. Handles any exceptions that occur during request processing.
+    5. Disconnects the WebSocket from the connection manager when the client disconnects.
 
-    If a `ValidationError` occurs, it logs the error and continues waiting for the next request.
-
-    If any other exception occurs, it logs the traceback and breaks out of the loop, disconnecting the client.
-
-    If the client disconnects, it removes the client from the connection manager.
+    Args:
+        websocket (WebSocket): The WebSocket connection for the client.
+        session (AsyncSession): The database session to use for the request.
     """
     await connection_manager.connect(websocket)
     try:
@@ -43,29 +42,25 @@ async def web_websocket_endpoint(
 
                 data = await websocket.receive_json()
                 request = RequestModel(**data)
-
                 handler = get_handler(request.pkg_id)
-
-                if response := is_request_data_valid(request) is not None:
-                    await websocket.send_json(response.dict())
-                    continue
-
                 response = await handler(request, session)
 
                 await websocket.send_json(response.dict())
+                logger.debug(
+                    f"Succesfully send response for PkgID {request.pkg_id}"
+                )
             except ValueError as ex:
                 logger.debug(f"No handler for PkgID {request.pkg_id}")
                 await websocket.send_json(
-                    ResponseModel.err_msg(request.pkg_id, msg=str(ex)).dict())
-                # TODO: Need to close websocket connection?
-            except ValidationError as ex:
-                logger.error(f"Invalid data for PkgID {request.pkg_id}: \n{ex}")
-                await websocket.send_json(
-                    ResponseModel.err_msg(request.pkg_id, status_code=RSPCode.INVALID_DATA).dict())
+                    ResponseModel.err_msg(request.pkg_id, msg=str(ex)).dict()
+                )
                 # TODO: Need to close websocket connection?
             except Exception as ex:
                 await websocket.send_json(
-                    ResponseModel.err_msg(request.pkg_id, msg=f"Error occurred while handle request for PkgID {request.pkg_id}: {ex}").dict()
+                    ResponseModel.err_msg(
+                        request.pkg_id,
+                        msg=f"Error occurred while handle request for PkgID {request.pkg_id}: {ex}",
+                    ).dict()
                 )
                 # TODO: Need to close websocket connection?
     except WebSocketDisconnect:
