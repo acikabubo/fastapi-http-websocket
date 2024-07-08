@@ -26,10 +26,12 @@ def collect_subrouters():
         logger.info(f'Register "{module}" api')
 
     # Get WS routers
-    for _, module, _ in pkgutil.iter_modules([f"{app_dir}/routers/ws/"]):
+    for _, module, _ in pkgutil.iter_modules(
+        [f"{app_dir}/routers/ws/consumers"]
+    ):
         # Get ws module
         ws_consumer = import_module(
-            f".{module}", package=f"{app_name}.routers.ws"
+            f".{module}", package=f"{app_name}.routers.ws.consumers"
         )
 
         # Add ws router to main router

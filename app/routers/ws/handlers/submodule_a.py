@@ -3,9 +3,9 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.contants import PkgID
 from app.db import get_paginated_results
-from app.handlers.registry import register_handler
 from app.logging import logger
 from app.models import Author
+from app.routers.ws.handlers.registry import register_handler
 from app.schemas import RequestModel, ResponseModel
 
 
