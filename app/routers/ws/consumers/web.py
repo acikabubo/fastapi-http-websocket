@@ -3,10 +3,13 @@ from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.connection_manager import connection_manager
+from app.contants import RSPCode
 from app.db import get_session
 from app.logging import logger
 from app.routers.ws.handlers.registry import get_handler
-from app.schemas import RequestModel
+from app.routers.ws.handlers.validation import is_request_data_valid
+from app.schemas import RequestModel, ResponseModel
+from jsonschema import ValidationError
 
 router = APIRouter()
 
@@ -40,29 +43,31 @@ async def web_websocket_endpoint(
 
                 data = await websocket.receive_json()
                 request = RequestModel(**data)
+
                 handler = get_handler(request.pkg_id)
+
+                if response := is_request_data_valid(request) is not None:
+                    await websocket.send_json(response.dict())
+                    continue
+
                 response = await handler(request, session)
 
                 await websocket.send_json(response.dict())
+            except ValueError as ex:
+                logger.debug(f"No handler for PkgID {request.pkg_id}")
+                await websocket.send_json(
+                    ResponseModel.err_msg(request.pkg_id, msg=str(ex)).dict())
+                # TODO: Need to close websocket connection?
             except ValidationError as ex:
-                print()
-                print(print(repr(ex.errors()[0]["type"])))
-                print()
-
-            except Exception:
-                import traceback
-
-                traceback.print_exc()
-                break
-                # TODO: websocket.send_json(...) -> websocket.send_response(ResponseModel)
-                # await websocket.send_json(
-                #     ResponseModel(
-                #         pkg_id=None,
-                #         req_id=None,
-                #         status_code=-2,
-                #         data={"msg": str(e)},
-                #     ).dict()
-                # )
+                logger.error(f"Invalid data for PkgID {request.pkg_id}: \n{ex}")
+                await websocket.send_json(
+                    ResponseModel.err_msg(request.pkg_id, status_code=RSPCode.INVALID_DATA).dict())
+                # TODO: Need to close websocket connection?
+            except Exception as ex:
+                await websocket.send_json(
+                    ResponseModel.err_msg(request.pkg_id, msg=f"Error occurred while handle request for PkgID {request.pkg_id}: {ex}").dict()
+                )
+                # TODO: Need to close websocket connection?
     except WebSocketDisconnect:
         connection_manager.disconnect(websocket)
         print("Client disconnected")

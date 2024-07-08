@@ -4,6 +4,8 @@ from uuid import UUID
 from pydantic import BaseModel
 from sqlmodel import SQLModel
 
+from app.contants import RSPCode
+
 GenericSQLModelType = TypeVar("GenericSQLModelType", bound=SQLModel)
 
 
@@ -65,10 +67,13 @@ class ResponseModel[GenericSQLModelType](BaseModel):
         req_id: Optional[UUID | str] = "",
         data: Optional[dict[str, Any]] = {},
         msg: Optional[str] = None,
+        status_code: Optional[RSPCode] = RSPCode.ERROR,
     ) -> "ResponseModel":
         if msg:
             data["msg"] = msg
-        return cls(pkg_id=pkg_id, req_id=req_id, status_code=-1, data=data)
+        return cls(
+            pkg_id=pkg_id, req_id=req_id, status_code=status_code, data=data
+        )
 
 
 class PaginatedResponseModel(BaseModel, Generic[GenericSQLModelType]):
