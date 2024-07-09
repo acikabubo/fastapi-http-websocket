@@ -2,8 +2,8 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from app.models import ResponseModel
-from app.routers.ws.handlers.submodule_a import SubmoduleAHandler
+from app.api.models import ResponseModel
+from app.api.routers.ws.handlers.submodule_a import SubmoduleAHandler
 
 
 @pytest.fixture

@@ -3,8 +3,8 @@ from rich import print
 from rich.console import Console
 from rich.table import Table
 
+from app.api.routers.ws.handlers.registry import handler_registry
 from app.contants import PkgID
-from app.routers.ws.handlers.registry import handler_registry
 
 app = typer.Typer()
 console = Console()

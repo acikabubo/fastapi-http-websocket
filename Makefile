@@ -17,10 +17,10 @@ shell:
 	- docker compose -f docker/docker-compose.yml down
 	- docker system prune -f
 
-# @uvicorn app:application --host 0.0.0.0 --reload
+# @fastapi run app
 serve:
 	@echo "Staring DHC Scada Backend Server..."
-	@fastapi run app
+	@uvicorn app:application --host 0.0.0.0 --reload
 
 
 ws-handlers:

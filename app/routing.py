@@ -16,9 +16,11 @@ def collect_subrouters():
     app_name = os.path.basename(app_dir)
 
     # Get API routers
-    for _, module, _ in pkgutil.iter_modules([f"{app_dir}/routers/api"]):
+    for _, module, _ in pkgutil.iter_modules([f"{app_dir}/api/routers/http"]):
         # Get api module
-        api = import_module(f".{module}", package=f"{app_name}.routers.api")
+        api = import_module(
+            f".{module}", package=f"{app_name}.api.routers.http"
+        )
 
         # Add api router to main router
         main_router.include_router(api.router)
@@ -27,11 +29,11 @@ def collect_subrouters():
 
     # Get WS routers
     for _, module, _ in pkgutil.iter_modules(
-        [f"{app_dir}/routers/ws/consumers"]
+        [f"{app_dir}/api/routers/ws/consumers"]
     ):
         # Get ws module
         ws_consumer = import_module(
-            f".{module}", package=f"{app_name}.routers.ws.consumers"
+            f".{module}", package=f"{app_name}.api.routers.ws.consumers"
         )
 
         # Add ws router to main router
