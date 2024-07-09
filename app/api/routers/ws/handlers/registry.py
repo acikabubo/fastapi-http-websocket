@@ -1,6 +1,6 @@
 from typing import Callable, Dict
 
-from app.logging import logger
+from app.core.logging import logger
 
 handler_registry: Dict[int, Callable] = {}
 

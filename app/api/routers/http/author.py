@@ -4,8 +4,8 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
-from app.db import get_paginated_results, get_session
-from app.models import Author
+from app.core.db import get_paginated_results, get_session
+from app.models.author import Author
 from app.schemas.response import PaginatedResponseModel
 
 router = APIRouter()

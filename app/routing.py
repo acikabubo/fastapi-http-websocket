@@ -4,7 +4,7 @@ from importlib import import_module
 
 from fastapi import APIRouter
 
-from app.logging import logger
+from app.core.logging import logger
 
 
 def collect_subrouters():

@@ -2,8 +2,8 @@ from typing import Any, Dict, Union
 
 from jsonschema import ValidationError, validate
 
-from app.contants import PkgID, RSPCode
-from app.logging import logger
+from app.api.routers.ws.constants import PkgID, RSPCode
+from app.core.logging import logger
 from app.schemas.request import PaginatedRequestModel, RequestModel
 from app.schemas.response import ResponseModel
 
@@ -64,5 +64,5 @@ def is_request_data_valid(request: RequestModel) -> ResponseModel | None:
         logger.error(f"Invalid data for PkgID {request.pkg_id}: \n{ex}")
 
         return ResponseModel.err_msg(
-            request.pkg_id, status_code=RSPCode.INVALID_DATA
+            request.pkg_id, status_code=RSPCode().INVALID_DATA
         )
