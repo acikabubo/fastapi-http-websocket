@@ -8,7 +8,8 @@ from app.contants import PkgID, RSPCode
 from app.db import get_paginated_results
 from app.logging import logger
 from app.models import Author
-from app.schemas import RequestModel, ResponseModel
+from app.schemas.request import RequestModel
+from app.schemas.response import ResponseModel
 
 
 @register_handler(PkgID.GET_AUTHORS)

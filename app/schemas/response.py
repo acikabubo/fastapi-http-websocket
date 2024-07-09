@@ -1,37 +1,10 @@
-from typing import Any, Generic, Optional, TypeVar
+from typing import Any, Generic, Optional
 from uuid import UUID
 
 from pydantic import BaseModel
-from sqlmodel import SQLModel
 
 from app.contants import RSPCode
-
-GenericSQLModelType = TypeVar("GenericSQLModelType", bound=SQLModel)
-
-
-class AuthorCreateSchema(BaseModel):
-    name: str
-
-
-class BookCreateSchema(BaseModel):
-    title: str
-    author_id: Optional[int]
-
-
-class GenreCreateSchema(BaseModel):
-    name: str
-
-
-class RequestModel(BaseModel):
-    pkg_id: int
-    req_id: str
-    method: Optional[str] = ""
-    data: Optional[dict[str, Any]] = {}
-
-
-class PaginatedRequestModel(BaseModel):
-    page: int = 1
-    per_page: int = 2
+from app.schemas.generic import GenericSQLModelType
 
 
 class MetadataModel(BaseModel):

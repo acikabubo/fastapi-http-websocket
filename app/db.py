@@ -11,7 +11,8 @@ from sqlalchemy.pool import NullPool
 from sqlmodel import SQLModel, func, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.schemas import GenericSQLModelType, MetadataModel
+from app.schemas.generic import GenericSQLModelType
+from app.schemas.response import MetadataModel
 
 DB_URL = "postgresql+asyncpg://postgres:postgres@db:5432/app_db"
 

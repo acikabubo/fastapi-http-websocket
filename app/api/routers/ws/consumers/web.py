@@ -5,7 +5,8 @@ from app.api.routers.ws.handlers.registry import get_handler
 from app.connection_manager import connection_manager
 from app.db import get_session
 from app.logging import logger
-from app.schemas import RequestModel, ResponseModel
+from app.schemas.request import RequestModel
+from app.schemas.response import ResponseModel
 
 router = APIRouter()
 

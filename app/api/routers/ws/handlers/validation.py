@@ -4,7 +4,8 @@ from jsonschema import ValidationError, validate
 
 from app.contants import PkgID, RSPCode
 from app.logging import logger
-from app.schemas import PaginatedRequestModel, RequestModel, ResponseModel
+from app.schemas.request import PaginatedRequestModel, RequestModel
+from app.schemas.response import ResponseModel
 
 # A mapping of PkgID to JSON schema definitions for validating request data.
 # The schema definitions are used to validate the `data` field of `RequestModel` instances
