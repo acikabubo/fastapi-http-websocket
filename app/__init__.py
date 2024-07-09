@@ -53,3 +53,6 @@ def application() -> FastAPI:
     # app.add_middleware(ActionMiddleware, action_map=action_map)  # FIXME:
 
     return app
+
+
+app = application()  # Need for fastapi cli

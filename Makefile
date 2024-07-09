@@ -17,6 +17,12 @@ shell:
 	- docker compose -f docker/docker-compose.yml down
 	- docker system prune -f
 
+# @uvicorn app:application --host 0.0.0.0 --reload
 serve:
 	@echo "Staring DHC Scada Backend Server..."
-	@uvicorn app:application --host 0.0.0.0 --reload
+	@fastapi run app
+
+
+ws-handlers:
+	@echo "Make table with PkgID's and related websocket handlers"
+	@python cli.py ws-handlers

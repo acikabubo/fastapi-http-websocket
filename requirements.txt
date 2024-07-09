@@ -4,4 +4,5 @@ jsonschema
 pytest
 sqlalchemy
 sqlmodel
+typer
 uvicorn
