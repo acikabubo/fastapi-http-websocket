@@ -3,16 +3,26 @@ from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.api.routers.ws.constants import PkgID, RSPCode
-from app.api.routers.ws.handlers.registry import register_handler
-from app.api.routers.ws.validation import is_request_data_valid
+from app.api.routers.ws.handlers.registry import register_handler, validate
+from app.api.routers.ws.validation import validator
 from app.core.db import get_paginated_results
 from app.core.logging import logger
 from app.models.author import Author
+from app.schemas.generic import JsonSchemaType
 from app.schemas.request import RequestModel
 from app.schemas.response import ResponseModel
 
+json_schema: JsonSchemaType = {
+    "type": "object",
+    "properties": {
+        "field1": {"type": "string"},
+    },
+    "required": ["field1"],
+}
+
 
 @register_handler(PkgID.GET_AUTHORS)
+@validate(json_schema=json_schema, validator=validator)
 async def get_authors_handler(
     request: RequestModel, session: AsyncSession
 ) -> ResponseModel[Author]:
@@ -27,14 +37,6 @@ async def get_authors_handler(
         ResponseModel[Author]: The response model containing the list of authors.
     """
     try:
-        if (response := is_request_data_valid(request)) is not None:
-            return response
-
-        # author = Author(**data)
-        # self.session.add(author)
-        # await self.session.commit()
-        # await self.session.refresh(author)
-
         result = await session.exec(select(Author))
         authors = result.all()
 
