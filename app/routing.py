@@ -64,7 +64,7 @@ class PackageRouter:
                 )
 
                 logger.info(
-                    f"FROM ROUTER Registered {func.__module__}.{func.__name__} for PkgID: {pkg_id}"
+                    f"Register {func.__module__}.{func.__name__} for PkgID: {pkg_id}"
                 )
 
             return func

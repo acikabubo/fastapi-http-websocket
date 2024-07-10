@@ -36,8 +36,13 @@ formatter.set_formatter(
     logging.DEBUG, logging.Formatter(ERROR_FMT, datefmt=datefmt)
 )
 
-handler = logging.StreamHandler()
-handler.setFormatter(formatter)
+stream_handler = logging.StreamHandler()
+stream_handler.setFormatter(formatter)
+stream_handler.setLevel(logging.INFO)
+
+file_handler = logging.FileHandler("logging_errors.log")
+file_handler.setFormatter(formatter)
+file_handler.setLevel(logging.ERROR)
 
 logger = logging.getLogger("HandlersApp")
 
@@ -46,4 +51,4 @@ if sys.argv[0].split("/")[-1] in ["pytest"]:
     logging.disable(logging.ERROR)
 
 logger.setLevel(logging.DEBUG)
-logger.addHandler(handler)
+logger.addHandler(stream_handler)
