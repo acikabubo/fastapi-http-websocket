@@ -11,7 +11,9 @@ GenericSQLModelType = TypeVar("GenericSQLModelType", bound=SQLModel)
 JsonSchemaType = Dict[
     str, Union[str, int, float, bool, List[Any], "JsonSchemaType"]
 ]
-Validator = Callable[[RequestModel, JsonSchemaType], Optional["ResponseModel"]]
+ValidatorType = Callable[
+    [RequestModel, JsonSchemaType], Optional["ResponseModel"]
+]
 HandlerCallableType = Callable[
     [RequestModel, AsyncSession], Optional["ResponseModel"]
 ]

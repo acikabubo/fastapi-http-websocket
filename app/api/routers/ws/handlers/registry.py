@@ -1,13 +1,8 @@
-from functools import wraps
-from typing import Any, Callable, Dict
-
-from sqlmodel.ext.asyncio.session import AsyncSession
+from typing import Callable, Dict
 
 from app.api.routers.ws.constants import PkgID
 from app.core.logging import logger
-from app.schemas.generic import HandlerCallableType, JsonSchemaType, Validator
-from app.schemas.request import RequestModel
-from app.schemas.response import ResponseModel
+from app.schemas.generic import HandlerCallableType
 
 handler_registry: Dict[PkgID, HandlerCallableType] = {}
 
@@ -64,39 +59,3 @@ def get_handler(pkg_id: PkgID) -> Callable:
         raise ValueError(f"No handler found for pkg_id {pkg_id}")
 
     return handler_registry[pkg_id]
-
-
-def validate(
-    *,
-    json_schema: JsonSchemaType,
-    validator: Validator,
-):
-    """
-    A decorator that validates the input request model against a JSON schema before calling the decorated function.
-
-    Args:
-        json_schema (JsonSchemaType): The JSON schema to validate the request model against.
-        validator (Validator): The validator function to use for validating the request model.
-
-    Returns:
-        Callable: A decorator that wraps the original function and performs the validation.
-    """
-
-    def decorator(
-        func: Callable[
-            [RequestModel, AsyncSession], ResponseModel[dict[str, Any]]
-        ],
-    ):
-        @wraps(func)
-        async def wrapper(
-            request: RequestModel, session: AsyncSession
-        ) -> ResponseModel[dict[str, Any]]:
-            validation_result = validator(request, json_schema)
-            if validation_result is not None:
-                return validation_result
-
-            return await func(request, session)
-
-        return wrapper
-
-    return decorator

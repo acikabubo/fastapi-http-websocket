@@ -3,11 +3,11 @@ from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.api.routers.ws.constants import PkgID, RSPCode
-from app.api.routers.ws.handlers.registry import register_handler, validate
 from app.api.routers.ws.validation import validator
 from app.core.db import get_paginated_results
 from app.core.logging import logger
 from app.models.author import Author
+from app.routing import pkg_router
 from app.schemas.generic import JsonSchemaType
 from app.schemas.request import RequestModel
 from app.schemas.response import ResponseModel
@@ -21,8 +21,9 @@ json_schema: JsonSchemaType = {
 }
 
 
-@register_handler(PkgID.GET_AUTHORS)
-@validate(json_schema=json_schema, validator=validator)
+@pkg_router.register(
+    PkgID.GET_AUTHORS, json_schema=json_schema, validator_callback=validator
+)
 async def get_authors_handler(
     request: RequestModel, session: AsyncSession
 ) -> ResponseModel[Author]:
@@ -60,7 +61,7 @@ async def get_authors_handler(
         )
 
 
-@register_handler(PkgID.GET_PAGINATED_AUTHORS)
+@pkg_router.register(PkgID.GET_PAGINATED_AUTHORS)
 async def get_paginated_authers_handlers(
     request: RequestModel, session: AsyncSession
 ) -> ResponseModel[Author]:

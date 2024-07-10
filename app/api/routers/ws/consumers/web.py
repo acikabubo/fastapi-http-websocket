@@ -5,6 +5,7 @@ from app.api.routers.ws.handlers.registry import get_handler
 from app.core.connection_manager import connection_manager
 from app.core.db import get_session
 from app.core.logging import logger
+from app.routing import pkg_router
 from app.schemas.request import RequestModel
 from app.schemas.response import ResponseModel
 
@@ -43,8 +44,7 @@ async def web_websocket_endpoint(
 
                 data = await websocket.receive_json()
                 request = RequestModel(**data)
-                handler = get_handler(request.pkg_id)
-                response = await handler(request, session)
+                response = await pkg_router.handle_request(request, session)
 
                 await websocket.send_json(response.dict())
                 logger.debug(
