@@ -1,7 +1,9 @@
 from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.routers.ws.handlers.registry import get_handler
+from app.api.routers.ws import (
+    handlers,  # FIXME: Need this import for handler registration, try to find better way
+)
 from app.core.connection_manager import connection_manager
 from app.core.db import get_session
 from app.core.logging import logger
