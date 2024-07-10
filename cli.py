@@ -1,10 +1,9 @@
 import typer
-from rich import print
 from rich.console import Console
 from rich.table import Table
 
-from app.api.routers.ws.handlers.registry import handler_registry
-from app.contants import PkgID
+from app.api.routers.ws.constants import PkgID
+from app.routing import pkg_router
 
 app = typer.Typer()
 console = Console()
@@ -24,14 +23,14 @@ def ws_handlers():
     table = Table("PkgID", "Handler Path")
 
     for pkg_id in PkgID:
-        handler = handler_registry.get(pkg_id)
+        handler = pkg_router.handlers_registry.get(pkg_id)
 
         if not handler:
             table.add_row(str(pkg_id), "")
             continue
 
         handler_path = f"{handler.__module__}.[yellow]{handler.__name__}"
-        table.add_row(str(pkg_id), handler_path)
+        table.add_row(f"{pkg_id.value} - {pkg_id.name}", handler_path)
 
     console.print(table)
 
