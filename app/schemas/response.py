@@ -4,7 +4,7 @@ from uuid import UUID
 from pydantic import BaseModel
 
 from app.api.routers.ws.constants import RSPCode
-from app.schemas.generic import GenericSQLModelType
+from app.schemas.generic_typing import GenericSQLModelType
 
 
 class MetadataModel(BaseModel):

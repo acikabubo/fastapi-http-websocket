@@ -1,1 +1,1 @@
-from app.api.routers.ws.handlers import submodule_a
+from app.api.routers.ws.handlers import author_handler

@@ -1,14 +1,14 @@
 import os
 import pkgutil
 from importlib import import_module
-from typing import Any, Callable
+from typing import Any
 
 from fastapi import APIRouter
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.api.routers.ws.constants import PkgID
 from app.core.logging import logger
-from app.schemas.generic import (
+from app.schemas.generic_typing import (
     HandlerCallableType,
     JsonSchemaType,
     ValidatorType,
@@ -71,7 +71,7 @@ class PackageRouter:
 
         return decorator
 
-    def __get_handler(self, pkg_id: PkgID) -> Callable:
+    def __get_handler(self, pkg_id: PkgID) -> HandlerCallableType:
         return self.handlers_registry[pkg_id]
 
     async def handle_request(
@@ -107,7 +107,7 @@ class PackageRouter:
 pkg_router = PackageRouter()
 
 
-def collect_subrouters():
+def collect_subrouters() -> APIRouter:
     """
     Collects and registers all API and WebSocket routers for the application.
 
@@ -118,7 +118,7 @@ def collect_subrouters():
     The main `APIRouter` instance is then returned, allowing it to be used as the entry point for the application's API.
     """
     # Initialize main router
-    main_router = APIRouter()
+    main_router: APIRouter = APIRouter()
 
     # Get project dir
     app_dir = os.path.dirname(__file__)

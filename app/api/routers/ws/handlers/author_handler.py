@@ -8,7 +8,7 @@ from app.core.db import get_paginated_results
 from app.core.logging import logger
 from app.models.author import Author
 from app.routing import pkg_router
-from app.schemas.generic import JsonSchemaType
+from app.schemas.generic_typing import JsonSchemaType
 from app.schemas.request import RequestModel
 from app.schemas.response import ResponseModel
 
