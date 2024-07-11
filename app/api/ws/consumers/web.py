@@ -21,22 +21,11 @@ async def web_websocket_endpoint(
     """
     Handles the WebSocket connection for the web client.
 
-    This function is the main entry point for the web client WebSocket connection. It manages the connection lifecycle, including connecting, receiving and processing client requests, and handling disconnections.
+    This function is responsible for managing the WebSocket connection with the web client. It connects the client to the connection manager, and then enters a loop to handle incoming requests from the client. For each request, it processes the request, generates a response, and sends the response back to the client.
 
-    The function performs the following steps:
-    1. Connects the WebSocket to the connection manager.
-    2. Enters a loop to continuously receive and process client requests.
-    3. For each request:
-       - Deserializes the request data into a `RequestModel` instance.
-       - Retrieves the appropriate request handler based on the `pkg_id` in the request.
-       - Calls the request handler with the request and the database session.
-       - Sends the response back to the client.
-    4. Handles any exceptions that occur during request processing.
-    5. Disconnects the WebSocket from the connection manager when the client disconnects.
+    If the client disconnects or an error occurs during the request handling, the function will catch the exception, log the error, and send an error response to the client if possible.
 
-    Args:
-        websocket (WebSocket): The WebSocket connection for the client.
-        session (AsyncSession): The database session to use for the request.
+    Finally, when the client disconnects, the function will remove the client from the connection manager.
     """
     await connection_manager.connect(websocket)
     try:
@@ -50,22 +39,25 @@ async def web_websocket_endpoint(
 
                 await websocket.send_json(response.dict())
                 logger.debug(
-                    f"Succesfully send response for PkgID {request.pkg_id}"
+                    f"Successfully sent response for PkgID {request.pkg_id}"
                 )
-            except ValueError as ex:
-                logger.debug(f"No handler for PkgID {request.pkg_id}")
-                await websocket.send_json(
-                    ResponseModel.err_msg(request.pkg_id, msg=str(ex)).dict()
-                )
-                # TODO: Need to close websocket connection?
+            except WebSocketDisconnect as ex:
+                logger.info(f"WebSocket disconnected with code {ex.code}")
+                break
             except Exception as ex:
-                await websocket.send_json(
-                    ResponseModel.err_msg(
-                        request.pkg_id,
-                        msg=f"Error occurred while handle request for PkgID {request.pkg_id}: {ex}",
-                    ).dict()
-                )
-                # TODO: Need to close websocket connection?
-    except WebSocketDisconnect:
+                logger.error(f"Error occurred while handling request: {ex}")
+                try:
+                    await websocket.send_json(
+                        ResponseModel.err_msg(
+                            request.pkg_id,
+                            msg=f"Error occurred while handling request for PkgID {request.pkg_id}: {ex}",
+                        ).dict()
+                    )
+                except WebSocketDisconnect:
+                    logger.info(
+                        "WebSocket disconnected while sending error message"
+                    )
+                    break
+    finally:
         connection_manager.disconnect(websocket)
-        print("Client disconnected")
+        logger.info("Client disconnected")

@@ -6,7 +6,7 @@ from typing import Any
 from fastapi import APIRouter
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.api.ws.constants import PkgID
+from app.api.ws.constants import PkgID, RSPCode
 from app.core.logging import logger
 from app.schemas.generic_typing import (
     HandlerCallableType,
@@ -78,20 +78,22 @@ class PackageRouter:
         self, request: RequestModel, session: AsyncSession
     ) -> ResponseModel[dict[str, Any]]:
         """
-        Handles a request by retrieving the appropriate handler and validator for the given package ID (pkg_id), validating the request data against the provided JSON schema, and then calling the handler function with the request and session.
+        Handles a request by looking up the appropriate handler function and validator for the given package ID (PkgID), validating the request data if a validator is registered, and then calling the handler function.
 
         Args:
-            request (RequestModel): The request object containing the package ID and other data.
-            session (AsyncSession): The database session to be used for the request.
+            request (RequestModel): The request model containing the package ID and other request data.
+            session (AsyncSession): The database session to use for the request.
 
         Returns:
-            ResponseModel[dict[str, Any]]: The response data from the handler function.
-
-        Raises:
-            ValueError: If no handler is found for the given package ID.
+            ResponseModel[dict[str, Any]]: The response model containing the result of the request handling.
         """
         if request.pkg_id not in self.handlers_registry:
-            raise ValueError(f"No handler found for pkg_id {request.pkg_id}")
+            return ResponseModel.err_msg(
+                request.pkg_id,
+                request.req_id,
+                msg=f"No handler found for pkg_id {request.pkg_id}",
+                status_code=RSPCode.ERROR,
+            )
 
         json_schema, validator_func = self.validators_registry[request.pkg_id]
 
