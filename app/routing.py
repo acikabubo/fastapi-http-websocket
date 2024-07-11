@@ -6,7 +6,7 @@ from typing import Any
 from fastapi import APIRouter
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.api.routers.ws.constants import PkgID
+from app.api.ws.constants import PkgID
 from app.core.logging import logger
 from app.schemas.generic_typing import (
     HandlerCallableType,
@@ -125,11 +125,9 @@ def collect_subrouters() -> APIRouter:
     app_name = os.path.basename(app_dir)
 
     # Get API routers
-    for _, module, _ in pkgutil.iter_modules([f"{app_dir}/api/routers/http"]):
+    for _, module, _ in pkgutil.iter_modules([f"{app_dir}/api/http"]):
         # Get api module
-        api = import_module(
-            f".{module}", package=f"{app_name}.api.routers.http"
-        )
+        api = import_module(f".{module}", package=f"{app_name}.api.http")
 
         # Add api router to main router
         main_router.include_router(api.router)
@@ -137,12 +135,10 @@ def collect_subrouters() -> APIRouter:
         logger.info(f'Register "{module}" api')
 
     # Get WS routers
-    for _, module, _ in pkgutil.iter_modules(
-        [f"{app_dir}/api/routers/ws/consumers"]
-    ):
+    for _, module, _ in pkgutil.iter_modules([f"{app_dir}/api/ws/consumers"]):
         # Get ws module
         ws_consumer = import_module(
-            f".{module}", package=f"{app_name}.api.routers.ws.consumers"
+            f".{module}", package=f"{app_name}.api.ws.consumers"
         )
 
         # Add ws router to main router

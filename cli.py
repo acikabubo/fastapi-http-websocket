@@ -2,7 +2,7 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
-from app.api.routers.ws.constants import PkgID
+from app.api.ws.constants import PkgID
 from app.routing import pkg_router
 
 app = typer.Typer()

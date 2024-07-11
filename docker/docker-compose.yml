@@ -20,7 +20,8 @@ services:
     volumes:
       - .:/project
     ports:
-      - "8000:8000"
+      - "8001:8000"
+      - "8081:8080"
     depends_on:
       - db
 
@@ -31,8 +32,9 @@ services:
     container_name: server-shell
 
     ports:
-      - 8000:8000
-      - 5678:5678
+      - 8001:8000
+      - 56781:5678
+      - 8081:8080
 
     volumes:
       - ..:/project:delegated

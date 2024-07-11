@@ -2,8 +2,8 @@ from jsonschema import ValidationError
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.api.routers.ws.constants import PkgID, RSPCode
-from app.api.routers.ws.validation import validator
+from app.api.ws.constants import PkgID, RSPCode
+from app.api.ws.validation import validator
 from app.core.db import get_paginated_results
 from app.core.logging import logger
 from app.models.author import Author
@@ -87,7 +87,7 @@ filters_schema: JsonSchemaType = {
     json_schema=filters_schema,
     validator_callback=validator,
 )
-async def get_paginated_authers_handlers(
+async def get_paginated_authers_handler(
     request: RequestModel, session: AsyncSession
 ) -> ResponseModel[Author]:
     """

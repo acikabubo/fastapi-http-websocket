@@ -1,5 +1,3 @@
-import math
-
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
@@ -34,7 +32,7 @@ async def create_author_endpoint(
 
 
 @router.get("/authors", response_model=list[Author])
-async def get_authors(
+async def get_authors_endpoint(
     session: AsyncSession = Depends(get_session),
 ) -> list[Author]:
     # TODO: add filters
@@ -55,7 +53,7 @@ async def get_authors(
 @router.get(
     "/authors_paginated", response_model=PaginatedResponseModel[Author]
 )
-async def get_paginated_authors(
+async def get_paginated_authors_endpoint(
     page: int = 1,
     per_page: int = 20,
     session: AsyncSession = Depends(get_session),
