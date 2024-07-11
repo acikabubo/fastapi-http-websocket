@@ -12,45 +12,47 @@ from app.schemas.generic_typing import JsonSchemaType
 from app.schemas.request import RequestModel
 from app.schemas.response import ResponseModel
 
-json_schema: JsonSchemaType = {
+filters_schema: JsonSchemaType = {
+    "$schema": "http://json-schema.org/draft-07/schema#",
     "type": "object",
     "properties": {
-        "field1": {"type": "string"},
+        "filters": {
+            "type": "object",
+            "properties": {
+                "id": {"type": "integer"},
+                "name": {"type": "string"},
+            },
+            "additionalProperties": False,
+        },
     },
-    "required": ["field1"],
+    "additionalProperties": False,
 }
 
 
 @pkg_router.register(
-    PkgID.GET_AUTHORS, json_schema=json_schema, validator_callback=validator
+    PkgID.GET_AUTHORS, json_schema=filters_schema, validator_callback=validator
 )
 async def get_authors_handler(
     request: RequestModel, session: AsyncSession
 ) -> ResponseModel[Author]:
     """
-    Handles the request to retrieve a list of authors.
+    Handles the request to retrieve a list of authors based on the provided filters.
 
     Args:
-        request (RequestModel): The request model containing the package ID and request ID.
+        request (RequestModel): The request model containing the package ID, request ID, and filters.
         session (AsyncSession): The database session to use for the query.
 
     Returns:
         ResponseModel[Author]: The response model containing the list of authors.
     """
     try:
-        result = await session.exec(select(Author))
-        authors = result.all()
+        filters = request.data.get("filters", {})
+        authors = await Author.get_list(session, **filters)
 
         return ResponseModel(
             pkg_id=request.pkg_id,
             req_id=request.req_id,
             data=authors,
-        )
-    except ValidationError as ex:
-        logger.error(f"Invalid data for PkgID {request.pkg_id}: \n{ex}")
-
-        return ResponseModel.err_msg(
-            request.pkg_id, status_code=RSPCode.INVALID_DATA
         )
     except Exception as ex:
         logger.error(ex)
@@ -61,15 +63,38 @@ async def get_authors_handler(
         )
 
 
-@pkg_router.register(PkgID.GET_PAGINATED_AUTHORS)
+filters_schema: JsonSchemaType = {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+        "filters": {
+            "type": "object",
+            "properties": {
+                "id": {"type": "integer"},
+                "name": {"type": "string"},
+            },
+            "additionalProperties": False,
+        },
+        "page": {"type": "integer"},
+        "per_page": {"type": "integer"},
+    },
+    "additionalProperties": False,
+}
+
+
+@pkg_router.register(
+    PkgID.GET_PAGINATED_AUTHORS,
+    json_schema=filters_schema,
+    validator_callback=validator,
+)
 async def get_paginated_authers_handlers(
     request: RequestModel, session: AsyncSession
 ) -> ResponseModel[Author]:
     """
-    Handles the request to retrieve a paginated list of authors.
+    Handles the request to get a paginated list of authors.
 
     Args:
-        request (RequestModel): The request model containing the package ID, request ID, and pagination parameters.
+        request (RequestModel): The request model containing the package ID, request ID, and filters.
         session (AsyncSession): The database session to use for the query.
 
     Returns:

@@ -40,7 +40,7 @@ stream_handler = logging.StreamHandler()
 stream_handler.setFormatter(formatter)
 stream_handler.setLevel(logging.INFO)
 
-file_handler = logging.FileHandler("logging_errors.log")
+file_handler = logging.FileHandler("logs/logging_errors.log")
 file_handler.setFormatter(formatter)
 file_handler.setLevel(logging.ERROR)
 
@@ -52,3 +52,4 @@ if sys.argv[0].split("/")[-1] in ["pytest"]:
 
 logger.setLevel(logging.DEBUG)
 logger.addHandler(stream_handler)
+logger.addHandler(file_handler)
