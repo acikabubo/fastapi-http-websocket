@@ -23,6 +23,10 @@ serve:
 	@uvicorn app:application --host 0.0.0.0 --reload
 
 
+# To execute this commands first need to be executed `make shell`
 ws-handlers:
 	@echo "Make table with PkgID's and related websocket handlers"
 	@python cli.py ws-handlers
+
+code-docs:
+	pydoc -n 0.0.0.0 -p 8080

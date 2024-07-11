@@ -9,6 +9,8 @@ class AuthorFilters(TypedDict):
 
 
 class Author(SQLModel, table=True):
+    __table_args__ = {"extend_existing": True}  # for pydoc
+
     id: Optional[int] = Field(default=None, primary_key=True)
     name: str
 
