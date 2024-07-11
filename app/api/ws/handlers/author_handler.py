@@ -1,11 +1,9 @@
-from jsonschema import ValidationError
-from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.api.ws.constants import PkgID, RSPCode
 from app.api.ws.validation import validator
-from app.core.db import get_paginated_results
-from app.core.logging import logger
+from app.db import get_paginated_results
+from app.logging import logger
 from app.models.author import Author
 from app.routing import pkg_router
 from app.schemas.generic_typing import JsonSchemaType
@@ -60,6 +58,7 @@ async def get_authors_handler(
             request.pkg_id,
             request.req_id,
             msg="Error occurred while handle get authors",
+            status_code=RSPCode.ERROR,
         )
 
 

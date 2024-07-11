@@ -7,7 +7,7 @@ from fastapi import APIRouter
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.api.ws.constants import PkgID, RSPCode
-from app.core.logging import logger
+from app.logging import logger
 from app.schemas.generic_typing import (
     HandlerCallableType,
     JsonSchemaType,

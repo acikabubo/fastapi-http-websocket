@@ -1,8 +1,8 @@
 # Uvicorn application factory <https://www.uvicorn.org/#application-factories>
 from fastapi import FastAPI
 
-from app.core.db import init_db
-from app.core.logging import logger
+from app.db import init_db
+from app.logging import logger
 from app.middlewares.middleware import ActionMiddleware
 from app.routing import collect_subrouters
 

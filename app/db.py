@@ -1,7 +1,7 @@
 import math
 from typing import Any, Callable, Dict, Optional, Type
 
-from sqlalchemy import Select, inspect
+from sqlalchemy import Select
 from sqlalchemy.ext.asyncio import (
     AsyncAttrs,
     AsyncEngine,

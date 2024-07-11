@@ -4,9 +4,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.ws import (
     handlers,  # FIXME: Need this import for handler registration, try to find better way
 )
-from app.core.connection_manager import connection_manager
-from app.core.db import get_session
-from app.core.logging import logger
+from app.api.ws.connection_manager import connection_manager
+from app.db import get_session
+from app.logging import logger
 from app.routing import pkg_router
 from app.schemas.request import RequestModel
 from app.schemas.response import ResponseModel

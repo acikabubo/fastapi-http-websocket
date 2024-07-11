@@ -3,7 +3,7 @@ from typing import Any
 from jsonschema import ValidationError, validate
 
 from app.api.ws.constants import RSPCode
-from app.core.logging import logger
+from app.logging import logger
 from app.schemas.generic_typing import JsonSchemaType
 from app.schemas.request import RequestModel
 from app.schemas.response import ResponseModel
