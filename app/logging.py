@@ -38,7 +38,7 @@ formatter.set_formatter(
 
 stream_handler = logging.StreamHandler()
 stream_handler.setFormatter(formatter)
-stream_handler.setLevel(logging.INFO)
+stream_handler.setLevel(logging.DEBUG)
 
 file_handler = logging.FileHandler("logs/logging_errors.log")
 file_handler.setFormatter(formatter)
