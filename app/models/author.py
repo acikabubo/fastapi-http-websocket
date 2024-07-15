@@ -2,6 +2,8 @@ from typing import Optional, TypedDict, Unpack
 
 from sqlmodel import Field, SQLModel, select
 
+from app.db import async_session
+
 
 class AuthorFilters(TypedDict):
     id: int
@@ -16,21 +18,21 @@ class Author(SQLModel, table=True):
 
     @classmethod
     async def get_list(
-        cls, session, **filters: Unpack[AuthorFilters]
+        cls, **filters: Unpack[AuthorFilters]
     ) -> list["Author"]:
         """
-        Get a list of authors based on the provided filters.
+        Retrieves a list of `Author` objects based on the provided filters.
 
         Args:
-            session: The SQLModel session to use for the database query.
-            **filters: Keyword arguments that match the fields of the `AuthorFilters` TypedDict. These filters will be used to narrow down the list of authors returned.
+            **filters: A dictionary of filters to apply to the query. The keys should match the field names of the `Author` model, and the values should be the desired filter values.
 
         Returns:
-            A list of `Author` instances that match the provided filters.
+            A list of `Author` objects that match the provided filters.
         """
-        stmt = select(cls).where(
-            *[getattr(cls, k) == v for k, v in filters.items()]
-        )
-        result = await session.exec(stmt)
-        authors = result.all()
-        return authors
+        async with async_session() as s:
+            stmt = select(cls).where(
+                *[getattr(cls, k) == v for k, v in filters.items()]
+            )
+            result = await s.exec(stmt)
+            authors = result.all()
+            return authors

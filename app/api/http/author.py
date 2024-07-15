@@ -56,20 +56,18 @@ async def get_authors_endpoint(
 async def get_paginated_authors_endpoint(
     page: int = 1,
     per_page: int = 20,
-    session: AsyncSession = Depends(get_session),
 ) -> PaginatedResponseModel[Author]:
-    # TODO: add filters
     """
     Retrieves a paginated list of authors from the database.
 
     Args:
         page (int): The page number to retrieve. Defaults to 1.
         per_page (int): The number of items to retrieve per page. Defaults to 20.
-        session (AsyncSession): The database session to use for the operation.
 
     Returns:
-        PaginatedResponseModel[Author]: A paginated response containing the requested authors.
+        PaginatedResponseModel[Author]: A paginated response containing the list of authors.
     """
-    items, meta = await get_paginated_results(session, Author, page, per_page)
+    # TODO: add filters
+    items, meta = await get_paginated_results(Author, page, per_page)
 
     return PaginatedResponseModel(items=items, meta=meta)

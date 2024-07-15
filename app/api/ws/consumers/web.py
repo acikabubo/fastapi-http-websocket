@@ -1,63 +1,40 @@
-from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
-from sqlalchemy.ext.asyncio import AsyncSession
+from typing import Any
+
+from fastapi import APIRouter
 
 from app.api.ws import (
     handlers,  # FIXME: Need this import for handler registration, try to find better way
 )
-from app.api.ws.connection_manager import connection_manager
-from app.db import get_session
+from app.api.ws.websocket import PackageWebSocketEndpoint
 from app.logging import logger
 from app.routing import pkg_router
 from app.schemas.request import RequestModel
-from app.schemas.response import ResponseModel
 
 router = APIRouter()
 
 
-@router.websocket("/web")
-async def web_websocket_endpoint(
-    websocket: WebSocket, session: AsyncSession = Depends(get_session)
-):
+@router.websocket_route("/web")
+class Web(PackageWebSocketEndpoint):
     """
-    Handles the WebSocket connection for the web client.
+    Defines the `Web` class, which is a WebSocket endpoint for handling package-related requests.
 
-    This function is responsible for managing the WebSocket connection with the web client. It connects the client to the connection manager, and then enters a loop to handle incoming requests from the client. For each request, it processes the request, generates a response, and sends the response back to the client.
+    The `Web` class inherits from `PackageWebSocketEndpoint` and implements the following methods:
 
-    If the client disconnects or an error occurs during the request handling, the function will catch the exception, log the error, and send an error response to the client if possible.
-
-    Finally, when the client disconnects, the function will remove the client from the connection manager.
+    - `on_connect`: Called when a WebSocket connection is established. Calls the parent class's `on_connect` method.
+    - `on_receive`: Called when data is received on the WebSocket connection. Logs the received data, creates a `RequestModel` instance from the data, handles the request using the `pkg_router`, and sends the response back to the client.
+    - `on_disconnect`: Called when the WebSocket connection is closed. Calls the parent class's `on_disconnect` method.
     """
-    await connection_manager.connect(websocket)
-    try:
-        while True:
-            try:
-                logger.debug("Waiting for client request...")
 
-                data = await websocket.receive_json()
-                request = RequestModel(**data)
-                response = await pkg_router.handle_request(request, session)
+    async def on_connect(self, websocket):
+        await super().on_connect(websocket)
 
-                await websocket.send_json(response.dict())
-                logger.debug(
-                    f"Successfully sent response for PkgID {request.pkg_id}"
-                )
-            except WebSocketDisconnect as ex:
-                logger.info(f"WebSocket disconnected with code {ex.code}")
-                break
-            except Exception as ex:
-                logger.error(f"Error occurred while handling request: {ex}")
-                try:
-                    await websocket.send_json(
-                        ResponseModel.err_msg(
-                            request.pkg_id,
-                            msg=f"Error occurred while handling request for PkgID {request.pkg_id}: {ex}",
-                        ).dict()
-                    )
-                except WebSocketDisconnect:
-                    logger.info(
-                        "WebSocket disconnected while sending error message"
-                    )
-                    break
-    finally:
-        connection_manager.disconnect(websocket)
-        logger.info("Client disconnected")
+    async def on_receive(self, websocket, data: dict[str, Any]):
+        logger.debug(f"Receive data: {data}")
+        request = RequestModel(**data)
+        response = await pkg_router.handle_request(request)
+
+        await websocket.send_response(response)
+        logger.debug(f"Successfully sent response for PkgID {request.pkg_id}")
+
+    async def on_disconnect(self, websocket, close_code):
+        await super().on_disconnect(websocket, close_code)

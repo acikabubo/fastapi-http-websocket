@@ -75,17 +75,16 @@ class PackageRouter:
         return self.handlers_registry[pkg_id]
 
     async def handle_request(
-        self, request: RequestModel, session: AsyncSession
+        self, request: RequestModel
     ) -> ResponseModel[dict[str, Any]]:
         """
-        Handles a request by looking up the appropriate handler function and validator for the given package ID (PkgID), validating the request data if a validator is registered, and then calling the handler function.
+        Handles a request by finding the appropriate handler and validator for the request's package ID (pkg_id), validating the request data if a validator is registered, and then calling the registered handler function.
 
         Args:
-            request (RequestModel): The request model containing the package ID and other request data.
-            session (AsyncSession): The database session to use for the request.
+            request (RequestModel): The request object containing the package ID and other request data.
 
         Returns:
-            ResponseModel[dict[str, Any]]: The response model containing the result of the request handling.
+            ResponseModel[dict[str, Any]]: The response object containing the result of the request handling.
         """
         if request.pkg_id not in self.handlers_registry:
             return ResponseModel.err_msg(
@@ -103,7 +102,8 @@ class PackageRouter:
 
         handler = self.__get_handler(request.pkg_id)
 
-        return await handler(request, session)
+        # return await handler(request, session)
+        return await handler(request)
 
 
 pkg_router = PackageRouter()

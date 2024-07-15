@@ -30,22 +30,22 @@ filters_schema: JsonSchemaType = {
 @pkg_router.register(
     PkgID.GET_AUTHORS, json_schema=filters_schema, validator_callback=validator
 )
-async def get_authors_handler(
-    request: RequestModel, session: AsyncSession
-) -> ResponseModel[Author]:
+async def get_authors_handler(request: RequestModel) -> ResponseModel[Author]:
     """
-    Handles the request to retrieve a list of authors based on the provided filters.
+    Handles the request to get a list of authors.
 
     Args:
-        request (RequestModel): The request model containing the package ID, request ID, and filters.
-        session (AsyncSession): The database session to use for the query.
+        request (RequestModel): The request model containing the filters to apply.
 
     Returns:
         ResponseModel[Author]: The response model containing the list of authors.
+
+    Raises:
+        Exception: If an error occurs while handling the request.
     """
     try:
         filters = request.data.get("filters", {})
-        authors = await Author.get_list(session, **filters)
+        authors = await Author.get_list(**filters)
 
         return ResponseModel(
             pkg_id=request.pkg_id,
@@ -87,22 +87,19 @@ filters_schema: JsonSchemaType = {
     validator_callback=validator,
 )
 async def get_paginated_authers_handler(
-    request: RequestModel, session: AsyncSession
+    request: RequestModel,
 ) -> ResponseModel[Author]:
     """
     Handles the request to get a paginated list of authors.
 
-    Args:
-        request (RequestModel): The request model containing the package ID, request ID, and filters.
-        session (AsyncSession): The database session to use for the query.
-
     Returns:
-        ResponseModel[Author]: The response model containing the list of authors and pagination metadata.
+        ResponseModel[Author]: The response model containing the paginated list of authors.
+
+    Raises:
+        Exception: If an error occurs while handling the request.
     """
     try:
-        authors, meta = await get_paginated_results(
-            session, Author, **request.data
-        )
+        authors, meta = await get_paginated_results(Author, **request.data)
 
         return ResponseModel(
             pkg_id=request.pkg_id,
