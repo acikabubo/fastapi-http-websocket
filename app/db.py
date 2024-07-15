@@ -50,6 +50,7 @@ async def get_paginated_results(
     model: Type[GenericSQLModelType],
     page: int = 1,
     per_page: int = 20,
+    *,
     filters: Dict[str, Any] | None = None,
     apply_filters: Optional[
         Callable[[Select, Type[GenericSQLModelType], Dict[str, Any]], Select]

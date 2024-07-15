@@ -1,5 +1,3 @@
-from sqlmodel.ext.asyncio.session import AsyncSession
-
 from app.api.ws.constants import PkgID, RSPCode
 from app.api.ws.validation import validator
 from app.db import get_paginated_results

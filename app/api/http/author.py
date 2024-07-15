@@ -1,18 +1,18 @@
-from fastapi import APIRouter, Depends
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlmodel import select
+from typing import Annotated
 
-from app.db import get_paginated_results, get_session
+from fastapi import APIRouter, Depends, Query
+from pydantic import BaseModel
+
+from app.db import get_paginated_results
 from app.models.author import Author
+from app.schemas.author import AuthorQueryParams
 from app.schemas.response import PaginatedResponseModel
 
 router = APIRouter()
 
 
 @router.post("/authors")
-async def create_author_endpoint(
-    author: Author = Author, session: AsyncSession = Depends(get_session)
-) -> Author:
+async def create_author_endpoint(author: Author = Author) -> Author:
     """
     Creates a new author in the database.
 
@@ -23,31 +23,23 @@ async def create_author_endpoint(
     Returns:
         Author: The created author object.
     """
-    # TODO: create create_author method in Author model and use like Depends here
-
-    session.add(author)
-    await session.commit()
-    await session.refresh(author)
-    return author
+    return await Author.create(author)
 
 
 @router.get("/authors", response_model=list[Author])
 async def get_authors_endpoint(
-    session: AsyncSession = Depends(get_session),
+    q: AuthorQueryParams = Depends(),
 ) -> list[Author]:
-    # TODO: add filters
     """
-    Retrieves a list of all authors from the database.
+    Retrieves a list of authors from the database based on the provided query parameters.
 
     Args:
-        session (AsyncSession): The database session to use for the operation.
+        q (AuthorQueryParams): The query parameters to filter the authors by.
 
     Returns:
-        list[Author]: A list of all authors in the database.
+        list[Author]: A list of author objects matching the provided query parameters.
     """
-    result = await session.exec(select(Author))
-    authors = result.all()
-    return authors
+    return await Author.get_list(**q.model_dump(exclude_none=True))
 
 
 @router.get(
@@ -56,18 +48,21 @@ async def get_authors_endpoint(
 async def get_paginated_authors_endpoint(
     page: int = 1,
     per_page: int = 20,
+    q: AuthorQueryParams = Depends(),
 ) -> PaginatedResponseModel[Author]:
     """
-    Retrieves a paginated list of authors from the database.
+    Retrieves a paginated list of authors from the database based on the provided query parameters.
 
     Args:
-        page (int): The page number to retrieve. Defaults to 1.
-        per_page (int): The number of items to retrieve per page. Defaults to 20.
+        page (int): The page number to retrieve.
+        per_page (int): The number of items to return per page.
+        q (AuthorQueryParams): The query parameters to filter the authors by.
 
     Returns:
-        PaginatedResponseModel[Author]: A paginated response containing the list of authors.
+        PaginatedResponseModel[Author]: A paginated response containing the list of authors matching the provided query parameters.
     """
-    # TODO: add filters
-    items, meta = await get_paginated_results(Author, page, per_page)
+    items, meta = await get_paginated_results(
+        Author, page, per_page, filters=q.model_dump(exclude_none=True)
+    )
 
     return PaginatedResponseModel(items=items, meta=meta)

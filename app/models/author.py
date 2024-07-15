@@ -1,13 +1,9 @@
-from typing import Optional, TypedDict, Unpack
+from typing import Optional, Unpack
 
 from sqlmodel import Field, SQLModel, select
 
 from app.db import async_session
-
-
-class AuthorFilters(TypedDict):
-    id: int
-    name: str
+from app.schemas.author import AuthorFilters
 
 
 class Author(SQLModel, table=True):
@@ -15,6 +11,25 @@ class Author(SQLModel, table=True):
 
     id: Optional[int] = Field(default=None, primary_key=True)
     name: str
+
+    @classmethod
+    async def create(cls, author: "Author"):
+        """
+        Creates a new `Author` instance in the database.
+
+        Args:
+            author: The `Author` instance to create.
+
+        Returns:
+            The created `Author` instance.
+        """
+        async with async_session() as session:
+            async with session.begin():
+                session.add(author)
+
+            await session.refresh(author)
+
+            return author
 
     @classmethod
     async def get_list(
