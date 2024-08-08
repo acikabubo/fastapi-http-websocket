@@ -1,0 +1,3 @@
+POSTGRES_USER=app-user
+POSTGRES_PASSWORD=app-pass
+POSTGRES_DB=app_db
