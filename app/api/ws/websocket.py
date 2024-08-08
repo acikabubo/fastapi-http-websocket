@@ -46,6 +46,17 @@ class PackageWebSocketEndpoint(WebSocketEndpoint):
 
     async def on_connect(self, websocket):
         await super().on_connect(websocket)
+
+        user = self.scope["user"].obj
+        if user is None:
+            logger.debug(
+                "Client is not logged in, websocket connection will be closed!"
+            )
+            await websocket.close()
+            return
+
+        self.user = user
+
         connection_manager.connect(websocket)
         logger.debug("Client connected to the websocket connection")
 

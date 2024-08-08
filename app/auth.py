@@ -5,6 +5,7 @@ from starlette.authentication import (
 )
 
 from app.logging import logger
+from app.schemas.user import UserModel
 
 
 class AuthUser(BaseUser):
@@ -30,4 +31,15 @@ class AuthBackend(AuthenticationBackend):
         #     auth_access_token
         # )
 
-        return AuthCredentials([]), AuthUser(None)
+        # FIXME: This is mocked user
+        user_data = {
+            "firstname": "Aleksandar",
+            "lastname": "Krsteski",
+            "username": "acika",
+            "email": "krsteski_aleksandar@hotmail.com",
+        }
+        user: UserModel = UserModel(**user_data)
+        roles = user.roles
+
+        return AuthCredentials(roles), AuthUser(user)
+        # return AuthCredentials(roles), AuthUser(None)
