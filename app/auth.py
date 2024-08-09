@@ -4,6 +4,7 @@ from starlette.authentication import (
     BaseUser,
 )
 
+from app.keycloak_manager import KeycloakManager
 from app.logging import logger
 from app.schemas.user import UserModel
 
@@ -31,15 +32,14 @@ class AuthBackend(AuthenticationBackend):
         #     auth_access_token
         # )
 
-        # FIXME: This is mocked user
-        user_data = {
-            "firstname": "Aleksandar",
-            "lastname": "Krsteski",
-            "username": "acika",
-            "email": "krsteski_aleksandar@hotmail.com",
-        }
+        # FIXME: Simulate keycloak user login
+        kc_manager = KeycloakManager()
+
+        token = kc_manager.login("acika", "12345")
+        user_data = kc_manager.openid.decode_token(token["access_token"])
+
+        # Make logged in user object
         user: UserModel = UserModel(**user_data)
         roles = user.roles
 
         return AuthCredentials(roles), AuthUser(user)
-        # return AuthCredentials(roles), AuthUser(None)

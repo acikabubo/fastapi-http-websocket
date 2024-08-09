@@ -22,12 +22,16 @@ services:
 
     networks:
       - app-network
+
     ports:
       - "8001:8000"
-      - "8081:8080"
 
     volumes:
       - .:/project
+
+    env_file:
+      - .srv_env
+
     depends_on:
       - db
 
@@ -43,15 +47,13 @@ services:
     ports:
       - 8080:8080
 
-    # volumes:
-    #   - ../db/keycloak:/opt/keycloak/data/import
-    #   - ../theme/dhc-scada-theme:/opt/keycloak/themes/dhc-scada-theme
+    volumes:
+      - ../db/keycloak:/opt/keycloak/data/import
 
     env_file:
       - .kc_env
 
-    # command: -v start-dev --import-realm
-    command: -v start-dev
+    command: -v start-dev --import-realm
 
     depends_on:
       - db

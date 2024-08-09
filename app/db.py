@@ -15,7 +15,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from app.schemas.generic_typing import GenericSQLModelType
 from app.schemas.response import MetadataModel
 
-DB_URL = "postgresql+asyncpg://postgres:postgres@db:5432/app_db"
+DB_URL = "postgresql+asyncpg://app-user:app-pass@db:5432/app_db"
 
 engine: AsyncEngine = create_async_engine(
     DB_URL, echo=False, poolclass=NullPool

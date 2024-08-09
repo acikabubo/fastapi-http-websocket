@@ -4,6 +4,7 @@ icecream
 jsonschema
 pytest
 python-decouple
+python-keycloak
 sqlalchemy
 sqlmodel
 typer
