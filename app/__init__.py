@@ -3,11 +3,11 @@ from fastapi import FastAPI
 from starlette.middleware.authentication import AuthenticationMiddleware
 
 from app.auth import AuthBackend
-from app.db import init_db
 from app.logging import logger
 from app.middlewares.action import PermAuthHTTPMiddleware
 from app.routing import collect_subrouters
 from app.settings import ACTIONS_FILE_PATH
+from app.storage.db import init_db
 from app.utils import read_json_file
 
 # Define your action map here

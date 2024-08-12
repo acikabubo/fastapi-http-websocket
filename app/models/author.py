@@ -2,8 +2,8 @@ from typing import Optional, Unpack
 
 from sqlmodel import Field, SQLModel, select
 
-from app.db import async_session
 from app.schemas.author import AuthorFilters
+from app.storage.db import async_session
 
 
 class Author(SQLModel, table=True):

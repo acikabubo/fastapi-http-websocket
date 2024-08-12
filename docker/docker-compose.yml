@@ -1,27 +1,41 @@
 services:
-  db:
+  hw-db:
     image: postgres:13
-    hostname: app-db
-    container_name: app-db
+    hostname: hw-db
+    container_name: hw-db
+
     networks:
-      - app-network
+      - hw-network
+
     ports:
       - "5432:5432"
 
     volumes:
-      - postgres_app_data:/var/lib/postgresql/data
+      - postgres-hw-data:/var/lib/postgresql/data
       - ../db:/docker-entrypoint-initdb.d
 
     env_file:
       - .pg_env
 
-  server:
+  hw-redis:
+    image: redis:alpine
+    container_name: hw-redis
+
+    networks:
+      - hw-network
+
+    ports:
+      - 6379:6379
+
+    # command: redis-cli config set notify-keyspace-events KEA
+
+  hw-server:
     build:
       context: ..
       dockerfile: docker/Dockerfile
 
     networks:
-      - app-network
+      - hw-network
 
     ports:
       - "8001:8000"
@@ -33,16 +47,17 @@ services:
       - .srv_env
 
     depends_on:
-      - db
+      - hw-db
+      - hw-redis
 
     # command: sh -c "uvicorn app:application --host 0.0.0.0 --port 8000"
 
-  keycloak:
+  hw-keycloak:
     image: keycloak/keycloak:25.0
-    hostname: keycloak-db
-    container_name: keycloak
+    hostname: hw-keycloak
+    container_name: hw-keycloak
     networks:
-      - app-network
+      - hw-network
 
     ports:
       - 8080:8080
@@ -56,11 +71,11 @@ services:
     command: -v start-dev --import-realm
 
     depends_on:
-      - db
+      - hw-db
 
   shell:
-    extends: server
-    container_name: server-shell
+    extends: hw-server
+    container_name: hw-server-shell
 
     ports:
       - 8001:8000
@@ -75,13 +90,14 @@ services:
     command: "/usr/bin/tmux -L server"
 
     depends_on:
-      - db
-      - keycloak
+      - hw-db
+      - hw-keycloak
+      - hw-redis
 
 volumes:
-  postgres_app_data:
+  postgres-hw-data:
 
 
 networks:
-  app-network:
-    name: app-network
+  hw-network:
+    name: hw-network

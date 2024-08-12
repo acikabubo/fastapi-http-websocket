@@ -1,1 +1,1 @@
-CREATE DATABASE "app-keycloak-db";
+CREATE DATABASE "hw-keycloak-db";

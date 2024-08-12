@@ -10,3 +10,4 @@ sqlmodel
 typer
 uvicorn
 websockets
+redis

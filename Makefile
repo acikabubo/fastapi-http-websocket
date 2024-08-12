@@ -10,7 +10,7 @@ stop:
 	docker compose -f docker/docker-compose.yml down
 
 run-server-service-command = \
-	docker-compose -f docker/docker-compose.yml run --rm --name server --service-ports shell
+	docker-compose -f docker/docker-compose.yml run --rm --name hw-server --service-ports shell
 
 shell:
 	- $(run-server-service-command)
