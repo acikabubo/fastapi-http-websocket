@@ -1,17 +1,20 @@
-from typing import Annotated
+from fastapi import APIRouter, Depends, Query, Security
 
-from fastapi import APIRouter, Depends, Query
-from pydantic import BaseModel
-
+from app.auth import JWTBearer, logged_kc_user
 from app.models.author import Author
 from app.schemas.author import AuthorQueryParams
 from app.schemas.response import PaginatedResponseModel
+from app.schemas.user import UserModel
 from app.storage.db import get_paginated_results
 
 router = APIRouter()
 
 
-@router.post("/authors")
+@router.post(
+    "/authors",
+    summary="Create new author",
+    dependencies=[Security(JWTBearer("REQUIRED-ROLE"))],
+)
 async def create_author_endpoint(author: Author = Author) -> Author:
     """
     Creates a new author in the database.
@@ -26,8 +29,14 @@ async def create_author_endpoint(author: Author = Author) -> Author:
     return await Author.create(author)
 
 
-@router.get("/authors", response_model=list[Author])
+@router.get(
+    "/authors",
+    response_model=list[Author],
+    summary="Get list of authors",
+    # dependencies=[Security(JWTBearer("REQUIRED-ROLE"))],
+)
 async def get_authors_endpoint(
+    user: UserModel = Depends(logged_kc_user),
     q: AuthorQueryParams = Depends(),
 ) -> list[Author]:
     """
@@ -43,7 +52,10 @@ async def get_authors_endpoint(
 
 
 @router.get(
-    "/authors_paginated", response_model=PaginatedResponseModel[Author]
+    "/authors_paginated",
+    response_model=PaginatedResponseModel[Author],
+    summary="Get paginated list of authors",
+    dependencies=[Security(JWTBearer("REQUIRED-ROLE"))],
 )
 async def get_paginated_authors_endpoint(
     page: int = 1,
