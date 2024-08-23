@@ -5,7 +5,7 @@ from fastapi import APIRouter
 from app.api.ws import (
     handlers,  # FIXME: Need this import for handler registration, try to find better way
 )
-from app.api.ws.websocket import PackageWebSocketEndpoint
+from app.api.ws.websocket import PackageAuthWebSocketEndpoint
 from app.logging import logger
 from app.routing import pkg_router
 from app.schemas.request import RequestModel
@@ -14,11 +14,11 @@ router = APIRouter()
 
 
 @router.websocket_route("/web")
-class Web(PackageWebSocketEndpoint):
+class Web(PackageAuthWebSocketEndpoint):
     """
     Defines the `Web` class, which is a WebSocket endpoint for handling package-related requests.
 
-    The `Web` class inherits from `PackageWebSocketEndpoint` and implements the following methods:
+    The `Web` class inherits from `PackageAuthWebSocketEndpoint` and implements the following methods:
 
     - `on_connect`: Called when a WebSocket connection is established. Calls the parent class's `on_connect` method.
     - `on_receive`: Called when data is received on the WebSocket connection. Logs the received data, creates a `RequestModel` instance from the data, handles the request using the `pkg_router`, and sends the response back to the client.

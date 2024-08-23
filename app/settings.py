@@ -17,3 +17,7 @@ KEYCLOAK_ADMIN_USERNAME = config("KEYCLOAK_ADMIN_USERNAME", cast=str)
 KEYCLOAK_ADMIN_PASSWORD = config("KEYCLOAK_ADMIN_PASSWORD", cast=str)
 
 REDIS_IP = config("REDIS_IP", cast=str, default="localhost")
+
+USER_SESSION_REDIS_KEY_PREFIX = config(
+    "USER_SESSION_REDIS_KEY_PREFIX", cast=str, default="session:"
+)
