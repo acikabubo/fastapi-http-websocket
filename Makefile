@@ -28,5 +28,9 @@ ws-handlers:
 	@echo "Make table with PkgID's and related websocket handlers"
 	@python cli.py ws-handlers
 
+new-ws-handlers:
+	@echo "Generate new websocket handler"
+	@python cli.py generate-new-ws-handler
+
 code-docs:
 	pydoc -n 0.0.0.0 -p 8080
