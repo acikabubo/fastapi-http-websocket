@@ -1,0 +1,7 @@
+{
+    "project_name": "Project",
+    "module_name": "Module",
+    "_copy_without_render": [
+        "templates/ws_handler.jinja"
+    ]
+}
