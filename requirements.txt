@@ -1,6 +1,7 @@
 asyncpg
 fastapi
 icecream
+jinja2
 jsonschema
 pytest
 python-decouple

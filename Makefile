@@ -1,6 +1,14 @@
 SHELL := /bin/bash
 .PHONY: start stop
 
+ifeq ($(shell uname), Darwin)
+export UID=1000
+export GID=1000
+else
+export UID=$(shell id -u)
+export GID=$(shell id -g)
+endif
+
 build:
 	docker compose -f docker/docker-compose.yml build
 

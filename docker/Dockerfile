@@ -31,6 +31,9 @@ RUN USER=devel && \
     mkdir -p /etc/fixuid && \
     printf "user: $USER\ngroup: $GROUP\n" > /etc/fixuid/config.yml
 
+# Switch to user
+USER devel:devel
+
 WORKDIR /project
 
 # Copy the application code

@@ -43,6 +43,8 @@ services:
     volumes:
       - .:/project
 
+    user: ${UID}:${GID}
+
     env_file:
       - .srv_env
 
