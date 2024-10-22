@@ -33,10 +33,6 @@ class ConnectionManager:
         Args:
             websocket (WebSocket): The WebSocket connection to be removed from the list of active connections.
         """
-        # TODO: if user is not logged in ???
-        if websocket not in self.active_connections:
-            return
-
         self.active_connections.remove(websocket)
         logger.debug(
             f"websocket objects ({id(websocket)}) removed from active connections"

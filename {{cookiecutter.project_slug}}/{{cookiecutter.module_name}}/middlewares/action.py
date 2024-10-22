@@ -12,6 +12,5 @@ class PermAuthHTTPMiddleware(BaseHTTPMiddleware):
         print()
         print("HTTP Middleware")
         print(self.actions)
-        print(f"Logged user: {request.user.obj.username}")
         print()
         return await call_next(request)

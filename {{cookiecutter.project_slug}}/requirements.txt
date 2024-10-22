@@ -10,4 +10,3 @@ sqlalchemy
 sqlmodel
 typer
 uvicorn
-websockets

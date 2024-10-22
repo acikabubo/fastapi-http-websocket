@@ -25,7 +25,6 @@ class Web(PackageAuthWebSocketEndpoint):
     - `on_disconnect`: Called when the WebSocket connection is closed. Calls the parent class's `on_disconnect` method.
     """
 
-    # TODO: There is no need of this method
     async def on_connect(self, websocket):
         await super().on_connect(websocket)
 
