@@ -138,8 +138,8 @@ def application() -> FastAPI:
     """
     # Initialize application
     app = FastAPI(
-        title="HTTP & WebSocket handlers",
-        description="HTTP & WebSocket handlers",
+        title="{{cookiecutter.project_name}}",
+        description="{{cookiecutter.project_description}}",
         version="1.0.0",
     )
 
