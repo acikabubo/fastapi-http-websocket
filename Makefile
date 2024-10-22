@@ -1,6 +1,14 @@
 SHELL := /bin/bash
 .PHONY: start stop
 
+ifeq ($(shell uname), Darwin)
+export UID=1000
+export GID=1000
+else
+export UID=$(shell id -u)
+export GID=$(shell id -g)
+endif
+
 build:
 	docker compose -f docker/docker-compose.yml build
 
@@ -10,7 +18,7 @@ stop:
 	docker compose -f docker/docker-compose.yml down
 
 run-server-service-command = \
-	docker-compose -f docker/docker-compose.yml run --rm --name server --service-ports shell
+	docker-compose -f docker/docker-compose.yml run --rm --name hw-server --service-ports shell
 
 shell:
 	- $(run-server-service-command)
@@ -27,6 +35,10 @@ serve:
 ws-handlers:
 	@echo "Make table with PkgID's and related websocket handlers"
 	@python cli.py ws-handlers
+
+new-ws-handlers:
+	@echo "Generate new websocket handler"
+	@python cli.py generate-new-ws-handler
 
 code-docs:
 	pydoc -n 0.0.0.0 -p 8080

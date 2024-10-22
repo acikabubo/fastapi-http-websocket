@@ -1,12 +1,12 @@
 from app.api.ws.constants import PkgID, RSPCode
 from app.api.ws.validation import validator
-from app.db import get_paginated_results
 from app.logging import logger
 from app.models.author import Author
 from app.routing import pkg_router
 from app.schemas.generic_typing import JsonSchemaType
 from app.schemas.request import RequestModel
 from app.schemas.response import ResponseModel
+from app.storage.db import get_paginated_results
 
 filters_schema: JsonSchemaType = {
     "$schema": "http://json-schema.org/draft-07/schema#",
