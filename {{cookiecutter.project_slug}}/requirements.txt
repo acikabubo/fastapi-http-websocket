@@ -1,0 +1,13 @@
+asyncpg
+fastapi
+icecream
+jsonschema
+pytest
+python-decouple
+python-keycloak
+redis
+sqlalchemy
+sqlmodel
+typer
+uvicorn
+websockets
