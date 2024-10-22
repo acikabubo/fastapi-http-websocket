@@ -1,0 +1,47 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:13
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: app_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  server:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+
+    volumes:
+      - .:/project
+    ports:
+      - "8001:8000"
+      - "8081:8080"
+    depends_on:
+      - db
+
+    # command: sh -c "uvicorn app:application --host 0.0.0.0 --port 8000"
+
+  shell:
+    extends: server
+    container_name: server-shell
+
+    ports:
+      - 8001:8000
+      - 56781:5678
+      - 8081:8080
+
+    volumes:
+      - ..:/project:delegated
+      - /tmp:/tmp
+      - ~/.ssh:/home/devel/.ssh
+
+    command: "/usr/bin/tmux -L server"
+
+volumes:
+  postgres_data:
