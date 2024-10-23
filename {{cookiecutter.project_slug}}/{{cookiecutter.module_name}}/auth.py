@@ -8,14 +8,17 @@ from fastapi.security import (
     HTTPBasicCredentials,
     HTTPBearer,
 )
+{% if cookiecutter.use_keycloak == "y" %}
 from keycloak.exceptions import KeycloakAuthenticationError
+{% endif %}
 from starlette.authentication import (
     AuthCredentials,
     AuthenticationBackend,
     BaseUser,
 )
-
+{% if cookiecutter.use_keycloak == "y" %}
 from {{cookiecutter.module_name}}.keycloak_manager import KeycloakManager
+{% endif %}
 from {{cookiecutter.module_name}}.logging import logger
 from {{cookiecutter.module_name}}.schemas.user import UserModel
 from {{cookiecutter.module_name}}.settings import KEYCLOAK_CLIENT_ID
@@ -45,6 +48,10 @@ class AuthBackend(AuthenticationBackend):
         # )
 
         # FIXME: Simulate keycloak user login
+        user = None
+        roles = []
+
+        {% if cookiecutter.use_keycloak == "y" %}
         kc_manager = KeycloakManager()
 
         token = kc_manager.login("acika", "12345")
@@ -53,6 +60,7 @@ class AuthBackend(AuthenticationBackend):
         # Make logged in user object
         user: UserModel = UserModel(**user_data)
         roles = user.roles
+        {% endif %}
 
         return AuthCredentials(roles), AuthUser(user)
 
