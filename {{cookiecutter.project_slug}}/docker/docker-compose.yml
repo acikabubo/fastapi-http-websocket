@@ -17,6 +17,7 @@ services:
     env_file:
       - .pg_env
 
+  {% if cookiecutter.use_redis == "y" %}
   hw-redis:
     image: redis:alpine
     container_name: hw-redis
@@ -28,6 +29,7 @@ services:
       - 6379:6379
 
     # command: redis-server --notify-keyspace-events KEA
+  {% endif %}
 
   hw-server:
     build:
@@ -48,11 +50,16 @@ services:
 
     depends_on:
       - hw-db
+      {% if cookiecutter.use_redis == "y" %}
       - hw-redis
+      {% endif %}
+      {% if cookiecutter.use_keycloak == "y" %}
       - hw-keycloak
+      {% endif %}
 
     # command: sh -c "uvicorn app:application --host 0.0.0.0 --port 8000"
 
+  {% if cookiecutter.use_keycloak == "y" %}
   hw-keycloak:
     image: keycloak/keycloak:25.0
     hostname: hw-keycloak
@@ -73,6 +80,8 @@ services:
 
     depends_on:
       - hw-db
+  {% endif %}
+
 
   shell:
     extends: hw-server

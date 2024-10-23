@@ -4,8 +4,12 @@ icecream
 jsonschema
 pytest
 python-decouple
+{% if cookiecutter.use_keycloak == "y" %}
 python-keycloak
+{% endif %}
+{% if cookiecutter.use_redis == "y" %}
 redis
+{% endif %}
 sqlalchemy
 sqlmodel
 typer
