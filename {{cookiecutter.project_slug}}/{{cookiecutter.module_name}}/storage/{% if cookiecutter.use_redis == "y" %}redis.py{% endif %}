@@ -66,6 +66,7 @@ class AuthRedisPool(object):  # -
         return cls.__instance
 
 
+{% if cookiecutter.use_keycloak == "y" %}
 # FIXME: Try to attach this function to redis instance, to use in websocket like <ws-instance>.r.add_kc_user_session
 async def add_kc_user_session(r: Redis, user: UserModel):
     """
@@ -88,6 +89,7 @@ async def add_kc_user_session(r: Redis, user: UserModel):
     user_session_key = USER_SESSION_REDIS_KEY_PREFIX + user.username
     await r.set(user_session_key, 1)
     await r.pexpire(user_session_key, (user.expired_seconds + 10) * 1000)
+{% endif %}
 
 
 async def get_auth_redis_connection():

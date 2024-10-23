@@ -17,7 +17,9 @@ from {{cookiecutter.module_name}}.middlewares.action import PermAuthHTTPMiddlewa
 from {{cookiecutter.module_name}}.routing import collect_subrouters
 from {{cookiecutter.module_name}}.settings import ACTIONS_FILE_PATH, USER_SESSION_REDIS_KEY_PREFIX
 from {{cookiecutter.module_name}}.storage.db import init_db
+{% if cookiecutter.use_redis == "y" and cookiecutter.use_keycloak == "y" %}
 from {{cookiecutter.module_name}}.storage.redis import get_auth_redis_connection
+{% endif %}
 from {{cookiecutter.module_name}}.utils import read_json_file
 
 # Define your action map here
@@ -26,7 +28,7 @@ action_map = {1: "create_author", 2: "create_genre"}
 tasks = []
 ws_clients = {}
 
-
+{% if cookiecutter.use_redis == "y" and cookiecutter.use_keycloak == "y" %}
 async def kc_user_session_task():
     """
     Runs a task that monitors the expiration of user sessions stored in Redis.
@@ -85,7 +87,7 @@ async def kc_user_session_task():
             )
             rch = None
             await sleep(0.5)
-
+{% endif %}
 
 def startup():
     """
@@ -98,7 +100,9 @@ def startup():
         logger.info("Initialized database and tables")
 
         print("STARTUP")
+        {% if cookiecutter.use_redis == "y" and cookiecutter.use_keycloak == "y" %}
         # tasks.append(create_task(kc_user_session_task()))
+        {% endif %}
         logger.info("Created task for user session")
 
     return wrapper

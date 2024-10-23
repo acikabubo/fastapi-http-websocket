@@ -4,8 +4,5 @@
     "project_slug": "{{ cookiecutter.project_name.lower().replace(' ', '_') }}",
     "module_name": "src",
     "use_redis": "y",
-    "use_keycloak": "y",
-    "_copy_without_render": [
-        "templates/ws_handler.jinja"
-    ]
+    "use_keycloak": "y"
 }
