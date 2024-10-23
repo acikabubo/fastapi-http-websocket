@@ -1,29 +1,31 @@
 services:
-  {{cookiecutter.project_slug}}-db:
+  hw-db:
     image: postgres:13
-    hostname: {{cookiecutter.project_slug}}-db
-    container_name: {{cookiecutter.project_slug}}-db
+    hostname: hw-db
+    container_name: hw-db
 
     networks:
-      - {{cookiecutter.project_slug}}-network
+      - hw-network
 
     ports:
       - "5432:5432"
 
     volumes:
-      - postgres-{{cookiecutter.project_slug}}-data:/var/lib/postgresql/data
+      - postgres-hw-data:/var/lib/postgresql/data
+      {% if cookiecutter.use_keycloak == "y" %}
       - ../db:/docker-entrypoint-initdb.d
+      {% endif %}
 
     env_file:
       - .pg_env
 
   {% if cookiecutter.use_redis == "y" %}
-  {{cookiecutter.project_slug}}-redis:
+  hw-redis:
     image: redis:alpine
-    container_name: {{cookiecutter.project_slug}}-redis
+    container_name: hw-redis
 
     networks:
-      - {{cookiecutter.project_slug}}-network
+      - hw-network
 
     ports:
       - 6379:6379
@@ -31,13 +33,13 @@ services:
     # command: redis-server --notify-keyspace-events KEA
   {% endif %}
 
-  {{cookiecutter.project_slug}}-server:
+  hw-server:
     build:
       context: ..
       dockerfile: docker/Dockerfile
 
     networks:
-      - {{cookiecutter.project_slug}}-network
+      - hw-network
 
     ports:
       - "8001:8000"
@@ -49,23 +51,23 @@ services:
       - .srv_env
 
     depends_on:
-      - {{cookiecutter.project_slug}}-db
+      - hw-db
       {% if cookiecutter.use_redis == "y" %}
-      - {{cookiecutter.project_slug}}-redis
+      - hw-redis
       {% endif %}
       {% if cookiecutter.use_keycloak == "y" %}
-      - {{cookiecutter.project_slug}}-keycloak
+      - hw-keycloak
       {% endif %}
 
     # command: sh -c "uvicorn app:application --host 0.0.0.0 --port 8000"
 
   {% if cookiecutter.use_keycloak == "y" %}
-  {{cookiecutter.project_slug}}-keycloak:
+  hw-keycloak:
     image: keycloak/keycloak:25.0
-    hostname: {{cookiecutter.project_slug}}-keycloak
-    container_name: {{cookiecutter.project_slug}}-keycloak
+    hostname: hw-keycloak
+    container_name: hw-keycloak
     networks:
-      - {{cookiecutter.project_slug}}-network
+      - hw-network
 
     ports:
       - 8080:8080
@@ -79,13 +81,12 @@ services:
     command: -v start-dev --import-realm
 
     depends_on:
-      - {{cookiecutter.project_slug}}-db
+      - hw-db
   {% endif %}
 
-
   shell:
-    extends: {{cookiecutter.project_slug}}-server
-    container_name: {{cookiecutter.project_slug}}-server-shell
+    extends: hw-server
+    container_name: hw-server-shell
 
     ports:
       - 8001:8000
@@ -100,14 +101,14 @@ services:
     command: "/usr/bin/tmux -L server"
 
     depends_on:
-      - {{cookiecutter.project_slug}}-db
-      - {{cookiecutter.project_slug}}-keycloak
-      - {{cookiecutter.project_slug}}-redis
+      - hw-db
+      - hw-keycloak
+      - hw-redis
 
 volumes:
-  postgres-{{cookiecutter.project_slug}}-data:
+  postgres-hw-data:
 
 
 networks:
-  {{cookiecutter.project_slug}}-network:
-    name: {{cookiecutter.project_slug}}-network
+  hw-network:
+    name: hw-network
