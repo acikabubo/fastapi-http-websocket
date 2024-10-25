@@ -1,3 +1,3 @@
-POSTGRES_USER=hw-user
-POSTGRES_PASSWORD=hw-pass
-POSTGRES_DB=hw-db
+POSTGRES_USER={{cookiecutter.project_slug}}-user
+POSTGRES_PASSWORD={{cookiecutter.project_slug}}-pass
+POSTGRES_DB={{cookiecutter.project_slug}}-db

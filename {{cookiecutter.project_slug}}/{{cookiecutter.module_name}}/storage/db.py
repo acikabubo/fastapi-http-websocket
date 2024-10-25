@@ -1,7 +1,9 @@
+import asyncio
 import math
 from typing import Any, Callable, Dict, Optional, Type
 
 from sqlalchemy import Select
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.asyncio import (
     AsyncAttrs,
     AsyncEngine,
@@ -12,10 +14,11 @@ from sqlalchemy.pool import NullPool
 from sqlmodel import SQLModel, func, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from {{cookiecutter.module_name}}.logging import logger
 from {{cookiecutter.module_name}}.schemas.generic_typing import GenericSQLModelType
 from {{cookiecutter.module_name}}.schemas.response import MetadataModel
 
-DB_URL = "postgresql+asyncpg://hw-user:hw-pass@hw-db:5432/hw-db"
+DB_URL = "postgresql+asyncpg://{{cookiecutter.project_slug}}-user:{{cookiecutter.project_slug}}-pass@{{cookiecutter.project_slug}}-db:5432/{{cookiecutter.project_slug}}-db"
 
 engine: AsyncEngine = create_async_engine(
     DB_URL, echo=False, poolclass=NullPool
@@ -25,14 +28,29 @@ async_session = sessionmaker(
 )
 
 
-async def init_db():
+async def wait_and_init_db(retry_interval=2, max_retries=10):
     """
-    Initialize the database by creating all SQLModel tables.
+    Wait until the database is available.
 
-    This function is used to set up the database schema by creating all tables defined using the SQLModel library. It should be called once during application initialization to ensure the database is properly configured.
+    Parameters:
+    - retry_interval (int): Time in seconds to wait between retries.
+    - max_retries (int): Maximum number of retries before giving up.
     """
-    async with engine.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.create_all)
+    for attempt in range(max_retries):
+        try:
+            # Test a lightweight connection to check if the DB is ready
+            async with engine.begin() as conn:
+                await conn.run_sync(SQLModel.metadata.create_all)
+            logger.info("Database is now ready.")
+            return  # Database is ready, continue
+        except OperationalError:
+            logger.warning(
+                f"Database not ready, retrying in {retry_interval} seconds... (Attempt {attempt + 1}/{max_retries})"
+            )
+            await asyncio.sleep(retry_interval)
+
+    logger.error("Failed to connect to the database after multiple attempts.")
+    raise RuntimeError("Database connection could not be established.")
 
 
 async def get_session() -> AsyncSession:

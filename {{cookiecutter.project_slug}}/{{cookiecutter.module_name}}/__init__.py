@@ -16,7 +16,7 @@ from {{cookiecutter.module_name}}.logging import logger
 from {{cookiecutter.module_name}}.middlewares.action import PermAuthHTTPMiddleware
 from {{cookiecutter.module_name}}.routing import collect_subrouters
 from {{cookiecutter.module_name}}.settings import ACTIONS_FILE_PATH, USER_SESSION_REDIS_KEY_PREFIX
-from {{cookiecutter.module_name}}.storage.db import init_db
+from {{cookiecutter.module_name}}.storage.db import wait_and_init_db
 {% if cookiecutter.use_redis == "y" and cookiecutter.use_keycloak == "y" %}
 from {{cookiecutter.module_name}}.storage.redis import get_auth_redis_connection
 {% endif %}
@@ -96,7 +96,7 @@ def startup():
 
     async def wrapper():
         # Create the database and tables
-        await init_db()
+        await wait_and_init_db()
         logger.info("Initialized database and tables")
 
         print("STARTUP")

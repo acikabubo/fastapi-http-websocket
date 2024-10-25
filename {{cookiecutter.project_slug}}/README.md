@@ -1,3 +1,7 @@
+# Project generate
+
+cookiecutter --overwrite-if-exists <path-of-cookiecutter-template>
+
 # Authentication
 
 TODO
