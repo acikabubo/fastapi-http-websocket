@@ -38,6 +38,9 @@ services:
       context: ..
       dockerfile: docker/Dockerfile
 
+    container_name: {{cookiecutter.project_slug}}-server
+    hostname: {{cookiecutter.project_slug}}-server
+
     networks:
       - {{cookiecutter.project_slug}}-network
 

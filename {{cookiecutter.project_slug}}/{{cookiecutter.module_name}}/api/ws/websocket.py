@@ -4,7 +4,7 @@ from starlette import status
 from starlette.endpoints import WebSocketEndpoint
 from starlette.websockets import WebSocket
 
-from app import ws_clients
+from {{cookiecutter.module_name}} import ws_clients
 from {{cookiecutter.module_name}}.api.ws.connection_manager import connection_manager
 from {{cookiecutter.module_name}}.logging import logger
 from {{cookiecutter.module_name}}.schemas.response import ResponseModel

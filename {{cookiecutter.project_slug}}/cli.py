@@ -10,7 +10,7 @@ typer_app = typer.Typer()
 console = Console()
 
 
-@typer_{{cookiecutter.module_name}}.command()
+@typer_app.command()
 def ws_handlers():
     """
     Prints a table of all the registered WebSocket handlers and their corresponding package IDs.
@@ -74,7 +74,7 @@ def __pkg_id_input() -> str:
     return pkg_id
 
 
-@typer_{{cookiecutter.module_name}}.command()
+@typer_app.command()
 def generate_new_ws_handler():
     """
     This function generates a new WebSocket handler module based on user input.

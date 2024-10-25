@@ -148,18 +148,18 @@ def application() -> FastAPI:
     )
 
     # Add event handlers
-    {{cookiecutter.module_name}}.add_event_handler("startup", startup())  # FIXME: Is it necessary?
-    {{cookiecutter.module_name}}.add_event_handler("shutdown", shutdown())  # FIXME: Is it necessary?
+    app.add_event_handler("startup", startup())  # FIXME: Is it necessary?
+    app.add_event_handler("shutdown", shutdown())  # FIXME: Is it necessary?
 
     # Collect routers
-    {{cookiecutter.module_name}}.include_router(collect_subrouters())
+    app.include_router(collect_subrouters())
 
     # Middlewares
-    {{cookiecutter.module_name}}.add_middleware(
+    app.add_middleware(
         PermAuthHTTPMiddleware,
         actions=read_json_file(ACTIONS_FILE_PATH),
     )  # FIXME:
-    {{cookiecutter.module_name}}.add_middleware(AuthenticationMiddleware, backend=AuthBackend())
+    app.add_middleware(AuthenticationMiddleware, backend=AuthBackend())
 
     return app
 
