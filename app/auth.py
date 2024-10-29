@@ -45,16 +45,22 @@ class AuthBackend(AuthenticationBackend):
         # )
 
         # FIXME: Simulate keycloak user login
-        kc_manager = KeycloakManager()
+        try:
+            kc_manager = KeycloakManager()
 
-        token = kc_manager.login("acika", "12345")
-        user_data = kc_manager.openid.decode_token(token["access_token"])
+            token = kc_manager.login("acika", "12345")
+            user_data = kc_manager.openid.decode_token(token["access_token"])
 
-        # Make logged in user object
-        user: UserModel = UserModel(**user_data)
-        roles = user.roles
-
-        return AuthCredentials(roles), AuthUser(user)
+            # Make logged in user object
+            user: UserModel = UserModel(**user_data)
+            roles = user.roles
+            return AuthCredentials(roles), AuthUser(user)
+        except KeycloakAuthenticationError as ex:
+            raise HTTPException(
+                status_code=ex.response_code,
+                detail="Invalid credentials",
+                headers={"WWW-Authenticate": "Basic"},
+            )
 
 
 class JWTBearer(HTTPBearer):
