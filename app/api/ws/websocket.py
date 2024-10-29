@@ -10,7 +10,7 @@ from app.api.ws.connection_manager import connection_manager
 from app.logging import logger
 from app.schemas.response import ResponseModel
 from app.settings import USER_SESSION_REDIS_KEY_PREFIX
-from app.storage.redis import add_kc_user_session, get_auth_redis_connection
+from app.storage.redis import get_auth_redis_connection
 
 
 class PackagedWebSocket(WebSocket):
@@ -84,7 +84,7 @@ class PackageAuthWebSocketEndpoint(WebSocketEndpoint):
         self.user = user
 
         # Set user username in redis with TTL from expired seconds from keycloak
-        await add_kc_user_session(self.r, user)
+        await self.r.add_kc_user_session(user)
 
         # Map username with websocket instance
         ws_clients[USER_SESSION_REDIS_KEY_PREFIX + user.username] = websocket

@@ -77,8 +77,8 @@ def application() -> FastAPI:
     )
 
     # Add event handlers
-    app.add_event_handler("startup", startup())  # FIXME: Is it necessary?
-    app.add_event_handler("shutdown", shutdown())  # FIXME: Is it necessary?
+    app.add_event_handler("startup", startup())
+    app.add_event_handler("shutdown", shutdown())
 
     # Collect routers
     app.include_router(collect_subrouters())
