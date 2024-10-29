@@ -1,11 +1,8 @@
 # Uvicorn application factory <https://www.uvicorn.org/#application-factories>
 from asyncio import (
-    CancelledError,
-    TimeoutError,
     create_task,
     ensure_future,
     gather,
-    sleep,
 )
 
 from fastapi import FastAPI
@@ -15,12 +12,12 @@ from {{cookiecutter.module_name}}.auth import AuthBackend
 from {{cookiecutter.module_name}}.logging import logger
 from {{cookiecutter.module_name}}.middlewares.action import PermAuthHTTPMiddleware
 from {{cookiecutter.module_name}}.routing import collect_subrouters
-from {{cookiecutter.module_name}}.settings import ACTIONS_FILE_PATH, USER_SESSION_REDIS_KEY_PREFIX
+from {{cookiecutter.module_name}}.settings import ACTIONS_FILE_PATH
 from {{cookiecutter.module_name}}.storage.db import wait_and_init_db
-{% if cookiecutter.use_redis == "y" and cookiecutter.use_keycloak == "y" %}
-from {{cookiecutter.module_name}}.storage.redis import get_auth_redis_connection
-{% endif %}
 from {{cookiecutter.module_name}}.utils import read_json_file
+{% if cookiecutter.use_redis == "y" and cookiecutter.use_keycloak == "y" %}
+from {{cookiecutter.module_name}}.tasks.kc_user_session import kc_user_session_task
+{% endif %}
 
 # Define your action map here
 action_map = {1: "create_author", 2: "create_genre"}
@@ -28,66 +25,6 @@ action_map = {1: "create_author", 2: "create_genre"}
 tasks = []
 ws_clients = {}
 
-{% if cookiecutter.use_redis == "y" and cookiecutter.use_keycloak == "y" %}
-async def kc_user_session_task():
-    """
-    Runs a task that monitors the expiration of user sessions stored in Redis.
-
-    This task subscribes to the Redis `__keyevent@*__:expired` channel to listen for expired keys.
-    When an expired key is detected that matches the `USER_SESSION_REDIS_KEY_PREFIX`,
-    the task closes the associated WebSocket connection (if it exists) and removes the user from the `ws_clients` dictionary.
-
-    This ensures that when a user's session expires, their WebSocket connection is properly closed and cleaned up.
-    """
-    # Get auth redis instance
-    r = await get_auth_redis_connection()
-
-    rch = None
-
-    while True:
-        try:
-            if not rch:
-                rch = r.pubsub()
-                await rch.psubscribe("__keyevent@*__:expired")
-
-            event = await rch.get_message(
-                ignore_subscribe_messages=True, timeout=1
-            )
-
-            if not event:
-                await sleep(0.5)
-                continue
-
-            evt_key = event["data"]
-
-            if not evt_key.startswith(USER_SESSION_REDIS_KEY_PREFIX):
-                await sleep(1)
-                continue
-
-            # Close websocket connection and delete user
-            # relation with websocket connection
-            if ws_conn := ws_clients.get(evt_key):
-                await ws_conn.close()
-                del ws_clients[evt_key]
-
-            logger.info(f'Session for user "{evt_key}" has been expired')
-
-            await sleep(1)
-
-        except CancelledError:
-            logger.info("Task for keycloak user session cancelled!")
-            break
-
-        except TimeoutError:
-            await sleep(0.1)
-
-        except Exception as ex:
-            logger.error(
-                f"Keycloak user session task error occurred with: {ex}"
-            )
-            rch = None
-            await sleep(0.5)
-{% endif %}
 
 def startup():
     """
@@ -101,9 +38,9 @@ def startup():
 
         print("STARTUP")
         {% if cookiecutter.use_redis == "y" and cookiecutter.use_keycloak == "y" %}
-        # tasks.append(create_task(kc_user_session_task()))
-        {% endif %}
+        tasks.append(create_task(kc_user_session_task()))
         logger.info("Created task for user session")
+        {% endif %}
 
     return wrapper
 
