@@ -6,7 +6,12 @@ from json import loads
 from redis.asyncio import ConnectionPool, Redis
 
 from app.schemas.user import UserModel
-from app.settings import REDIS_IP, USER_SESSION_REDIS_KEY_PREFIX
+from app.settings import (
+    AUTH_REDIS_DB,
+    MAIN_REDIS_DB,
+    REDIS_IP,
+    USER_SESSION_REDIS_KEY_PREFIX,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +48,7 @@ class RedisPool:
         await r.pexpire(user_session_key, (user.expired_seconds + 10) * 1000)
 
 
-async def get_redis_connection(db=1):
+async def get_redis_connection(db=MAIN_REDIS_DB):
     try:
         return await RedisPool.get_instance(db)
     except Exception as ex:
@@ -51,7 +56,7 @@ async def get_redis_connection(db=1):
 
 
 async def get_auth_redis_connection():
-    return await get_redis_connection(db=10)
+    return await get_redis_connection(db=AUTH_REDIS_DB)
 
 
 class REventHandler:
