@@ -1,16 +1,26 @@
-FROM python:3.12.1-slim-bullseye
+# FROM python:3.12.1-slim-bullseye
+FROM ghcr.io/astral-sh/uv:python3.13-alpine
 
-LABEL maintainer="Aleksandar Krsteski <aleksandar.krsteski@gmail.comved.mk>"
+LABEL maintainer="Aleksandar Krsteski <aleksandar.krsteski@ved.mk>"
 LABEL description="HTTP & WebSocket Handlers"
 
 # General system staff
-RUN apt update && apt-get upgrade -y && apt autoremove -y && \
-    apt install -my locales tmux rsync curl tig vim build-essential
+RUN apk update && apk upgrade && \
+    apk add --no-cache \
+    tzdata \
+    bash \
+    tmux \
+    rsync \
+    curl \
+    tig \
+    vim \
+    build-base \
+    python3-dev
 
-RUN echo 'Europe/Skopje' > /etc/timezone
+# Set timezone
+RUN cp /usr/share/zoneinfo/Europe/Skopje /etc/localtime
+RUN echo "Europe/Skopje" > /etc/timezone
 ENV TZ=Europe/Skopje
-RUN echo 'en_US.UTF-8 UTF-8' > /etc/locale.gen
-RUN locale-gen
 
 # Setup normal user. If not passed as build argument use 'devel' as default
 RUN addgroup --gid 1000 devel && \
@@ -20,7 +30,8 @@ RUN pip install --upgrade pip
 
 # Install dependencies
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# RUN pip install --no-cache-dir -r requirements.txt
+RUN uv pip install --no-cache-dir -r requirements.txt --system
 
 # Install fixuid
 RUN USER=devel && \
