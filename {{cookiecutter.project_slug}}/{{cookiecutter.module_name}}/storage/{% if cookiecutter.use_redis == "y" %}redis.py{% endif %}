@@ -11,9 +11,13 @@ from json import loads
 from redis.asyncio import ConnectionPool, Redis
 
 from {{cookiecutter.module_name}}.schemas.user import UserModel
-from {{cookiecutter.module_name}}.settings import REDIS_IP, USER_SESSION_REDIS_KEY_PREFIX
+from {{cookiecutter.module_name}}.settings import (
+    REDIS_IP,
+    USER_SESSION_REDIS_KEY_PREFIX,
+    AUTH_REDIS_DB,
+    MAIN_REDIS_DB,
+)
 from {{cookiecutter.module_name}}.logging import logger
-
 
 
 class RedisPool:
@@ -48,7 +52,7 @@ class RedisPool:
         await r.pexpire(user_session_key, (user.expired_seconds + 10) * 1000)
 
 
-async def get_redis_connection(db=1):
+async def get_redis_connection(db=MAIN_REDIS_DB):
     try:
         return await RedisPool.get_instance(db)
     except Exception as ex:
@@ -56,7 +60,7 @@ async def get_redis_connection(db=1):
 
 
 async def get_auth_redis_connection():
-    return await get_redis_connection(db=10)
+    return await get_redis_connection(db=AUTH_REDIS_DB)
 
 
 class REventHandler:
