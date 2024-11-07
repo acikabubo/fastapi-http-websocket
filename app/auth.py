@@ -15,8 +15,8 @@ from starlette.authentication import (
     BaseUser,
 )
 
-from app.keycloak_manager import KeycloakManager
 from app.logging import logger
+from app.managers.keycloak_manager import KeycloakManager
 from app.schemas.user import UserModel
 from app.settings import KEYCLOAK_CLIENT_ID
 

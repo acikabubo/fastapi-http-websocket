@@ -6,8 +6,8 @@ from starlette.endpoints import WebSocketEndpoint
 from starlette.websockets import WebSocket
 
 from app import ws_clients
-from app.api.ws.connection_manager import connection_manager
 from app.logging import logger
+from app.managers.websocket_connection_manager import connection_manager
 from app.schemas.response import ResponseModel
 from app.settings import USER_SESSION_REDIS_KEY_PREFIX
 from app.storage.redis import get_auth_redis_connection

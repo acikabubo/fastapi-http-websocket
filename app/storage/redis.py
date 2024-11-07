@@ -39,6 +39,7 @@ class RedisPool:
         redis_instance.add_kc_user_session = partial(
             cls.add_kc_user_session, redis_instance
         )
+
         return redis_instance
 
     @staticmethod
