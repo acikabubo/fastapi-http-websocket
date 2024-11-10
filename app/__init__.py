@@ -1,4 +1,5 @@
 # Uvicorn application factory <https://www.uvicorn.org/#application-factories>
+import uvicorn
 from asyncio import create_task, ensure_future, gather
 
 from fastapi import FastAPI
@@ -12,12 +13,16 @@ from app.settings import ACTIONS_FILE_PATH
 from app.storage.db import wait_and_init_db
 from app.tasks.kc_user_session import kc_user_session_task
 from app.utils import read_json_file
+from app.system import calculate_workers
 
 # Define your action map here
 action_map = {1: "create_author", 2: "create_genre"}
 
 tasks = []
 ws_clients = {}
+
+# Initialize based on system resources
+WORKER_COUNT, THREAD_COUNT = calculate_workers()
 
 
 def startup():
@@ -92,5 +97,24 @@ def application() -> FastAPI:
 
     return app
 
+
+# FIXME: Fix this
+if __name__ == "__main__":
+    config = uvicorn.Config(
+        application,  # Assuming your app instance is in main.py
+        host="0.0.0.0",
+        port=8001,
+        workers=worker_count,
+        loop="asyncio",
+        http="httptools",
+        ws="websockets",
+        proxy_headers=True,
+        worker_class="uvicorn.workers.UvicornWorker",
+        limit_concurrency=worker_count * thread_count,  # Limit concurrent connections
+        timeout_keep_alive=30,  # Connection keepalive timeout
+    )
+
+    server = uvicorn.Server(config)
+    server.run()
 
 app = application()  # Need for fastapi cli

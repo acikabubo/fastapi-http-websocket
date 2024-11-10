@@ -15,7 +15,10 @@ RUN apk update && apk upgrade && \
     tig \
     vim \
     build-base \
-    python3-dev
+    python3-dev \
+    gcc \
+    musl-dev \
+    linux-headers
 
 # Set timezone
 RUN cp /usr/share/zoneinfo/Europe/Skopje /etc/localtime
