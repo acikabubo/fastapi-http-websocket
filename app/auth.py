@@ -16,7 +16,7 @@ from starlette.authentication import (
 )
 
 from app.logging import logger
-from app.managers.keycloak_manager import KeycloakManager
+from app.managers.keycloak_auth_manager import KeycloakAuthManager
 from app.schemas.user import UserModel
 from app.settings import KEYCLOAK_CLIENT_ID
 
@@ -46,12 +46,12 @@ class AuthBackend(AuthenticationBackend):
 
         # FIXME: Simulate keycloak user login
         try:
-            kc_manager = KeycloakManager()
+            kc_auth_manager = KeycloakAuthManager()
 
-            token = kc_manager.login("acika", "12345")
+            token = kc_auth_manager.login("acika", "12345")
 
             # Make logged in user object
-            user: UserModel = kc_manager.get_user_from_token(token)
+            user: UserModel = kc_auth_manager.get_user_from_token(token)
 
             return AuthCredentials(user.roles), AuthUser(user)
         except KeycloakAuthenticationError as ex:
@@ -86,8 +86,8 @@ class JWTBearer(HTTPBearer):
 
     def verify_jwt(self, jwtoken: str):
         try:
-            kc_manager = KeycloakManager()
-            payload = kc_manager.openid.decode_token(jwtoken)
+            kc_auth_manager = KeycloakAuthManager()
+            payload = kc_auth_manager.openid.decode_token(jwtoken)
 
             user_roles = (
                 payload.get("resource_access", {})
@@ -117,10 +117,12 @@ def logged_kc_user(
     credentials: Annotated[HTTPBasicCredentials, Depends(HTTPBasic())],
 ) -> UserModel:
     try:
-        kc_manager = KeycloakManager()
-        token = kc_manager.login(credentials.username, credentials.password)
+        kc_auth_manager = KeycloakAuthManager()
+        token = kc_auth_manager.login(
+            credentials.username, credentials.password
+        )
 
-        user: UserModel = kc_manager.get_user_from_token(token)
+        user: UserModel = kc_auth_manager.get_user_from_token(token)
 
         return user
     except KeycloakAuthenticationError as ex:
@@ -136,10 +138,12 @@ async def get_admin_user(
     credentials: Annotated[HTTPBasicCredentials, Depends(HTTPBasic())],
 ) -> UserModel:
     try:
-        kc_manager = KeycloakManager()
-        token = kc_manager.login(credentials.username, credentials.password)
+        kc_auth_manager = KeycloakAuthManager()
+        token = kc_auth_manager.login(
+            credentials.username, credentials.password
+        )
 
-        user: UserModel = kc_manager.get_user_from_token(token)
+        user: UserModel = kc_auth_manager.get_user_from_token(token)
 
         if not user.is_admin:
             raise HTTPException(

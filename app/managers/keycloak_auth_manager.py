@@ -15,12 +15,12 @@ from app.settings import (
 )
 
 
-class KeycloakManager:
+class KeycloakAuthManager:
     __instance = None
 
     def __init__(self):
         """
-        Initialize KeycloakManager instance.
+        Initialize KeycloakAuthManager instance.
 
         This method initializes two Keycloak clients: `admin` and `openid`.
         The `admin` client is used for administrative tasks, while the `openid` client is used for OpenID Connect operations.
@@ -114,7 +114,7 @@ class KeycloakManager:
 # Create singleton instance
 @lru_cache()
 def get_auth_handler():
-    return KeycloakManager()
+    return KeycloakAuthManager()
 
 
 # OAuth2 scheme for FastAPI
@@ -127,7 +127,7 @@ oauth2_scheme = OAuth2AuthorizationCodeBearer(
 # Dependency for protected routes
 async def get_current_user(
     token: str = Depends(oauth2_scheme),
-    auth_handler: KeycloakManager = Depends(get_auth_handler),
+    auth_handler: KeycloakAuthManager = Depends(get_auth_handler),
 ) -> UserModel:
     return await auth_handler.get_user_from_token(token)
 

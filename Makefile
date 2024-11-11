@@ -30,6 +30,10 @@ serve:
 	@echo "Staring DHC Scada Backend Server..."
 	@uvicorn app:application --host 0.0.0.0 --reload
 
+serve-with-workers:
+	@echo "Staring DHC Scada Backend Server With Workers..."
+	@python run_server.py
+
 # To execute this commands first need to be executed `make shell`
 ws-handlers:
 	@echo "Make table with PkgID's and related websocket handlers"
