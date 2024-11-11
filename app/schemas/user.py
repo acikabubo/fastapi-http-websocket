@@ -15,9 +15,13 @@ class UserModel(BaseModel):
     username: str = Field(..., alias="preferred_username")
     roles: list[str] = []
     attributes: dict[str, Any] = {}
+    is_admin: bool = False
 
     def __init__(self, **kwargs):
         kwargs["roles"] = kwargs.get("realm_access", {}).get("roles", [])
+        kwargs["is_admin"] = "admin" in kwargs.get("realm_access", {}).get(
+            "roles", []
+        )
 
         super(UserModel, self).__init__(**kwargs)
 

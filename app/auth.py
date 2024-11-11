@@ -49,12 +49,11 @@ class AuthBackend(AuthenticationBackend):
             kc_manager = KeycloakManager()
 
             token = kc_manager.login("acika", "12345")
-            user_data = kc_manager.openid.decode_token(token["access_token"])
 
             # Make logged in user object
-            user: UserModel = UserModel(**user_data)
-            roles = user.roles
-            return AuthCredentials(roles), AuthUser(user)
+            user: UserModel = kc_manager.get_user_from_token(token)
+
+            return AuthCredentials(user.roles), AuthUser(user)
         except KeycloakAuthenticationError as ex:
             raise HTTPException(
                 status_code=ex.response_code,
@@ -120,9 +119,33 @@ def logged_kc_user(
     try:
         kc_manager = KeycloakManager()
         token = kc_manager.login(credentials.username, credentials.password)
-        user_data = kc_manager.openid.decode_token(token["access_token"])
 
-        user: UserModel = UserModel(**user_data)
+        user: UserModel = kc_manager.get_user_from_token(token)
+
+        return user
+    except KeycloakAuthenticationError as ex:
+        raise HTTPException(
+            status_code=ex.response_code,
+            detail="Invalid credentials",
+            headers={"WWW-Authenticate": "Basic"},
+        )
+
+
+# Admin-only dependency
+async def get_admin_user(
+    credentials: Annotated[HTTPBasicCredentials, Depends(HTTPBasic())],
+) -> UserModel:
+    try:
+        kc_manager = KeycloakManager()
+        token = kc_manager.login(credentials.username, credentials.password)
+
+        user: UserModel = kc_manager.get_user_from_token(token)
+
+        if not user.is_admin:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Admin access required",
+            )
 
         return user
     except KeycloakAuthenticationError as ex:
