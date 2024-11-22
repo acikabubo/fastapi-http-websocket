@@ -17,7 +17,7 @@ from starlette.authentication import (
     BaseUser,
 )
 {% if cookiecutter.use_keycloak == "y" %}
-from {{cookiecutter.module_name}}.keycloak_manager import KeycloakManager
+from {{cookiecutter.module_name}}.managers.keycloak_manager import KeycloakManager
 {% endif %}
 from {{cookiecutter.module_name}}.logging import logger
 from {{cookiecutter.module_name}}.schemas.user import UserModel

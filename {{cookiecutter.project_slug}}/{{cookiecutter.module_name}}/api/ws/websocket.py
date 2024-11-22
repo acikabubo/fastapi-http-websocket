@@ -5,7 +5,7 @@ from starlette.endpoints import WebSocketEndpoint
 from starlette.websockets import WebSocket
 
 from {{cookiecutter.module_name}} import ws_clients
-from {{cookiecutter.module_name}}.api.ws.connection_manager import connection_manager
+from {{cookiecutter.module_name}}.managers.websocket_connection_manager import connection_manager
 from {{cookiecutter.module_name}}.logging import logger
 from {{cookiecutter.module_name}}.schemas.response import ResponseModel
 from {{cookiecutter.module_name}}.settings import USER_SESSION_REDIS_KEY_PREFIX

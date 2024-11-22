@@ -1,4 +1,5 @@
 import logging
+from functools import partial
 from asyncio import (
     CancelledError,
     TimeoutError,
