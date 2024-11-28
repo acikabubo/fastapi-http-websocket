@@ -34,3 +34,6 @@ new-ws-handlers:
 
 code-docs:
 	pydoc -n 0.0.0.0 -p 8080
+
+ruff-check:
+	ruff check --config=pyproject.toml

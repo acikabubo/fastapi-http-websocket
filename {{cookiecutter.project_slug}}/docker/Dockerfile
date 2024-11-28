@@ -1,26 +1,42 @@
-FROM python:3.12.1-slim-bullseye
+FROM python:3.13.0-slim-bullseye
+# FROM ghcr.io/astral-sh/uv:python3.13-alpine
 
-LABEL maintainer="Aleksandar Krsteski <aleksandar.krsteski@gmail.comved.mk>"
+LABEL maintainer="Aleksandar Krsteski <aleksandar.krsteski@ved.mk>"
 LABEL description="HTTP & WebSocket Handlers"
 
 # General system staff
-RUN apt update && apt-get upgrade -y && apt autoremove -y && \
-    apt install -my locales tmux rsync curl tig vim build-essential
+RUN apt update
+RUN apt-get upgrade -y && apt autoremove -y
+RUN apt install -my \
+    bash \
+    build-essential \
+    curl \
+    libpq-dev \
+    locales \
+    python3-dev \
+    rsync \
+    tig \
+    tmux \
+    tzdata \
+    vim
 
-RUN echo 'Europe/Skopje' > /etc/timezone
+# Set timezone
+RUN cp /usr/share/zoneinfo/Europe/Skopje /etc/localtime
+RUN echo "Europe/Skopje" > /etc/timezone
 ENV TZ=Europe/Skopje
-RUN echo 'en_US.UTF-8 UTF-8' > /etc/locale.gen
-RUN locale-gen
 
 # Setup normal user. If not passed as build argument use 'devel' as default
 RUN addgroup --gid 1000 devel && \
     adduser --uid 1000 --ingroup devel --home /home/devel --shell /bin/bash --disabled-password --gecos "" devel
 
-RUN pip install --upgrade pip
+# Install uv
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+
+# RUN pip install --upgrade pip
 
 # Install dependencies
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN uv pip install --no-cache-dir -r requirements.txt --system
 
 # Install fixuid
 RUN USER=devel && \
@@ -31,10 +47,15 @@ RUN USER=devel && \
     mkdir -p /etc/fixuid && \
     printf "user: $USER\ngroup: $GROUP\n" > /etc/fixuid/config.yml
 
-WORKDIR /project
+# Switch to user
+USER devel:devel
 
 # Copy the application code
-COPY . .
+COPY . /project
+
+# Install the application dependencies
+WORKDIR /project
+# RUN uv sync --frozen --no-cache
 
 # Expose the port the app runs on
 EXPOSE 8000
@@ -42,7 +63,7 @@ EXPOSE 8000
 ENV PYTHONPATH=/project
 
 # Export local user executables for python scripts
-ENV PATH "$PATH:/home/devel/.local/bin"
+ENV PATH "$PATH:.venv/bin/:home/devel/.local/bin"
 
 ENTRYPOINT ["fixuid"]
 

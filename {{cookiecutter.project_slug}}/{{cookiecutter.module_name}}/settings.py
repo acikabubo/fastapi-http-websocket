@@ -1,5 +1,4 @@
 from decouple import config
-from starlette.datastructures import Secret
 
 ACTIONS_FILE_PATH = config(
     "ACTIONS_FILE_PATH", cast=str, default="actions.json"
