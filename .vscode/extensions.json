@@ -1,0 +1,14 @@
+{
+    "recommendations": [
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "charliermarsh.ruff",
+        "tamasfe.even-better-toml",
+        "streetsidesoftware.code-spell-checker"
+        // "aaron-bond.better-comments",
+        // "github.vscode-github-actions",
+        // "bierner.markdown-mermaid",
+        // "postman.postman-for-vscode",
+        // "ms-vscode-remote.remote-containers",
+    ]
+}

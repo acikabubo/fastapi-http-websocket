@@ -5,7 +5,7 @@ from typing import Any, Callable, Dict, Optional, Type
 from sqlalchemy import Select
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.asyncio import (
-    AsyncAttrs,
+    # AsyncAttrs,  # TODO: Check sqlmodel docs
     AsyncEngine,
     create_async_engine,
 )

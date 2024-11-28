@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Query, Security
+from fastapi import APIRouter, Depends, Security
 
 from app.auth import JWTBearer, logged_kc_user
 from app.models.author import Author

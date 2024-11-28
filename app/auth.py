@@ -1,4 +1,3 @@
-import secrets
 from typing import Annotated, List
 
 from fastapi import Depends, HTTPException, Request, status
@@ -90,11 +89,11 @@ class JWTBearer(HTTPBearer):
             kc_manager = KeycloakManager()
             payload = kc_manager.openid.decode_token(jwtoken)
 
-            user_roles = (
-                payload.get("resource_access", {})
-                .get(KEYCLOAK_CLIENT_ID, {})
-                .get("roles", [])
-            )
+            # user_roles = (
+            #     payload.get("resource_access", {})
+            #     .get(KEYCLOAK_CLIENT_ID, {})
+            #     .get("roles", [])
+            # )
 
             # print()
             # print(f"    User roles: {user_roles}")

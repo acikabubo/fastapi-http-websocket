@@ -1,6 +1,5 @@
 from typing import Type
 
-from icecream import ic
 from starlette import status
 from starlette.endpoints import WebSocketEndpoint
 from starlette.websockets import WebSocket

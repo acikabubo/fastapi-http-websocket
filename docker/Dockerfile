@@ -1,21 +1,24 @@
-# FROM python:3.12.1-slim-bullseye
-FROM ghcr.io/astral-sh/uv:python3.13-alpine
+FROM python:3.13.0-slim-bullseye
+# FROM ghcr.io/astral-sh/uv:python3.13-alpine
 
 LABEL maintainer="Aleksandar Krsteski <aleksandar.krsteski@ved.mk>"
 LABEL description="HTTP & WebSocket Handlers"
 
 # General system staff
-RUN apk update && apk upgrade && \
-    apk add --no-cache \
-    tzdata \
+RUN apt update
+RUN apt-get upgrade -y && apt autoremove -y
+RUN apt install -my \
     bash \
-    tmux \
-    rsync \
+    build-essential \
     curl \
+    libpq-dev \
+    locales \
+    python3-dev \
+    rsync \
     tig \
-    vim \
-    build-base \
-    python3-dev
+    tmux \
+    tzdata \
+    vim
 
 # Set timezone
 RUN cp /usr/share/zoneinfo/Europe/Skopje /etc/localtime
@@ -26,11 +29,13 @@ ENV TZ=Europe/Skopje
 RUN addgroup --gid 1000 devel && \
     adduser --uid 1000 --ingroup devel --home /home/devel --shell /bin/bash --disabled-password --gecos "" devel
 
-RUN pip install --upgrade pip
+# Install uv
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+
+# RUN pip install --upgrade pip
 
 # Install dependencies
 COPY requirements.txt .
-# RUN pip install --no-cache-dir -r requirements.txt
 RUN uv pip install --no-cache-dir -r requirements.txt --system
 
 # Install fixuid
@@ -45,10 +50,12 @@ RUN USER=devel && \
 # Switch to user
 USER devel:devel
 
-WORKDIR /project
-
 # Copy the application code
-COPY . .
+COPY . /project
+
+# Install the application dependencies
+WORKDIR /project
+# RUN uv sync --frozen --no-cache
 
 # Expose the port the app runs on
 EXPOSE 8000
@@ -56,7 +63,7 @@ EXPOSE 8000
 ENV PYTHONPATH=/project
 
 # Export local user executables for python scripts
-ENV PATH "$PATH:/home/devel/.local/bin"
+ENV PATH "$PATH:.venv/bin/:home/devel/.local/bin"
 
 ENTRYPOINT ["fixuid"]
 

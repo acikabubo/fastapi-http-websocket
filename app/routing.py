@@ -4,7 +4,6 @@ from importlib import import_module
 from typing import Any
 
 from fastapi import APIRouter
-from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.api.ws.constants import PkgID, RSPCode
 from app.logging import logger
