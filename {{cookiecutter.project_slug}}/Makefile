@@ -20,7 +20,7 @@ shell:
 # @fastapi run app
 serve:
 	@echo "Staring DHC Scada Backend Server..."
-	@uvicorn {{cookiecutter.module_name}}:application --host 0.0.0.0 --reload
+	@uvicorn {{cookiecutter.module_name}}:application --host 0.0.0.0 --reload --log-config uvicorn_logging.json
 
 
 # To execute this commands first need to be executed `make shell`
