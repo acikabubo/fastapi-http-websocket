@@ -1,4 +1,4 @@
-from typing import Annotated, List
+from typing import Annotated, Any, List
 
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import (
@@ -6,6 +6,7 @@ from fastapi.security import (
     HTTPBasic,
     HTTPBasicCredentials,
     HTTPBearer,
+    OAuth2PasswordBearer
 )
 {% if cookiecutter.use_keycloak == "y" %}
 from keycloak.exceptions import KeycloakAuthenticationError
@@ -82,7 +83,7 @@ class JWTBearer(HTTPBearer):
                 detail="Invalid or expired token",
             )
 
-        request.scope["user"] = UserModel(**payload)
+        request.scope["user"].obj = UserModel(**payload)
 
         return payload
 
@@ -114,6 +115,40 @@ class JWTBearer(HTTPBearer):
         except Exception as ex:
             logger.error(ex)
 
+
+def validate_token(token: str):
+    """
+    Validate Keycloak token
+    """
+    try:
+        kc_manager = KeycloakManager()
+
+        # Validate token configuration
+        return kc_manager.openid.decode_token(token)
+    except Exception as ex:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+
+def get_current_user(
+    token: str = Depends(OAuth2PasswordBearer(tokenUrl="/token")),
+) -> dict[str, Any]:
+    """
+    Dependency to get the current authenticated user
+    """
+    # Validate the token
+    user_data = validate_token(token)
+
+    # Extract user information
+    user: UserModel = UserModel(**user_data)
+
+    return user
+
+
+# USED FOR DEVELOP
 
 def logged_kc_user(
     credentials: Annotated[HTTPBasicCredentials, Depends(HTTPBasic())],

@@ -12,6 +12,7 @@ from {{cookiecutter.module_name}}.auth import AuthBackend
 from {{cookiecutter.module_name}}.logging import logger
 from {{cookiecutter.module_name}}.middlewares.action import PermAuthHTTPMiddleware
 from {{cookiecutter.module_name}}.routing import collect_subrouters
+from {{cookiecutter.module_name}}.schemas.roles import ROLE_CONFIG_SCHEMA
 from {{cookiecutter.module_name}}.settings import ACTIONS_FILE_PATH
 from {{cookiecutter.module_name}}.storage.db import wait_and_init_db
 from {{cookiecutter.module_name}}.utils import read_json_file
@@ -94,7 +95,7 @@ def application() -> FastAPI:
     # Middlewares
     app.add_middleware(
         PermAuthHTTPMiddleware,
-        actions=read_json_file(ACTIONS_FILE_PATH),
+        actions=read_json_file(ACTIONS_FILE_PATH, ROLE_CONFIG_SCHEMA),
     )  # FIXME:
     app.add_middleware(AuthenticationMiddleware, backend=AuthBackend())
 

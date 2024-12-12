@@ -1,3 +1,13 @@
 {
-    "1": ["get-authors"]
+    "roles": [
+      "get-authors"
+    ],
+    "ws": {
+        "1": "get-authors"
+    },
+    "http": {
+        "/authors": {
+           "GET": "get-authors"
+        }
+    }
 }

@@ -1,5 +1,6 @@
 import os
 import pkgutil
+from functools import lru_cache
 from importlib import import_module
 from typing import Any
 
@@ -14,6 +15,10 @@ from {{cookiecutter.module_name}}.schemas.generic_typing import (
 )
 from {{cookiecutter.module_name}}.schemas.request import RequestModel
 from {{cookiecutter.module_name}}.schemas.response import ResponseModel
+from {{cookiecutter.module_name}}.schemas.roles import ROLE_CONFIG_SCHEMA
+from {{cookiecutter.module_name}}.schemas.user import UserModel
+from {{cookiecutter.module_name}}.settings import ACTIONS_FILE_PATH
+from {{cookiecutter.module_name}}.utils import read_json_file
 
 
 class PackageRouter:
@@ -28,6 +33,10 @@ class PackageRouter:
         self.validators_registry: dict[
             PkgID, tuple[JsonSchemaType, ValidatorType]
         ] = {}
+        __required_roles: dict[str, str] = read_json_file(
+            ACTIONS_FILE_PATH, ROLE_CONFIG_SCHEMA
+        )
+        self.required_roles = __required_roles["ws"]
 
     def register(
         self,
@@ -73,13 +82,32 @@ class PackageRouter:
     def __get_handler(self, pkg_id: PkgID) -> HandlerCallableType:
         return self.handlers_registry[pkg_id]
 
+    @lru_cache(maxsize=1000)
+    def check_permission(self, pkg_id: int, user: UserModel) -> bool:
+        """
+        Cached permission check with LRU (Least Recently Used) caching
+        - Caches results based on package ID and user's roles
+        - Automatic cache management with max 1000 entries
+        """
+        required_role: str = self.required_roles.get(str(pkg_id), "")
+
+        # Check if user has the required role
+        has_permission = required_role in user.roles
+
+        # Optional: Log cache misses
+        if not has_permission:
+            logger.info(f"Permission denied for user {user.username}")
+
+        return has_permission
+
     async def handle_request(
-        self, request: RequestModel
+        self, user: UserModel, request: RequestModel
     ) -> ResponseModel[dict[str, Any]]:
         """
         Handles a request by finding the appropriate handler and validator for the request's package ID (pkg_id), validating the request data if a validator is registered, and then calling the registered handler function.
 
         Args:
+            user (UserModel): The user making the request.
             request (RequestModel): The request object containing the package ID and other request data.
 
         Returns:
@@ -91,6 +119,16 @@ class PackageRouter:
                 request.req_id,
                 msg=f"No handler found for pkg_id {request.pkg_id}",
                 status_code=RSPCode.ERROR,
+            )
+
+        has_permission = self.check_permission(request.pkg_id, user)
+
+        if not has_permission:
+            return ResponseModel.err_msg(
+                request.pkg_id,
+                request.req_id,
+                msg=f"No permission for pkg_id {request.pkg_id}",
+                status_code=RSPCode.PERMISSION_DENIED,
             )
 
         json_schema, validator_func = self.validators_registry[request.pkg_id]

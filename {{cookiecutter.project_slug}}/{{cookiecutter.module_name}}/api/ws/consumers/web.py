@@ -2,6 +2,7 @@ from typing import Any
 
 from fastapi import APIRouter
 
+from {{cookiecutter.module_name}}.api.ws.handlers import load_handlers
 from {{cookiecutter.module_name}}.api.ws import (
     handlers,  # FIXME: Need this import for handler registration, try to find better way
 )
@@ -9,6 +10,8 @@ from {{cookiecutter.module_name}}.api.ws.websocket import PackageAuthWebSocketEn
 from {{cookiecutter.module_name}}.logging import logger
 from {{cookiecutter.module_name}}.routing import pkg_router
 from {{cookiecutter.module_name}}.schemas.request import RequestModel
+
+load_handlers()
 
 router = APIRouter()
 
@@ -32,7 +35,9 @@ class Web(PackageAuthWebSocketEndpoint):
     async def on_receive(self, websocket, data: dict[str, Any]):
         logger.debug(f"Receive data: {data}")
         request = RequestModel(**data)
-        response = await pkg_router.handle_request(request)
+        response = await pkg_router.handle_request(
+            self.scope["user"].obj, request
+        )
 
         await websocket.send_response(response)
         logger.debug(f"Successfully sent response for PkgID {request.pkg_id}")
