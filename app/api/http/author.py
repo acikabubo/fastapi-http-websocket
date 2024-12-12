@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, Security
 
-from app.auth import JWTBearer, logged_kc_user
+from app.auth import JWTBearer, get_current_user
 from app.models.author import Author
 from app.schemas.author import AuthorQueryParams
 from app.schemas.response import PaginatedResponseModel
@@ -33,10 +33,9 @@ async def create_author_endpoint(author: Author = Author) -> Author:
     "/authors",
     response_model=list[Author],
     summary="Get list of authors",
-    # dependencies=[Security(JWTBearer("REQUIRED-ROLE"))],
 )
 async def get_authors_endpoint(
-    user: UserModel = Depends(logged_kc_user),
+    user: UserModel = Depends(get_current_user),
     q: AuthorQueryParams = Depends(),
 ) -> list[Author]:
     """

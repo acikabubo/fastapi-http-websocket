@@ -8,6 +8,7 @@ from app.auth import AuthBackend
 from app.logging import logger
 from app.middlewares.action import PermAuthHTTPMiddleware
 from app.routing import collect_subrouters
+from app.schemas.roles import ROLE_CONFIG_SCHEMA
 from app.settings import ACTIONS_FILE_PATH
 from app.storage.db import wait_and_init_db
 from app.tasks.kc_user_session import kc_user_session_task
@@ -86,8 +87,8 @@ def application() -> FastAPI:
     # Middlewares
     app.add_middleware(
         PermAuthHTTPMiddleware,
-        actions=read_json_file(ACTIONS_FILE_PATH),
-    )  # FIXME:
+        actions=read_json_file(ACTIONS_FILE_PATH, ROLE_CONFIG_SCHEMA),
+    )
     app.add_middleware(AuthenticationMiddleware, backend=AuthBackend())
 
     return app

@@ -24,3 +24,7 @@ class UserModel(BaseModel):
     @property
     def expired_seconds(self):
         return self.expired_in - int(datetime.now().timestamp())
+
+    # This method is use for caching in PackageRouter class
+    def __hash__(self):
+        return hash(self.id)

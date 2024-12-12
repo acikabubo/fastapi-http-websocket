@@ -24,6 +24,130 @@ Authorization is enforced through a custom middleware `PermAuthHTTPMiddleware`:
   - Defined as a JSON structure (e.g., `ACTIONS_FILE_PATH`) that maps action IDs to permissions like `"create_author"` or `"create_genre"`.
   - The middleware checks user permissions against this map to ensure they can perform requested actions.
 
+
+```json
+{
+    "roles": [
+      "role1",
+      "role2",
+      "role3",
+    ],
+    "ws": {
+        "<PkgID>": "<required-role>"
+    },
+    "http": {
+        "<request-path>": {
+           "request-method": "<required-role>"
+        }
+    }
+}
+```
+
+### Routers
+
+#### Package router
+
+I'll analyze the code and create comprehensive Markdown documentation explaining its purpose, components, and functionality.
+
+# Package Router Documentation
+
+## Overview
+This code defines a robust routing and request handling system for a FastAPI-based web application, with a focus on WebSocket and API request management. The primary components are the `PackageRouter` class and the `collect_subrouters()` function.
+
+## Key Components
+
+### 1. PackageRouter Class
+
+#### Purpose
+The `PackageRouter` is a dynamic routing mechanism that:
+- Registers request handlers for different package IDs
+- Validates incoming requests
+- Checks user permissions
+- Routes requests to appropriate handler functions
+
+#### Key Methods
+
+##### `__init__()`
+Initializes registries for:
+- `handlers_registry`: Maps package IDs to handler functions
+- `validators_registry`: Stores JSON schemas and validator functions
+- `required_roles`: Defines role-based access control for different package IDs
+
+##### `register()` Decorator
+A powerful decorator that allows registering handler functions and validators for specific package IDs.
+
+**Features:**
+- Can register multiple package IDs simultaneously
+- Supports optional JSON schema validation
+- Prevents duplicate registrations
+
+**Example Usage:**
+```python
+@pkg_router.register(PkgID.USER_LOGIN, json_schema=login_schema)
+async def handle_user_login(request):
+    # Login handling logic
+```
+
+##### `check_permission()`
+Validates user roles against required roles for a specific package ID.
+
+##### `handle_request()`
+The core request handling method that:
+1. Validates the package ID
+2. Checks user permissions
+3. Applies optional request validation
+4. Calls the appropriate handler function
+
+### 2. `collect_subrouters()` Function
+
+#### Purpose
+Automatically discovers and registers HTTP and WebSocket routers from specific application directories.
+
+#### Key Features:
+- Dynamically imports router modules
+- Adds routers to a main `APIRouter`
+- Logs registered routers
+
+## Design Patterns and Techniques
+
+### Dynamic Module Discovery
+Uses `pkgutil.iter_modules()` to automatically discover and import router modules.
+
+### Decorator-based Registration
+Implements a flexible registration mechanism using decorators.
+
+### Role-based Access Control
+Integrates permission checking based on predefined role requirements.
+
+### Validation Workflow
+Supports optional JSON schema validation before request processing.
+
+## Configuration
+
+### Actions Configuration
+Roles and permissions are loaded from an `actions.json` file specified by `ACTIONS_FILE_PATH`.
+
+## Error Handling
+
+### Request Handling Errors
+Returns structured error responses for scenarios like:
+- Missing package ID handlers
+- Insufficient user permissions
+- Validation failures
+
+## Example Workflow
+
+```python
+# Register a handler for user login
+@pkg_router.register(PkgID.USER_LOGIN, json_schema=login_schema)
+async def login_handler(request):
+    # Process login
+    return ResponseModel.success(...)
+
+# Automatic routing and permission checking happens in handle_request()
+response = await pkg_router.handle_request(user, request)
+```
+
 ---
 
 ## Workflow

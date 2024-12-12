@@ -1,4 +1,4 @@
-from typing import Annotated, List
+from typing import Annotated, Any, List
 
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import (
@@ -6,7 +6,9 @@ from fastapi.security import (
     HTTPBasic,
     HTTPBasicCredentials,
     HTTPBearer,
+    OAuth2PasswordBearer,
 )
+from fastapi.security.utils import get_authorization_scheme_param
 from keycloak.exceptions import KeycloakAuthenticationError
 from starlette.authentication import (
     AuthCredentials,
@@ -48,7 +50,13 @@ class AuthBackend(AuthenticationBackend):
             kc_manager = KeycloakManager()
 
             token = kc_manager.login("acika", "12345")
+
+            # print()
+            # print(token["access_token"])
+            # print()
+
             user_data = kc_manager.openid.decode_token(token["access_token"])
+            # user_data = kc_manager.openid.decode_token(access_token)
 
             # Make logged in user object
             user: UserModel = UserModel(**user_data)
@@ -80,7 +88,7 @@ class JWTBearer(HTTPBearer):
                 detail="Invalid or expired token",
             )
 
-        request.scope["user"] = UserModel(**payload)
+        request.scope["user"].obj = UserModel(**payload)
 
         return payload
 
@@ -89,30 +97,59 @@ class JWTBearer(HTTPBearer):
             kc_manager = KeycloakManager()
             payload = kc_manager.openid.decode_token(jwtoken)
 
-            # user_roles = (
-            #     payload.get("resource_access", {})
-            #     .get(KEYCLOAK_CLIENT_ID, {})
-            #     .get("roles", [])
-            # )
+            user_roles = (
+                payload.get("realm_access", {})
+                # .get(KEYCLOAK_CLIENT_ID, {})
+                .get("roles", [])
+            )
 
-            # print()
-            # print(f"    User roles: {user_roles}")
-            # print(f"Required roles: {self.required_roles}")
-            # print()
             # FIXME: Temporary disable role check
-            # for role in self.required_roles:
-            #     if role in user_roles:
-            #         return payload
-            return payload  # FIXME: this role need to be removed
+            if self.required_roles in user_roles:
+                return payload
 
-            # raise HTTPException(
-            #     status_code=status.HTTP_403_FORBIDDEN,
-            #     detail="User does not have any of expected roles",
-            # )
+            # return payload  # FIXME: this role need to be removed
+
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="User does not have any of expected roles",
+            )
         except Exception as ex:
             logger.error(ex)
 
 
+def validate_token(token: str):
+    """
+    Validate Keycloak token
+    """
+    try:
+        kc_manager = KeycloakManager()
+
+        # Validate token configuration
+        return kc_manager.openid.decode_token(token)
+    except Exception as ex:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+
+def get_current_user(
+    token: str = Depends(OAuth2PasswordBearer(tokenUrl="/token")),
+) -> dict[str, Any]:
+    """
+    Dependency to get the current authenticated user
+    """
+    # Validate the token
+    user_data = validate_token(token)
+
+    # Extract user information
+    user: UserModel = UserModel(**user_data)
+
+    return user
+
+
+# USED FOR DEVELOP
 def logged_kc_user(
     credentials: Annotated[HTTPBasicCredentials, Depends(HTTPBasic())],
 ) -> UserModel:
