@@ -1,4 +1,5 @@
 from typing import Annotated, Any, List
+from urllib.parse import parse_qsl
 
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import (
@@ -35,28 +36,25 @@ class AuthBackend(AuthenticationBackend):
     async def authenticate(self, request):  # pragma: no cover
         logger.debug(f"Request type -> {request.scope['type']}")
 
-        # if request.scope["type"] == "websocket":
-        #     qs = dict(parse_qsl(request.scope["query_string"].decode("utf8")))
-        #     auth_access_token = qs.get("Authorization", "")
-        # else:  # type -> http
-        #     auth_access_token = request.headers.get("authorization", "")
+        if request.scope["type"] == "websocket":
+            qs = dict(parse_qsl(request.scope["query_string"].decode("utf8")))
+            auth_access_token = qs.get("Authorization", "")
+        else:  # type -> http
+            auth_access_token = request.headers.get("authorization", "")
 
-        # scheme, access_token = get_authorization_scheme_param(
-        #     auth_access_token
-        # )
+        _, access_token = get_authorization_scheme_param(auth_access_token)
 
-        # FIXME: Simulate keycloak user login
         try:
             kc_manager = KeycloakManager()
 
-            token = kc_manager.login("acika", "12345")
-
+            # FIXME: Simulate keycloak user login
+            # token = kc_manager.login("acika", "12345")
+            # access_token = token["access_token"]
             # print()
-            # print(token["access_token"])
+            # print(access_token)
             # print()
 
-            user_data = kc_manager.openid.decode_token(token["access_token"])
-            # user_data = kc_manager.openid.decode_token(access_token)
+            user_data = kc_manager.openid.decode_token(access_token)
 
             # Make logged in user object
             user: UserModel = UserModel(**user_data)
