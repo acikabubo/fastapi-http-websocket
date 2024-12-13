@@ -168,6 +168,56 @@ response = await pkg_router.handle_request(user, request)
 
 # Managers
 
+## RBAC Manager (Role-based access control `rbac_manager.py`)
+
+### Overview
+This code implements a Role-Based Access Control (RBAC) system, which acts as a security guard to check if users have permission to access different parts of an application. Think of it as a bouncer at a club who checks if people have the right type of ticket to enter different areas.
+
+### Inputs and Outputs
+
+#### Inputs:
+- A JSON file containing role configurations that defines who can access what
+- User information including their roles
+
+#### Outputs:
+- Boolean decisions (`True/False`) about whether a user is allowed to access something
+
+### Implementation Details
+The `RBACManager` class uses a design pattern called Singleton (through the `new` method) to ensure only one instance of the security checker exists. When it starts up, it reads role configurations from a JSON file and organizes them into two categories:
+
+- **`ws`** for WebSocket permissions
+- **`http`** for web request permissions
+
+### Main Functions
+
+#### 1. `check_ws_permission`
+This function checks if a user can access WebSocket features:
+
+- Takes a package ID number and user information as input
+- Looks up what role is required for that package ID
+- Checks if the user has that role in their list of roles
+- Logs a message and returns `False` if permission is denied
+
+#### 2. `check_http_permission`
+This function checks if a user can access specific web endpoints:
+
+- Takes a web request as input
+- Examines the URL path and request type (GET, POST, etc.)
+- Checks if the user has the required role
+- Logs detailed messages for denied permissions
+
+### Logic Flow
+1. Load configuration from JSON file
+2. When a permission check is needed, look up the required role
+3. Check if the user has that role
+4. Return `True` if they have permission, `False` if they don't
+
+### Data Transformation
+The code transforms the JSON configuration into easily searchable dictionaries (like lookup tables) where it can quickly find what role is needed for any given access attempt. This makes the permission-checking process fast and efficient.
+
+### Purpose
+This security system helps protect different parts of the application by ensuring users can only access features they're supposed to, based on their assigned roles.
+
 ## Websocket connection manager
 
 The `ConnectionManager` class manages WebSocket connections for a FastAPI application, enabling connection handling and message broadcasting.
