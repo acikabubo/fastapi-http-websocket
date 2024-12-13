@@ -34,6 +34,8 @@ class RBACManager:
             bool: True if the user has the required role, False otherwise.
                 required_role: str | None = self.ws.get(str(pkg_id))
         """
+        required_role = self.ws.get(str(pkg_id))
+
         has_permission: bool = required_role in user.roles
 
         if has_permission is False:

@@ -1,4 +1,5 @@
 from typing import Annotated, Any, List
+from urllib.parse import parse_qsl
 
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import (
@@ -43,7 +44,7 @@ class AuthBackend(AuthenticationBackend):
         # else:  # type -> http
         #     auth_access_token = request.headers.get("authorization", "")
 
-        # scheme, access_token = get_authorization_scheme_param(
+        # _, access_token = get_authorization_scheme_param(
         #     auth_access_token
         # )
 
@@ -55,7 +56,9 @@ class AuthBackend(AuthenticationBackend):
         kc_manager = KeycloakManager()
 
         token = kc_manager.login("acika", "12345")
-        user_data = kc_manager.openid.decode_token(token["access_token"])
+        access_token = token["access_token"]
+
+        user_data = kc_manager.openid.decode_token(access_token)
 
         # Make logged in user object
         user: UserModel = UserModel(**user_data)

@@ -1,6 +1,7 @@
 from typing import Any
 
 from fastapi import APIRouter
+from pydantic import ValidationError
 
 from {{cookiecutter.module_name}}.api.ws.handlers import load_handlers
 from {{cookiecutter.module_name}}.api.ws import (
@@ -33,14 +34,20 @@ class Web(PackageAuthWebSocketEndpoint):
         await super().on_connect(websocket)
 
     async def on_receive(self, websocket, data: dict[str, Any]):
-        logger.debug(f"Receive data: {data}")
-        request = RequestModel(**data)
-        response = await pkg_router.handle_request(
-            self.scope["user"].obj, request
-        )
+        try:
+            logger.debug(f"Receive data: {data}")
+            request = RequestModel(**data)
+            response = await pkg_router.handle_request(
+                self.scope["user"].obj, request
+            )
 
-        await websocket.send_response(response)
-        logger.debug(f"Successfully sent response for PkgID {request.pkg_id}")
+            await websocket.send_response(response)
+            logger.debug(f"Successfully sent response for PkgID {request.pkg_id}")
+        except ValidationError:
+            logger.debug(
+                f"Received invalid data: {data} from user {self.user.username}"
+            )
+            await websocket.close()
 
     async def on_disconnect(self, websocket, close_code):
         await super().on_disconnect(websocket, close_code)
