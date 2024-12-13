@@ -1,18 +1,15 @@
-from typing import Any
-
 from fastapi import Request, status
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import ASGIApp
 
-from app.logging import logger
-from app.schemas.user import UserModel
+from app.managers.rbac_manager import RBACManager
 
 
 class PermAuthHTTPMiddleware(BaseHTTPMiddleware):
-    def __init__(self, app: ASGIApp, actions: dict[str, Any]):
+    def __init__(self, app: ASGIApp, rbac: RBACManager):
         super().__init__(app)
-        self.actions = actions["http"]
+        self.rbac: RBACManager = rbac
 
     async def dispatch(self, request: Request, call_next):
         # Check if user is authenticated
@@ -26,21 +23,9 @@ class PermAuthHTTPMiddleware(BaseHTTPMiddleware):
                 content={"detail": "Authentication required"},
             )
 
-        user: UserModel = request.user.obj
+        has_permission = self.rbac.check_http_permission(request)
 
-        # Get required role using request path and method
-        required_role = self.actions.get(request.url.path, {}).get(
-            request.method
-        )
-
-        # If a role is specified for this endpoint and method
-        if required_role and required_role not in user.roles:
-            logger.debug(
-                f"The user {user.username} made a request to "
-                f"{request.method} {request.url.path} but has "
-                "insufficient permissions. "
-                f"The {required_role} role is required."
-            )
+        if has_permission is False:
             return JSONResponse(
                 status_code=status.HTTP_403_FORBIDDEN,
                 content={"detail": "User has insufficient permissions"},

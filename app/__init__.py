@@ -6,6 +6,7 @@ from starlette.middleware.authentication import AuthenticationMiddleware
 
 from app.auth import AuthBackend
 from app.logging import logger
+from app.managers.rbac_manager import RBACManager
 from app.middlewares.action import PermAuthHTTPMiddleware
 from app.routing import collect_subrouters
 from app.schemas.roles import ROLE_CONFIG_SCHEMA
@@ -85,10 +86,7 @@ def application() -> FastAPI:
     app.include_router(collect_subrouters())
 
     # Middlewares
-    app.add_middleware(
-        PermAuthHTTPMiddleware,
-        actions=read_json_file(ACTIONS_FILE_PATH, ROLE_CONFIG_SCHEMA),
-    )
+    app.add_middleware(PermAuthHTTPMiddleware, rbac=RBACManager())
     app.add_middleware(AuthenticationMiddleware, backend=AuthBackend())
 
     return app

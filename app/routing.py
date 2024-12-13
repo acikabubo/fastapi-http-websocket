@@ -1,6 +1,5 @@
 import os
 import pkgutil
-from functools import lru_cache
 from importlib import import_module
 from typing import Any
 
@@ -8,6 +7,7 @@ from fastapi import APIRouter
 
 from app.api.ws.constants import PkgID, RSPCode
 from app.logging import logger
+from app.managers.rbac_manager import RBACManager
 from app.schemas.generic_typing import (
     HandlerCallableType,
     JsonSchemaType,
@@ -33,10 +33,7 @@ class PackageRouter:
         self.validators_registry: dict[
             PkgID, tuple[JsonSchemaType, ValidatorType]
         ] = {}
-        __required_roles: dict[str, str] = read_json_file(
-            ACTIONS_FILE_PATH, ROLE_CONFIG_SCHEMA
-        )
-        self.required_roles = __required_roles["ws"]
+        self.rbac: RBACManager = RBACManager()
 
     def register(
         self,
@@ -82,24 +79,6 @@ class PackageRouter:
     def __get_handler(self, pkg_id: PkgID) -> HandlerCallableType:
         return self.handlers_registry[pkg_id]
 
-    @lru_cache(maxsize=1000)
-    def check_permission(self, pkg_id: int, user: UserModel) -> bool:
-        """
-        Cached permission check with LRU (Least Recently Used) caching
-        - Caches results based on package ID and user's roles
-        - Automatic cache management with max 1000 entries
-        """
-        required_role: str = self.required_roles.get(str(pkg_id), "")
-
-        # Check if user has the required role
-        has_permission = required_role in user.roles
-
-        # Optional: Log cache misses
-        if not has_permission:
-            logger.info(f"Permission denied for user {user.username}")
-
-        return has_permission
-
     async def handle_request(
         self, user: UserModel, request: RequestModel
     ) -> ResponseModel[dict[str, Any]]:
@@ -122,7 +101,7 @@ class PackageRouter:
                 status_code=RSPCode.ERROR,
             )
 
-        has_permission = self.check_permission(request.pkg_id, user)
+        has_permission = self.rbac.check_ws_permission(request.pkg_id, user)
 
         if not has_permission:
             return ResponseModel.err_msg(
