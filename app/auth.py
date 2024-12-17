@@ -10,6 +10,7 @@ from fastapi.security import (
     OAuth2PasswordBearer,
 )
 from fastapi.security.utils import get_authorization_scheme_param
+from jwcrypto.jwt import JWTExpired
 from keycloak.exceptions import KeycloakAuthenticationError
 from starlette.authentication import (
     AuthCredentials,
@@ -47,7 +48,7 @@ class AuthBackend(AuthenticationBackend):
         try:
             kc_manager = KeycloakManager()
 
-            # FIXME: Simulate keycloak user login
+            # # FIXME: Simulate keycloak user login
             # token = kc_manager.login("acika", "12345")
             # access_token = token["access_token"]
             # print()
@@ -60,12 +61,18 @@ class AuthBackend(AuthenticationBackend):
             user: UserModel = UserModel(**user_data)
             roles = user.roles
             return AuthCredentials(roles), AuthUser(user)
+
+        except JWTExpired as ex:
+            logger.error(f"JWT token expired: {ex}")
+            return
+
         except KeycloakAuthenticationError as ex:
-            raise HTTPException(
-                status_code=ex.response_code,
-                detail="Invalid credentials",
-                headers={"WWW-Authenticate": "Basic"},
-            )
+            logger.error(f"Invalid credentials: {ex}")
+            return
+
+        except ValueError as ex:
+            logger.error(f"Error occurred while decode auth token: {ex}")
+            return
 
 
 class JWTBearer(HTTPBearer):

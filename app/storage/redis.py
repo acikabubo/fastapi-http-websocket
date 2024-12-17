@@ -5,6 +5,7 @@ from json import loads
 
 from redis.asyncio import ConnectionPool, Redis
 
+from app.logging import logger
 from app.schemas.user import UserModel
 from app.settings import (
     AUTH_REDIS_DB,
@@ -12,8 +13,6 @@ from app.settings import (
     REDIS_IP,
     USER_SESSION_REDIS_KEY_PREFIX,
 )
-
-logger = logging.getLogger(__name__)
 
 
 class RedisPool:
@@ -47,6 +46,7 @@ class RedisPool:
         user_session_key = USER_SESSION_REDIS_KEY_PREFIX + user.username
         await r.set(user_session_key, 1)
         await r.pexpire(user_session_key, (user.expired_seconds + 10) * 1000)
+        logger.debug(f"Added user session in redis for: {user.username}")
 
 
 async def get_redis_connection(db=MAIN_REDIS_DB):
@@ -108,28 +108,29 @@ class REventHandler:
                 await asyncio.sleep(0.5)
 
 
-class RedisHandler:
+class RedisHandler(object):
     event_handlers = {}
     tasks = []
 
     async def subscribe(self, channel, callback, **kwargs):
         if not asyncio.iscoroutinefunction(callback):
-            raise ValueError("Callback must be a coroutine")
+            raise ValueError("Callback argument must be a coroutine")
 
         if channel not in self.event_handlers:
             redis = await get_redis_connection()
             handler = REventHandler(redis, channel)
+
             self.event_handlers[channel] = handler
             self.tasks.append(asyncio.create_task(handler.loop()))
 
         self.event_handlers[channel].add_callback((callback, kwargs))
 
 
-class RRedis:
+class RRedis(object):
     __instance = None
 
-    @classmethod
-    async def get_instance(cls):
+    async def __new__(cls):
         if cls.__instance is None:
             cls.__instance = RedisHandler()
+
         return cls.__instance

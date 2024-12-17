@@ -1,5 +1,6 @@
 from fastapi import Request, status
 from fastapi.responses import JSONResponse
+from starlette.authentication import UnauthenticatedUser
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import ASGIApp
 
@@ -13,11 +14,7 @@ class PermAuthHTTPMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next):
         # Check if user is authenticated
-        if (
-            not hasattr(request, "user")
-            or not request.user
-            or not request.user.obj
-        ):
+        if isinstance(request.user, UnauthenticatedUser) or not request.user:
             return JSONResponse(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 content={"detail": "Authentication required"},
