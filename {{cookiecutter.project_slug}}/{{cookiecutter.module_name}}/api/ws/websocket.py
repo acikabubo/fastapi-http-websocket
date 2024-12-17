@@ -1,6 +1,7 @@
 from typing import Type
 
 from starlette import status
+from starlette.authentication import UnauthenticatedUser
 from starlette.endpoints import WebSocketEndpoint
 from starlette.websockets import WebSocket
 
@@ -77,18 +78,23 @@ class PackageAuthWebSocketEndpoint(WebSocketEndpoint):
         {% endif %}
 
         user = self.scope["user"].obj
-        if user is None:
+
+        if (
+            isinstance(user, UnauthenticatedUser)
+            or user is None
+            or user.obj is None
+        ):
             logger.debug(
                 "Client is not logged in, websocket connection will be closed!"
             )
             await websocket.close()
             return
 
-        self.user = user
+        self.user = user.obj
 
         {% if cookiecutter.use_redis == "y" and cookiecutter.use_keycloak == "y" %}
         # Set user username in redis with TTL from expired seconds from keycloak
-        await self.r.add_kc_user_session(self.r, user)
+        await self.r.add_kc_user_session(self.r, user.obj)
         {% endif %}
 
         # Map username with websocket instance
@@ -100,6 +106,11 @@ class PackageAuthWebSocketEndpoint(WebSocketEndpoint):
     async def on_disconnect(self, websocket, close_code):
         await super().on_disconnect(websocket, close_code)
         connection_manager.disconnect(websocket)
-        logger.debug(
-            f"Client of user {self.user.username} disconnected from websocket connection with code {close_code}"
+
+        log_msg = (
+            f"Client of user {self.user.username} disconnected with code {close_code}"
+            if hasattr(self, "user")
+            else f"Unauthenticated user disconnected with code {close_code}"
         )
+
+        logger.debug(log_msg)

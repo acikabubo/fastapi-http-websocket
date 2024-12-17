@@ -9,6 +9,9 @@ from fastapi.security import (
     HTTPBearer,
     OAuth2PasswordBearer
 )
+from fastapi.security.utils import get_authorization_scheme_param
+from jwcrypto.jwt import JWTExpired
+
 {% if cookiecutter.use_keycloak == "y" %}
 from keycloak.exceptions import KeycloakAuthenticationError
 {% endif %}
@@ -38,34 +41,44 @@ class AuthBackend(AuthenticationBackend):
     async def authenticate(self, request):  # pragma: no cover
         logger.debug(f"Request type -> {request.scope['type']}")
 
-        # if request.scope["type"] == "websocket":
-        #     qs = dict(parse_qsl(request.scope["query_string"].decode("utf8")))
-        #     auth_access_token = qs.get("Authorization", "")
-        # else:  # type -> http
-        #     auth_access_token = request.headers.get("authorization", "")
+        if request.scope["type"] == "websocket":
+            qs = dict(parse_qsl(request.scope["query_string"].decode("utf8")))
+            auth_access_token = qs.get("Authorization", "")
+        else:  # type -> http
+            auth_access_token = request.headers.get("authorization", "")
 
-        # _, access_token = get_authorization_scheme_param(
-        #     auth_access_token
-        # )
+        _, access_token = get_authorization_scheme_param(auth_access_token)
 
-        # FIXME: Simulate keycloak user login
-        user = None
-        roles = []
+        try:
+            # FIXME: Simulate keycloak user login
+            user = None
+            roles = []
 
-        {% if cookiecutter.use_keycloak == "y" %}
-        kc_manager = KeycloakManager()
+            {% if cookiecutter.use_keycloak == "y" %}
+            kc_manager = KeycloakManager()
 
-        token = kc_manager.login("acika", "12345")
-        access_token = token["access_token"]
+            token = kc_manager.login("acika", "12345")
+            access_token = token["access_token"]
 
-        user_data = kc_manager.openid.decode_token(access_token)
+            user_data = kc_manager.openid.decode_token(access_token)
 
-        # Make logged in user object
-        user: UserModel = UserModel(**user_data)
-        roles = user.roles
-        {% endif %}
+            # Make logged in user object
+            user: UserModel = UserModel(**user_data)
+            roles = user.roles
+            {% endif %}
 
-        return AuthCredentials(roles), AuthUser(user)
+            return AuthCredentials(roles), AuthUser(user)
+        except JWTExpired as ex:
+            logger.error(f"JWT token expired: {ex}")
+            return
+
+        except KeycloakAuthenticationError as ex:
+            logger.error(f"Invalid credentials: {ex}")
+            return
+
+        except ValueError as ex:
+            logger.error(f"Error occurred while decode auth token: {ex}")
+            return
 
 
 class JWTBearer(HTTPBearer):

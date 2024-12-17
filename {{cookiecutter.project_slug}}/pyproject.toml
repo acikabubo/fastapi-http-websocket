@@ -36,6 +36,18 @@ asyncio_default_fixture_loop_scope = "function"
 [tool.uv.workspace]
 members = ["app"]
 
+[tool.vulture]
+ignore_names = [
+    "create_author_endpoint",
+    "get_authors_endpoint",
+    "get_paginated_authors_endpoint",
+    "Web",
+    "dispatch",
+    "get_authors_handler",
+    "get_paginated_authers_handler",
+    "authenticate"
+]
+
 [tool.ruff]
 exclude = [
     ".bzr",
