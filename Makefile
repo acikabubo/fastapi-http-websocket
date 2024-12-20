@@ -46,5 +46,19 @@ code-docs:
 ruff-check:
 	ruff check --config=pyproject.toml
 
-dead-code:
-	vulture app/
+
+# Local/develop dependency and security checking
+bandit-scan:
+	@bandit -r /project/app -f html -o security_reports/bandit_SAST_report.html -x /tests/
+
+skjold-scan:
+	@skjold audit -s pyup -s gemnasium -o json ./requirements.txt > security_reports/skjold_audit_report.json
+
+dead-code-scan:
+	@vulture app/
+
+outdated-pkgs-scan:
+	@echo "Scanning for outdated python packages!"
+	@python /project/scripts/scan_for_outdated_pkgs.py
+
+

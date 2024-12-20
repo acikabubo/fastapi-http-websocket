@@ -66,7 +66,7 @@ class RBACManager:
         # If a role is specified for this endpoint and method
         if required_role and required_role not in request.auth.scopes:
             logger.debug(
-                f"The user {request.user.obj.username} made a request to "
+                f"The user {request.user.username} made a request to "
                 f"{request.method} {request.url.path} but has "
                 "insufficient permissions. "
                 f"The {required_role} role is required."

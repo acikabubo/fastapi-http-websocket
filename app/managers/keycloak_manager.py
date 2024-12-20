@@ -1,3 +1,5 @@
+from typing import Any
+
 from keycloak import KeycloakAdmin, KeycloakOpenID
 
 from app.settings import (
@@ -25,13 +27,14 @@ class KeycloakManager:
         Returns:
         None
         """
-        self.admin = KeycloakAdmin(
-            server_url=KEYCLOAK_BASE_URL,
-            username=KEYCLOAK_ADMIN_USERNAME,
-            password=KEYCLOAK_ADMIN_PASSWORD,
-            realm_name=KEYCLOAK_REALM,
-            user_realm_name="master",
-        )
+        # FIXME: Unnecessary admin client, probably should be removed
+        # self.admin = KeycloakAdmin(
+        #     server_url=KEYCLOAK_BASE_URL,
+        #     username=KEYCLOAK_ADMIN_USERNAME,
+        #     password=KEYCLOAK_ADMIN_PASSWORD,
+        #     realm_name=KEYCLOAK_REALM,
+        #     user_realm_name="master",
+        # )
 
         self.openid = KeycloakOpenID(
             server_url=f"{KEYCLOAK_BASE_URL}/",

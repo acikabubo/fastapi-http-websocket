@@ -12,14 +12,18 @@ from app.routing import collect_subrouters
 from app.schemas.roles import ROLE_CONFIG_SCHEMA
 from app.settings import ACTIONS_FILE_PATH
 from app.storage.db import wait_and_init_db
+from app.storage.redis import RRedis
 from app.tasks.kc_user_session import kc_user_session_task
 from app.utils import read_json_file
 
-# Define your action map here
-action_map = {1: "create_author", 2: "create_genre"}
-
 tasks = []
 ws_clients = {}
+
+
+async def proba(_, content):
+    print()
+    print("tuka si")
+    print()
 
 
 def startup():
@@ -35,6 +39,10 @@ def startup():
         print("STARTUP")
         tasks.append(create_task(kc_user_session_task()))
         logger.info("Created task for user session")
+
+        # Subscribe to Redis channels
+        r = await RRedis()
+        await r.subscribe("proba", proba)
 
     return wrapper
 

@@ -1,20 +1,14 @@
-from fastapi import APIRouter, Depends, Security
+from fastapi import APIRouter, Depends
 
-from app.auth import JWTBearer, get_current_user
 from app.models.author import Author
 from app.schemas.author import AuthorQueryParams
 from app.schemas.response import PaginatedResponseModel
-from app.schemas.user import UserModel
 from app.storage.db import get_paginated_results
 
 router = APIRouter()
 
 
-@router.post(
-    "/authors",
-    summary="Create new author",
-    dependencies=[Security(JWTBearer("REQUIRED-ROLE"))],
-)
+@router.post("/authors", summary="Create new author")
 async def create_author_endpoint(author: Author = Author) -> Author:
     """
     Creates a new author in the database.
@@ -35,7 +29,6 @@ async def create_author_endpoint(author: Author = Author) -> Author:
     summary="Get list of authors",
 )
 async def get_authors_endpoint(
-    user: UserModel = Depends(get_current_user),
     q: AuthorQueryParams = Depends(),
 ) -> list[Author]:
     """
@@ -54,7 +47,6 @@ async def get_authors_endpoint(
     "/authors_paginated",
     response_model=PaginatedResponseModel[Author],
     summary="Get paginated list of authors",
-    dependencies=[Security(JWTBearer("REQUIRED-ROLE"))],
 )
 async def get_paginated_authors_endpoint(
     page: int = 1,

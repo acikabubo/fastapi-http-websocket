@@ -9,6 +9,7 @@ from app import ws_clients
 from app.logging import logger
 from app.managers.websocket_connection_manager import connection_manager
 from app.schemas.response import ResponseModel
+from app.schemas.user import UserModel
 from app.settings import USER_SESSION_REDIS_KEY_PREFIX
 from app.storage.redis import get_auth_redis_connection
 
@@ -73,24 +74,18 @@ class PackageAuthWebSocketEndpoint(WebSocketEndpoint):
         # Attach auth redis instance on websocket connection instance
         self.r = await get_auth_redis_connection()
 
-        user = self.scope["user"]
+        self.user: UserModel = self.scope["user"]
 
         # FIXME: Try to make it better
-        if (
-            isinstance(user, UnauthenticatedUser)
-            or user is None
-            or user.obj is None
-        ):
+        if isinstance(self.user, UnauthenticatedUser) or self.user is None:
             logger.debug(
                 "Client is not logged in, websocket connection will be closed!"
             )
             await websocket.close()
             return
 
-        self.user = user.obj
-
         # Set user username in redis with TTL from expired seconds from keycloak
-        await self.r.add_kc_user_session(user.obj)
+        await self.r.add_kc_user_session(self.user)
 
         # Map username with websocket instance
         ws_clients[USER_SESSION_REDIS_KEY_PREFIX + self.user.username] = (

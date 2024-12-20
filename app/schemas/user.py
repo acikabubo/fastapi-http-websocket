@@ -6,18 +6,25 @@ from pydantic import BaseModel, Field
 
 class UserModel(BaseModel):
     id: str = Field(..., alias="sub")
-    given_name: str
-    family_name: str
-    email: str
     expired_in: int = Field(
         ..., alias="exp"
     )  # timestamp when keycloak session expires
     username: str = Field(..., alias="preferred_username")
     roles: list[str] = []
-    attributes: dict[str, Any] = {}
+
+    # FIXME: Unnecessary fields, probably should be removed
+    # given_name: str
+    # family_name: str
+    # email: str
+    # attributes: dict[str, Any] = {}
 
     def __init__(self, **kwargs):
-        kwargs["roles"] = kwargs.get("realm_access", {}).get("roles", [])
+        # Get client roles
+        kwargs["roles"] = (
+            kwargs.get("resource_access", {})
+            .get(kwargs["azp"], {})
+            .get("roles", [])
+        )
 
         super(UserModel, self).__init__(**kwargs)
 

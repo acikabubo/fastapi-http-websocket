@@ -48,6 +48,4 @@ class Author(SQLModel, table=True):
             stmt = select(cls).where(
                 *[getattr(cls, k) == v for k, v in filters.items()]
             )
-            result = await s.exec(stmt)
-            authors = result.all()
-            return authors
+            return (await s.exec(stmt)).all()

@@ -1,3 +1,5 @@
+import re
+
 from decouple import config
 
 ACTIONS_FILE_PATH = config(
@@ -22,3 +24,5 @@ USER_SESSION_REDIS_KEY_PREFIX = config(
 
 MAIN_REDIS_DB = config("MAIN_REDIS_DB", cast=int, default=1)
 AUTH_REDIS_DB = config("AUTH_REDIS_DB", cast=int, default=10)
+
+EXCLUDED_PATHS = re.compile(r"^(/docs|/openapi.json)$")
