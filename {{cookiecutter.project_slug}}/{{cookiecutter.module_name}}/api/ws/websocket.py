@@ -9,6 +9,7 @@ from {{cookiecutter.module_name}} import ws_clients
 from {{cookiecutter.module_name}}.managers.websocket_connection_manager import connection_manager
 from {{cookiecutter.module_name}}.logging import logger
 from {{cookiecutter.module_name}}.schemas.response import ResponseModel
+from {{cookiecutter.module_name}}.schemas.user import UserModel
 from {{cookiecutter.module_name}}.settings import USER_SESSION_REDIS_KEY_PREFIX
 {% if cookiecutter.use_redis == "y" and cookiecutter.use_keycloak == "y" %}
 from {{cookiecutter.module_name}}.storage.redis import get_auth_redis_connection
@@ -77,28 +78,22 @@ class PackageAuthWebSocketEndpoint(WebSocketEndpoint):
         self.r = await get_auth_redis_connection()
         {% endif %}
 
-        user = self.scope["user"].obj
+        self.user = self.scope["user"]
 
-        if (
-            isinstance(user, UnauthenticatedUser)
-            or user is None
-            or user.obj is None
-        ):
+        if isinstance(self.user, UnauthenticatedUser) or self.user is None:
             logger.debug(
                 "Client is not logged in, websocket connection will be closed!"
             )
             await websocket.close()
             return
 
-        self.user = user.obj
-
         {% if cookiecutter.use_redis == "y" and cookiecutter.use_keycloak == "y" %}
         # Set user username in redis with TTL from expired seconds from keycloak
-        await self.r.add_kc_user_session(self.r, user.obj)
+        await self.r.add_kc_user_session(self.user)
         {% endif %}
 
         # Map username with websocket instance
-        ws_clients[USER_SESSION_REDIS_KEY_PREFIX + user.username] = websocket
+        ws_clients[USER_SESSION_REDIS_KEY_PREFIX + self.user.username] = websocket
 
         connection_manager.connect(websocket)
         logger.debug("Client connected to the websocket connection")

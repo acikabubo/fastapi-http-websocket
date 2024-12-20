@@ -1,14 +1,8 @@
-from typing import Annotated, Any, List
+from typing import Annotated
 from urllib.parse import parse_qsl
 
-from fastapi import Depends, HTTPException, Request, status
-from fastapi.security import (
-    HTTPAuthorizationCredentials,
-    HTTPBasic,
-    HTTPBasicCredentials,
-    HTTPBearer,
-    OAuth2PasswordBearer
-)
+from fastapi import Depends, HTTPException
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.security.utils import get_authorization_scheme_param
 from jwcrypto.jwt import JWTExpired
 
@@ -17,27 +11,20 @@ from keycloak.exceptions import KeycloakAuthenticationError
 {% endif %}
 from starlette.authentication import (
     AuthCredentials,
-    AuthenticationBackend,
-    BaseUser,
+    AuthenticationBackend
 )
 {% if cookiecutter.use_keycloak == "y" %}
 from {{cookiecutter.module_name}}.managers.keycloak_manager import KeycloakManager
 {% endif %}
 from {{cookiecutter.module_name}}.logging import logger
 from {{cookiecutter.module_name}}.schemas.user import UserModel
-from {{cookiecutter.module_name}}.settings import KEYCLOAK_CLIENT_ID
-
-
-class AuthUser(BaseUser):
-    def __init__(self, user) -> None:
-        self.obj = user
-
-    @property
-    def is_authenticated(self) -> bool:
-        return True
+from {{cookiecutter.module_name}}.settings import EXCLUDED_PATHS
 
 
 class AuthBackend(AuthenticationBackend):
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self.excluded_paths = EXCLUDED_PATHS
     async def authenticate(self, request):  # pragma: no cover
         logger.debug(f"Request type -> {request.scope['type']}")
 
@@ -45,6 +32,9 @@ class AuthBackend(AuthenticationBackend):
             qs = dict(parse_qsl(request.scope["query_string"].decode("utf8")))
             auth_access_token = qs.get("Authorization", "")
         else:  # type -> http
+            if self.excluded_paths.match(request.url.path):
+                return
+
             auth_access_token = request.headers.get("authorization", "")
 
         _, access_token = get_authorization_scheme_param(auth_access_token)
@@ -67,7 +57,7 @@ class AuthBackend(AuthenticationBackend):
             roles = user.roles
             {% endif %}
 
-            return AuthCredentials(roles), AuthUser(user)
+            return AuthCredentials(roles), user
         except JWTExpired as ex:
             logger.error(f"JWT token expired: {ex}")
             return
@@ -81,92 +71,8 @@ class AuthBackend(AuthenticationBackend):
             return
 
 
-class JWTBearer(HTTPBearer):
-    def __init__(self, required_roles: List[str]):
-        super(JWTBearer, self).__init__(auto_error=True)
-        self.required_roles = required_roles
-
-    async def __call__(self, request: Request):
-        credentials: HTTPAuthorizationCredentials = await super(
-            JWTBearer, self
-        ).__call__(request)
-
-        payload = self.verify_jwt(credentials.credentials)
-
-        if not payload:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid or expired token",
-            )
-
-        request.scope["user"].obj = UserModel(**payload)
-
-        return payload
-
-    def verify_jwt(self, jwtoken: str):
-        try:
-            kc_manager = KeycloakManager()
-            payload = kc_manager.openid.decode_token(jwtoken)
-
-            user_roles = (
-                payload.get("resource_access", {})
-                .get(KEYCLOAK_CLIENT_ID, {})
-                .get("roles", [])
-            )
-
-            # print()
-            # print(f"    User roles: {user_roles}")
-            # print(f"Required roles: {self.required_roles}")
-            # print()
-            # FIXME: Temporary disable role check
-            # for role in self.required_roles:
-            #     if role in user_roles:
-            #         return payload
-            return payload  # FIXME: this role need to be removed
-
-            # raise HTTPException(
-            #     status_code=status.HTTP_403_FORBIDDEN,
-            #     detail="User does not have any of expected roles",
-            # )
-        except Exception as ex:
-            logger.error(ex)
-
-
-def validate_token(token: str):
-    """
-    Validate Keycloak token
-    """
-    try:
-        kc_manager = KeycloakManager()
-
-        # Validate token configuration
-        return kc_manager.openid.decode_token(token)
-    except Exception as ex:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid token",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
-
-def get_current_user(
-    token: str = Depends(OAuth2PasswordBearer(tokenUrl="/token")),
-) -> dict[str, Any]:
-    """
-    Dependency to get the current authenticated user
-    """
-    # Validate the token
-    user_data = validate_token(token)
-
-    # Extract user information
-    user: UserModel = UserModel(**user_data)
-
-    return user
-
-
 # USED FOR DEVELOP
-
-def logged_kc_user(
+def basic_auth_keycloak_user(
     credentials: Annotated[HTTPBasicCredentials, Depends(HTTPBasic())],
 ) -> UserModel:
     try:

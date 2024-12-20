@@ -15,10 +15,7 @@ from {{cookiecutter.module_name}}.schemas.generic_typing import (
 )
 from {{cookiecutter.module_name}}.schemas.request import RequestModel
 from {{cookiecutter.module_name}}.schemas.response import ResponseModel
-from {{cookiecutter.module_name}}.schemas.roles import ROLE_CONFIG_SCHEMA
 from {{cookiecutter.module_name}}.schemas.user import UserModel
-from {{cookiecutter.module_name}}.settings import ACTIONS_FILE_PATH
-from {{cookiecutter.module_name}}.utils import read_json_file
 
 
 class PackageRouter:

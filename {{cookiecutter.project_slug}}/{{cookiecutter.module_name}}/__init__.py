@@ -21,8 +21,6 @@ from {{cookiecutter.module_name}}.utils import read_json_file
 from {{cookiecutter.module_name}}.tasks.kc_user_session import kc_user_session_task
 {% endif %}
 
-# Define your action map here
-action_map = {1: "create_author", 2: "create_genre"}
 
 tasks = []
 ws_clients = {}
