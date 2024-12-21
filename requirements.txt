@@ -19,4 +19,3 @@ typer==0.15.1
 uvicorn==0.34.0
 vulture==2.14
 websockets==14.1
-pipdeptree==2.24.0

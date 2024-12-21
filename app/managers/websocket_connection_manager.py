@@ -3,6 +3,7 @@ from typing import List
 from fastapi import WebSocket
 
 from app.logging import logger
+from app.schemas.response import BroadcastDataModel
 
 
 class ConnectionManager:
@@ -42,7 +43,7 @@ class ConnectionManager:
             f"websocket objects ({id(websocket)}) removed from active connections"
         )
 
-    async def broadcast(self, message: dict):
+    async def broadcast(self, message: BroadcastDataModel):
         """
         Broadcasts the provided message to all active WebSocket connections managed by this `ConnectionManager` instance.
 

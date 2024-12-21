@@ -8,15 +8,15 @@ from starlette.websockets import WebSocket
 from app import ws_clients
 from app.logging import logger
 from app.managers.websocket_connection_manager import connection_manager
-from app.schemas.response import ResponseModel
+from app.schemas.response import BroadcastDataModel
 from app.schemas.user import UserModel
 from app.settings import USER_SESSION_REDIS_KEY_PREFIX
 from app.storage.redis import get_auth_redis_connection
 
 
 class PackagedWebSocket(WebSocket):
-    async def send_response(self, response: ResponseModel) -> None:
-        await self.send_json(response.dict())
+    async def send_response(self, broadcast_data: BroadcastDataModel) -> None:
+        await self.send_json(broadcast_data.dict())
 
 
 class PackageAuthWebSocketEndpoint(WebSocketEndpoint):
