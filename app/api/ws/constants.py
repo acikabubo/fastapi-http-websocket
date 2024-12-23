@@ -17,6 +17,3 @@ class PkgID(IntEnum):
     GET_AUTHORS = 1
     GET_PAGINATED_AUTHORS = 2
     THIRD = 3
-
-    def __str__(self):
-        return f"{__class__.__name__}.{self.name}<{self.value}>"

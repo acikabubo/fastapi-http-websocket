@@ -1,9 +1,10 @@
 from typing import Any, Generic, Optional
 from uuid import UUID
-from typing_extensions import Annotated
-from pydantic import BaseModel, Field
 
-from app.api.ws.constants import RSPCode, PkgID
+from pydantic import BaseModel, Field
+from typing_extensions import Annotated
+
+from app.api.ws.constants import PkgID, RSPCode
 from app.schemas.generic_typing import GenericSQLModelType
 
 
@@ -19,7 +20,10 @@ class BroadcastDataModel[GenericSQLModelType](BaseModel):
     req_id: UUID
     data: dict[str, Any] | list[GenericSQLModelType]
 
-class ResponseModel[GenericSQLModelType](BroadcastDataModel):
+
+class ResponseModel[GenericSQLModelType](BaseModel):
+    pkg_id: PkgID
+    req_id: UUID
     status_code: Optional[RSPCode] = RSPCode.OK
     meta: Optional[MetadataModel | dict] = {}
     data: Optional[dict[str, Any] | list[GenericSQLModelType]] = {}
@@ -34,7 +38,9 @@ class ResponseModel[GenericSQLModelType](BroadcastDataModel):
     ) -> "ResponseModel":
         if msg:
             data["msg"] = msg
-        return cls(pkg_id=pkg_id, req_id=req_id, status_code=RSPCode.OK, data=data)
+        return cls(
+            pkg_id=pkg_id, req_id=req_id, status_code=RSPCode.OK, data=data
+        )
 
     @classmethod
     def err_msg(

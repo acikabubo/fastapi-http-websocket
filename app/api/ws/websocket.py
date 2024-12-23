@@ -1,4 +1,6 @@
+import json
 from typing import Type
+from uuid import UUID
 
 from starlette import status
 from starlette.authentication import UnauthenticatedUser
@@ -8,15 +10,26 @@ from starlette.websockets import WebSocket
 from app import ws_clients
 from app.logging import logger
 from app.managers.websocket_connection_manager import connection_manager
-from app.schemas.response import BroadcastDataModel
+from app.schemas.response import BroadcastDataModel, ResponseModel
 from app.schemas.user import UserModel
 from app.settings import USER_SESSION_REDIS_KEY_PREFIX
 from app.storage.redis import get_auth_redis_connection
 
 
+class UUIDEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, UUID):
+            return str(obj)
+        return json.JSONEncoder.default(self, obj)
+
+
 class PackagedWebSocket(WebSocket):
-    async def send_response(self, broadcast_data: BroadcastDataModel) -> None:
-        await self.send_json(broadcast_data.dict())
+    async def send_response(
+        self, data: BroadcastDataModel | ResponseModel
+    ) -> None:
+        # await self.send_json(data.model_dump())
+        text = json.dumps(data.model_dump(), cls=UUIDEncoder)
+        await self.send({"type": "websocket.send", "text": text})
 
 
 class PackageAuthWebSocketEndpoint(WebSocketEndpoint):
@@ -101,7 +114,7 @@ class PackageAuthWebSocketEndpoint(WebSocketEndpoint):
 
         log_msg = (
             f"Client of user {self.user.username} disconnected with code {close_code}"
-            if hasattr(self, "user")
+            if not isinstance(self.user, UnauthenticatedUser)
             else f"Unauthenticated user disconnected with code {close_code}"
         )
 
