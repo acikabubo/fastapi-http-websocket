@@ -42,7 +42,7 @@ class Web(PackageAuthWebSocketEndpoint):
             )
 
             await websocket.send_response(response)
-            logger.debug(f"Successfully sent response for PkgID {request.pkg_id}")
+            logger.debug(f"Successfully sent response for {request.pkg_id}")
         except ValidationError:
             logger.debug(
                 f"Received invalid data: {data} from user {self.user.username}"

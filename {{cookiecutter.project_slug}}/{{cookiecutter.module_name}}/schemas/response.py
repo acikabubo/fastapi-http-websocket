@@ -3,7 +3,7 @@ from uuid import UUID
 
 from pydantic import BaseModel
 
-from {{cookiecutter.module_name}}.api.ws.constants import RSPCode
+from {{cookiecutter.module_name}}.api.ws.constants import PkgID RSPCode
 from {{cookiecutter.module_name}}.schemas.generic_typing import GenericSQLModelType
 
 
@@ -13,10 +13,15 @@ class MetadataModel(BaseModel):
     total: int
     pages: int
 
+class BroadcastDataModel[GenericSQLModelType](BaseModel):
+    pkg_id: PkgID
+    req_id: UUID
+    data: dict[str, Any] | list[GenericSQLModelType]
+
 
 class ResponseModel[GenericSQLModelType](BaseModel):
-    pkg_id: int
-    req_id: str
+    pkg_id: PkgID
+    req_id: UUID,
     status_code: Optional[int] = 0
     meta: Optional[MetadataModel | dict] = {}
     data: Optional[dict[str, Any] | list[GenericSQLModelType]] = {}
@@ -31,7 +36,9 @@ class ResponseModel[GenericSQLModelType](BaseModel):
     ) -> "ResponseModel":
         if msg:
             data["msg"] = msg
-        return cls(pkg_id=pkg_id, req_id=req_id, status_code=0, data=data)
+        return cls(
+            pkg_id=pkg_id, req_id=req_id, status_code=RSPCode.OK, data=data
+        )
 
     @classmethod
     def err_msg(

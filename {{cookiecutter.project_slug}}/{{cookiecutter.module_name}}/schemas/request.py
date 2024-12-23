@@ -1,11 +1,14 @@
 from typing import Any, Optional
+from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+
+from {{cookiecutter.module_name}}.api.ws.constants import PkgID
 
 
 class RequestModel(BaseModel):
-    pkg_id: int
-    req_id: str
+    pkg_id: PkgID = Field(frozen=True)
+    req_id: UUID = Field(frozen=True)
     method: Optional[str] = ""
     data: Optional[dict[str, Any]] = {}
 

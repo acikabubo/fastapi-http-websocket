@@ -1,4 +1,6 @@
+import json
 from typing import Type
+from uuid import UUID
 
 from starlette import status
 from starlette.authentication import UnauthenticatedUser
@@ -8,7 +10,7 @@ from starlette.websockets import WebSocket
 from {{cookiecutter.module_name}} import ws_clients
 from {{cookiecutter.module_name}}.managers.websocket_connection_manager import connection_manager
 from {{cookiecutter.module_name}}.logging import logger
-from {{cookiecutter.module_name}}.schemas.response import ResponseModel
+from {{cookiecutter.module_name}}.schemas.response import BroadcastDataModel, ResponseModel
 from {{cookiecutter.module_name}}.schemas.user import UserModel
 from {{cookiecutter.module_name}}.settings import USER_SESSION_REDIS_KEY_PREFIX
 {% if cookiecutter.use_redis == "y" and cookiecutter.use_keycloak == "y" %}
@@ -16,9 +18,20 @@ from {{cookiecutter.module_name}}.storage.redis import get_auth_redis_connection
 {% endif %}
 
 
+class UUIDEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, UUID):
+            return str(obj)
+        return json.JSONEncoder.default(self, obj)
+
+
 class PackagedWebSocket(WebSocket):
-    async def send_response(self, response: ResponseModel) -> None:
-        await self.send_json(response.dict())
+    async def send_response(
+        self, data: BroadcastDataModel | ResponseModel
+    ) -> None:
+        # await self.send_json(data.model_dump())
+        text = json.dumps(data.model_dump(), cls=UUIDEncoder)
+        await self.send({"type": "websocket.send", "text": text})
 
 
 class PackageAuthWebSocketEndpoint(WebSocketEndpoint):
