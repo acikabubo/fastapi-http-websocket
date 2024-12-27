@@ -4,6 +4,7 @@ from importlib import import_module
 from typing import Any
 
 from fastapi import APIRouter
+from pydantic import BaseModel
 
 from app.api.ws.constants import PkgID, RSPCode
 from app.logging import logger
@@ -110,9 +111,14 @@ class PackageRouter:
 
         json_schema, validator_func = self.validators_registry[request.pkg_id]
 
-        if json_schema is not None and validator_func is not None:
-            if validation_result := validator_func(request, json_schema):
-                return validation_result
+        # FIXME: Maybe is better first to check if validator func exists and then check if json_schema is not None
+        if json_schema is not None:
+            if issubclass(json_schema, BaseModel):
+                json_schema = json_schema.model_json_schema()
+
+            if validator_func is not None:
+                if validation_result := validator_func(request, json_schema):
+                    return validation_result
 
         handler = self.__get_handler(request.pkg_id)
 

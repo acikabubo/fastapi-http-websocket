@@ -105,7 +105,7 @@ def generate_new_ws_handler():
 
         print()
         print(
-            "Module is succesfully generated. You can find it in app.api.ws.handlers"
+            "Module is successfully generated. You can find it in app.api.ws.handlers"
         )
 
 

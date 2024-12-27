@@ -1,3 +1,7 @@
+from typing import Optional
+
+from pydantic import BaseModel
+
 from app.api.ws.constants import PkgID, RSPCode
 from app.api.ws.validation import validator
 from app.logging import logger
@@ -25,8 +29,15 @@ filters_schema: JsonSchemaType = {
 }
 
 
+class GetAuthorsModel(BaseModel):
+    id: Optional[int] = None
+    name: Optional[str] = None
+
+
 @pkg_router.register(
-    PkgID.GET_AUTHORS, json_schema=filters_schema, validator_callback=validator
+    PkgID.GET_AUTHORS,
+    json_schema=GetAuthorsModel,
+    validator_callback=validator,
 )
 async def get_authors_handler(request: RequestModel) -> ResponseModel[Author]:
     """
@@ -84,7 +95,7 @@ filters_schema: JsonSchemaType = {
     json_schema=filters_schema,
     validator_callback=validator,
 )
-async def get_paginated_authers_handler(
+async def get_paginated_authors_handler(
     request: RequestModel,
 ) -> ResponseModel[Author]:
     """
