@@ -22,7 +22,7 @@ async def {{ handler_name }}(request: RequestModel):
         return ResponseModel.err_msg(
             request.pkg_id,
             request.req_id,
-            msg="Error occured while handler the request",  # FIXME: This is generic error msg if you need custom change it
+            msg="Error occurred while handler the request",  # FIXME: This is generic error msg if you need custom change it
             status_code=RSPCode.ERROR,
         )
 {% endraw %}

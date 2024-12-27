@@ -319,7 +319,7 @@ print(f"Access Token: {token}")
 
 # API and WS handers documentation
 
-## Establish WebSocket conenction
+## Establish WebSocket connection
 
 ```mermaid
 sequenceDiagram

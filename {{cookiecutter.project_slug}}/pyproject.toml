@@ -24,21 +24,20 @@ dependencies = [
 dev = [
     "bandit>=1.8.0",
     "ipython>=8.30.0",
-    "jinja2>=3.1.4",
     "pytest-asyncio>=0.25.0",
     "pytest>=8.3.4",
     "ruff>=0.8.4",
     "skjold>=0.6.2",
     "typer>=0.15.1",
     "vulture>=2.14",
+    "jinja2>=3.1.4",
+    "pre-commit>=4.0.1",
+    "typos>=1.28.4",
 ]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
-
-[tool.uv.workspace]
-members = ["app"]
 
 [tool.vulture]
 ignore_names = [
@@ -48,12 +47,13 @@ ignore_names = [
     "Web",
     "dispatch",
     "get_authors_handler",
-    "get_paginated_authers_handler",
+    "get_paginated_authors_handler",
     "authenticate"
 ]
-
 # exclude = ["app/api/ws/constants.py"]
 
+[tool.typos]
+files.extend-exclude = ["security_reports/*", "realm-export.json"]
 
 [tool.ruff]
 exclude = [

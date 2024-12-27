@@ -32,5 +32,5 @@ def validator(
         logger.error(f"Invalid data for PkgID {request.pkg_id}: \n{ex}")
 
         return ResponseModel.err_msg(
-            request.pkg_id, status_code=RSPCode.INVALID_DATA
+            request.pkg_id, request.req_id, status_code=RSPCode.INVALID_DATA
         )
