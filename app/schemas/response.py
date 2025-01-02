@@ -31,7 +31,7 @@ class ResponseModel[GenericSQLModelType](BaseModel):
     @classmethod
     def ok_msg(
         cls,
-        pkg_id: RSPCode,
+        pkg_id: PkgID,
         req_id: UUID,
         data: Optional[dict[str, Any]] = {},
         msg: Optional[str] = None,
@@ -45,7 +45,7 @@ class ResponseModel[GenericSQLModelType](BaseModel):
     @classmethod
     def err_msg(
         cls,
-        pkg_id: RSPCode,
+        pkg_id: PkgID,
         req_id: UUID,
         data: Optional[dict[str, Any]] = {},
         msg: Optional[str] = None,

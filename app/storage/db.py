@@ -94,9 +94,9 @@ async def get_paginated_results(
 
     if filters:
         if apply_filters:
-            query = apply_filters(query, model, filters)
+            query: Select = apply_filters(query, model, filters)
         else:
-            query = default_apply_filters(query, model, filters)
+            query: Select = default_apply_filters(query, model, filters)
 
     async with async_session() as s:
         # Calculate total

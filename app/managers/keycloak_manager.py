@@ -1,10 +1,6 @@
-from typing import Any
-
-from keycloak import KeycloakAdmin, KeycloakOpenID
+from keycloak import KeycloakOpenID
 
 from app.settings import (
-    KEYCLOAK_ADMIN_PASSWORD,
-    KEYCLOAK_ADMIN_USERNAME,
     KEYCLOAK_BASE_URL,
     KEYCLOAK_CLIENT_ID,
     KEYCLOAK_REALM,
@@ -28,6 +24,8 @@ class KeycloakManager:
         None
         """
         # FIXME: Unnecessary admin client, probably should be removed
+        # from keycloak import KeycloakAdmin
+        # from app.settings import KEYCLOAK_ADMIN_PASSWORD KEYCLOAK_ADMIN_USERNAME
         # self.admin = KeycloakAdmin(
         #     server_url=KEYCLOAK_BASE_URL,
         #     username=KEYCLOAK_ADMIN_USERNAME,

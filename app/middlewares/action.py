@@ -1,5 +1,3 @@
-import re
-
 from fastapi import Request, status
 from fastapi.responses import JSONResponse
 from starlette.authentication import UnauthenticatedUser
@@ -17,6 +15,14 @@ class PermAuthHTTPMiddleware(BaseHTTPMiddleware):
         self.excluded_paths = EXCLUDED_PATHS
 
     async def dispatch(self, request: Request, call_next):
+        """
+        This middleware function is responsible for handling permission-based authentication and authorization for incoming HTTP requests.
+        It checks if the request is for an excluded path, and if so, allows the request to continue.
+        Otherwise, it checks if the user is authenticated, and if not, returns a 401 Unauthorized response.
+        If the user is authenticated, it checks if the user has the necessary permissions to access the requested resource using the RBAC manager.
+        If the user does not have permission, it returns a 403 Forbidden response.
+        If all checks pass, the middleware allows the request to continue.
+        """
         if self.excluded_paths.match(request.url.path):
             return await call_next(request)
 

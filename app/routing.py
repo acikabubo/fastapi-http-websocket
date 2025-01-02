@@ -4,7 +4,6 @@ from importlib import import_module
 from typing import Any
 
 from fastapi import APIRouter
-from pydantic import BaseModel
 
 from app.api.ws.constants import PkgID, RSPCode
 from app.logging import logger
@@ -75,6 +74,15 @@ class PackageRouter:
         return decorator
 
     def __get_handler(self, pkg_id: PkgID) -> HandlerCallableType:
+        """
+        Retrieves the handler function registered for the given package ID from the `handlers_registry` dictionary.
+
+        Args:
+            pkg_id (PkgID): The package ID to retrieve the handler function for.
+
+        Returns:
+            HandlerCallableType: The handler function registered for the given package ID.
+        """
         return self.handlers_registry[pkg_id]
 
     async def handle_request(
@@ -112,13 +120,12 @@ class PackageRouter:
         json_schema, validator_func = self.validators_registry[request.pkg_id]
 
         # FIXME: Maybe is better first to check if validator func exists and then check if json_schema is not None
-        if json_schema is not None:
-            if issubclass(json_schema, BaseModel):
+        if validator_func is not None and json_schema is not None:
+            if hasattr(json_schema, "model_json_schema"):
                 json_schema = json_schema.model_json_schema()
 
-            if validator_func is not None:
-                if validation_result := validator_func(request, json_schema):
-                    return validation_result
+            if validation_result := validator_func(request, json_schema):
+                return validation_result
 
         handler = self.__get_handler(request.pkg_id)
 

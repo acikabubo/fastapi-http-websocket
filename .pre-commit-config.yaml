@@ -1,11 +1,29 @@
 repos:
-  - repo: https://github.com/pre-commit/pre-commit-hooks
+  - repo: 'https://github.com/pre-commit/pre-commit-hooks'
     rev: v2.3.0
     hooks:
       - id: check-yaml
       - id: end-of-file-fixer
       - id: trailing-whitespace
-  - repo: https://github.com/crate-ci/typos
+  - repo: 'https://github.com/crate-ci/typos'
     rev: v1.28.4
     hooks:
       - id: typos
+  - repo: 'https://github.com/astral-sh/ruff-pre-commit'
+    rev: v0.8.4
+    hooks:
+      - id: ruff
+      - id: ruff-format
+  - repo: 'https://github.com/econchick/interrogate'
+    rev: 1.7.0
+    hooks:
+      - id: interrogate
+        args:
+          # - '-vv'
+          - '--quiet'
+          - '--fail-under=80'
+        pass_filenames: false
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: '1.14.0'  # Use the sha / tag you want to point at
+    hooks:
+      - id: mypy

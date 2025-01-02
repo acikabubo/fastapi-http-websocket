@@ -33,6 +33,8 @@ dev = [
     "jinja2>=3.1.5",
     "pre-commit>=4.0.1",
     "typos>=1.28.4",
+    "interrogate>=1.7.0",
+    "mypy>=1.14.0",
 ]
 
 [tool.pytest.ini_options]
@@ -53,7 +55,7 @@ ignore_names = [
 # exclude = ["app/api/ws/constants.py"]
 
 [tool.typos]
-files.extend-exclude = ["security_reports/*", "realm-export.json"]
+files.extend-exclude = [".security_reports/*", "realm-export.json"]
 
 [tool.ruff]
 exclude = [
@@ -85,7 +87,7 @@ exclude = [
     ".venv",
     ".worktree"
 ]
-line-length = 88
+line-length = 79
 indent-width = 4
 target-version = "py312"
 
@@ -103,3 +105,20 @@ skip-magic-trailing-comma = false
 line-ending = "auto"
 docstring-code-format = true
 docstring-code-line-length = "dynamic"
+
+[tool.interrogate]
+ignore-module = true
+ignore-init-method = true
+ignore-nested-functions = true
+ignore-property-decorators = true
+fail-under = 80
+verbose=2
+ignore-regex = ["__new__"]
+exclude = [
+    ".worktree",
+    "tests",
+    "scripts",
+    "app/settings.py",
+    "app/logging.py",
+    "app/schemas/*"
+]
