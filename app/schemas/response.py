@@ -16,14 +16,14 @@ class MetadataModel(BaseModel):
 
 
 class BroadcastDataModel[GenericSQLModelType](BaseModel):
-    pkg_id: PkgID
-    req_id: UUID
+    pkg_id: PkgID = Field(frozen=True)
+    req_id: UUID = Field(frozen=True)
     data: dict[str, Any] | list[GenericSQLModelType]
 
 
 class ResponseModel[GenericSQLModelType](BaseModel):
-    pkg_id: PkgID
-    req_id: UUID
+    pkg_id: PkgID = Field(frozen=True)
+    req_id: UUID = Field(frozen=True)
     status_code: Optional[RSPCode] = RSPCode.OK
     meta: Optional[MetadataModel | dict] = {}
     data: Optional[dict[str, Any] | list[GenericSQLModelType]] = {}
