@@ -1,28 +1,30 @@
 import re
 
-from decouple import config
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
-ACTIONS_FILE_PATH = config(
-    "ACTIONS_FILE_PATH", cast=str, default="actions.json"
-)
 
-# Keycloak settings
-KEYCLOAK_REALM = config("KEYCLOAK_REALM", cast=str)
-KEYCLOAK_CLIENT_ID = config("KEYCLOAK_CLIENT_ID", cast=str)
-KEYCLOAK_BASE_URL = config(
-    "KEYCLOAK_BASE_URL", cast=str, default="http://hw-keycloak:8080/"
-)
-KEYCLOAK_ADMIN_USERNAME = config("KEYCLOAK_ADMIN_USERNAME", cast=str)
-KEYCLOAK_ADMIN_PASSWORD = config("KEYCLOAK_ADMIN_PASSWORD", cast=str)
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(case_sensitive=True)
 
-# Redis settings
-REDIS_IP = config("REDIS_IP", cast=str, default="localhost")
+    ACTIONS_FILE_PATH: str = "actions.json"
 
-USER_SESSION_REDIS_KEY_PREFIX = config(
-    "USER_SESSION_REDIS_KEY_PREFIX", cast=str, default="session:"
-)
+    # Keycloak settings
+    KEYCLOAK_REALM: str
+    KEYCLOAK_CLIENT_ID: str
+    KEYCLOAK_BASE_URL: str = "http://hw-keycloak:8080/"
 
-MAIN_REDIS_DB = config("MAIN_REDIS_DB", cast=int, default=1)
-AUTH_REDIS_DB = config("AUTH_REDIS_DB", cast=int, default=10)
+    # Keycloak admin credentials
+    KEYCLOAK_ADMIN_USERNAME: str
+    KEYCLOAK_ADMIN_PASSWORD: str
 
-EXCLUDED_PATHS = re.compile(r"^(/docs|/openapi.json)$")
+    # Redis settings
+    REDIS_IP: str = "localhost"
+
+    USER_SESSION_REDIS_KEY_PREFIX: str = "session:"
+    MAIN_REDIS_DB: int = 1
+    AUTH_REDIS_DB: int = 10
+
+    EXCLUDED_PATHS: re.Pattern = re.compile(r"^(/docs|/openapi.json)$")
+
+
+app_settings = Settings()

@@ -75,6 +75,7 @@ def main():
     try:
         packages = scan_outdated_packages()
         format_output(packages)
+        print()
     except Exception as e:
         print(f"An unexpected error occurred: {e}")
         sys.exit(1)

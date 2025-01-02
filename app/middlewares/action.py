@@ -5,14 +5,14 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import ASGIApp
 
 from app.managers.rbac_manager import RBACManager
-from app.settings import EXCLUDED_PATHS
+from app.settings import app_settings
 
 
 class PermAuthHTTPMiddleware(BaseHTTPMiddleware):
     def __init__(self, app: ASGIApp, rbac: RBACManager):
         super().__init__(app)
         self.rbac: RBACManager = rbac
-        self.excluded_paths = EXCLUDED_PATHS
+        self.excluded_paths = app_settings.EXCLUDED_PATHS
 
     async def dispatch(self, request: Request, call_next):
         """

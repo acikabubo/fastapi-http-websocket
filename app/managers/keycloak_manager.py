@@ -1,10 +1,6 @@
 from keycloak import KeycloakOpenID
 
-from app.settings import (
-    KEYCLOAK_BASE_URL,
-    KEYCLOAK_CLIENT_ID,
-    KEYCLOAK_REALM,
-)
+from app.settings import app_settings
 
 
 class KeycloakManager:
@@ -35,9 +31,9 @@ class KeycloakManager:
         # )
 
         self.openid = KeycloakOpenID(
-            server_url=f"{KEYCLOAK_BASE_URL}/",
-            client_id=KEYCLOAK_CLIENT_ID,
-            realm_name=KEYCLOAK_REALM,
+            server_url=f"{app_settings.KEYCLOAK_BASE_URL}/",
+            client_id=app_settings.KEYCLOAK_CLIENT_ID,
+            realm_name=app_settings.KEYCLOAK_REALM,
         )
 
     def login(self, username: str, password: str):

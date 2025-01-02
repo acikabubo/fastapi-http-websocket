@@ -1,7 +1,7 @@
 from app.logging import logger
 from app.schemas.roles import ROLE_CONFIG_SCHEMA
 from app.schemas.user import UserModel
-from app.settings import ACTIONS_FILE_PATH
+from app.settings import app_settings
 from app.utils import read_json_file
 
 
@@ -17,7 +17,9 @@ class RBACManager:
         The `http` attribute is a dictionary that maps HTTP request paths and methods to the required role for accessing the corresponding HTTP endpoint.
         """
 
-        __roles = read_json_file(ACTIONS_FILE_PATH, ROLE_CONFIG_SCHEMA)
+        __roles = read_json_file(
+            app_settings.ACTIONS_FILE_PATH, ROLE_CONFIG_SCHEMA
+        )
 
         self.ws: dict[str, str] = __roles["ws"]
         self.http: dict[str, dict[str, str]] = __roles["http"]

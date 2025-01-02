@@ -9,18 +9,18 @@ from app.logging import logger
 from app.managers.rbac_manager import RBACManager
 from app.middlewares.action import PermAuthHTTPMiddleware
 from app.routing import collect_subrouters
-from app.schemas.roles import ROLE_CONFIG_SCHEMA
-from app.settings import ACTIONS_FILE_PATH
 from app.storage.db import wait_and_init_db
 from app.storage.redis import RRedis
 from app.tasks.kc_user_session import kc_user_session_task
-from app.utils import read_json_file
 
 tasks = []
 ws_clients = {}
 
 
 async def proba(_, content):
+    """
+    Proba
+    """
     print()
     print("tuka si")
     print()
@@ -32,6 +32,14 @@ def startup():
     """
 
     async def wrapper():
+        """
+        Asynchronous initialization wrapper that:
+        - Sets up the database and tables
+        - Creates a user session background task
+        - Subscribes to Redis channels for real-time messaging
+
+        This wrapper handles all startup operations that require async/await syntax.
+        """
         # Create the database and tables
         await wait_and_init_db()
         logger.info("Initialized database and tables")
@@ -53,6 +61,13 @@ def shutdown():
     """
 
     async def wrapper():
+        """
+        Asynchronous shutdown wrapper that ensures all pending tasks complete gracefully.
+
+        Uses gather() to wait for all tasks in the global tasks list to finish,
+        handling any exceptions that may occur during shutdown without interrupting
+        the shutdown process.
+        """
         print("SHUTDOWN")
         # Run loop until tasks done
         ensure_future(gather(*tasks, return_exceptions=True))

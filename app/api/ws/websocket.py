@@ -12,7 +12,7 @@ from app.logging import logger
 from app.managers.websocket_connection_manager import connection_manager
 from app.schemas.response import BroadcastDataModel, ResponseModel
 from app.schemas.user import UserModel
-from app.settings import USER_SESSION_REDIS_KEY_PREFIX
+from app.settings import app_settings
 from app.storage.redis import get_auth_redis_connection
 
 
@@ -128,9 +128,9 @@ class PackageAuthWebSocketEndpoint(WebSocketEndpoint):
         await self.r.add_kc_user_session(self.user)
 
         # Map username with websocket instance
-        ws_clients[USER_SESSION_REDIS_KEY_PREFIX + self.user.username] = (
-            websocket
-        )
+        ws_clients[
+            app_settings.USER_SESSION_REDIS_KEY_PREFIX + self.user.username
+        ] = websocket
 
         connection_manager.connect(websocket)
         logger.debug("Client connected to the websocket connection")

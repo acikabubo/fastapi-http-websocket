@@ -2,7 +2,7 @@ from asyncio import CancelledError, TimeoutError, sleep
 
 import app  # FIXME: Import like this to avoid circular import. Try another way to use ws_clients!
 from app.logging import logger
-from app.settings import USER_SESSION_REDIS_KEY_PREFIX
+from app.settings import app_settings
 from app.storage.redis import get_auth_redis_connection
 
 
@@ -11,7 +11,7 @@ async def kc_user_session_task():
     Runs a task that monitors the expiration of user sessions stored in Redis.
 
     This task subscribes to the Redis `__keyevent@*__:expired` channel to listen for expired keys.
-    When an expired key is detected that matches the `USER_SESSION_REDIS_KEY_PREFIX`,
+    When an expired key is detected that matches the `app_settings.USER_SESSION_REDIS_KEY_PREFIX`,
     the task closes the associated WebSocket connection (if it exists) and removes the user from the `ws_clients` dictionary.
 
     This ensures that when a user's session expires, their WebSocket connection is properly closed and cleaned up.
@@ -37,7 +37,9 @@ async def kc_user_session_task():
 
             evt_key = event["data"]
 
-            if not evt_key.startswith(USER_SESSION_REDIS_KEY_PREFIX):
+            if not evt_key.startswith(
+                app_settings.USER_SESSION_REDIS_KEY_PREFIX
+            ):
                 await sleep(1)
                 continue
 

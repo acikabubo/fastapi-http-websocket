@@ -32,16 +32,19 @@ RUN addgroup --gid 1000 devel && \
 # Install uv
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
-# RUN pip install --upgrade pip
+RUN pip install --upgrade pip
 ENV UV_SYSTEM_PYTHON=1
 
-# Install dependencies
-COPY requirements.txt .
-RUN uv pip install --no-cache-dir -r requirements.txt
+# Copy required file
+COPY pyproject.toml /tmp
+
+# Install dependencies and include development dependencies
+RUN uv pip install --requirement /tmp/pyproject.toml
+# RUN uv pip install --requirement /tmp/pyproject.toml --all-extras
 
 # Install fixuid
 RUN USER=devel && \
-    GROUP=devel && \
+GROUP=devel && \
     curl -SsL https://github.com/boxboat/fixuid/releases/download/v0.6.0/fixuid-0.6.0-linux-amd64.tar.gz | tar -C /usr/local/bin -xzf - && \
     chown root:root /usr/local/bin/fixuid && \
     chmod 4755 /usr/local/bin/fixuid && \
@@ -56,7 +59,6 @@ COPY . /project
 
 # Install the application dependencies
 WORKDIR /project
-# RUN uv sync --frozen --no-cache
 
 # Expose the port the app runs on
 EXPOSE 8000

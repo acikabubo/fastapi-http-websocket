@@ -7,12 +7,7 @@ from redis.asyncio import ConnectionPool, Redis
 
 from app.logging import logger
 from app.schemas.user import UserModel
-from app.settings import (
-    AUTH_REDIS_DB,
-    MAIN_REDIS_DB,
-    REDIS_IP,
-    USER_SESSION_REDIS_KEY_PREFIX,
-)
+from app.settings import app_settings
 
 
 class RedisPool:
@@ -27,7 +22,7 @@ class RedisPool:
     @classmethod
     async def _create_instance(cls, db):
         pool = ConnectionPool.from_url(
-            f"redis://{REDIS_IP}:6379",
+            f"redis://{app_settings.REDIS_IP}:6379",
             db=db,
             encoding="utf-8",
             decode_responses=True,
@@ -43,13 +38,15 @@ class RedisPool:
 
     @staticmethod
     async def add_kc_user_session(r: Redis, user: UserModel):
-        user_session_key = USER_SESSION_REDIS_KEY_PREFIX + user.username
+        user_session_key = (
+            app_settings.USER_SESSION_REDIS_KEY_PREFIX + user.username
+        )
         await r.set(user_session_key, 1)
         await r.pexpire(user_session_key, (user.expired_seconds + 10) * 1000)
         logger.debug(f"Added user session in redis for: {user.username}")
 
 
-async def get_redis_connection(db=MAIN_REDIS_DB):
+async def get_redis_connection(db=app_settings.MAIN_REDIS_DB):
     try:
         return await RedisPool.get_instance(db)
     except Exception as ex:
@@ -57,7 +54,7 @@ async def get_redis_connection(db=MAIN_REDIS_DB):
 
 
 async def get_auth_redis_connection():
-    return await get_redis_connection(db=AUTH_REDIS_DB)
+    return await get_redis_connection(db=app_settings.AUTH_REDIS_DB)
 
 
 class REventHandler:

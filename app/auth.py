@@ -14,7 +14,7 @@ from starlette.authentication import AuthCredentials, AuthenticationBackend
 from app.logging import logger
 from app.managers.keycloak_manager import KeycloakManager
 from app.schemas.user import UserModel
-from app.settings import EXCLUDED_PATHS
+from app.settings import app_settings
 
 
 class AuthBackend(AuthenticationBackend):
@@ -42,7 +42,7 @@ class AuthBackend(AuthenticationBackend):
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
-        self.excluded_paths = EXCLUDED_PATHS
+        self.excluded_paths = app_settings.EXCLUDED_PATHS
 
     async def authenticate(self, request):  # pragma: no cover
         """

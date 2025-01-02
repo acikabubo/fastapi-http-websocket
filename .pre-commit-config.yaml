@@ -24,6 +24,16 @@ repos:
           - '--fail-under=80'
         pass_filenames: false
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: '1.14.0'  # Use the sha / tag you want to point at
+    rev: ''  # Use the sha / tag you want to point at
     hooks:
       - id: mypy
+        args: [--strict, --ignore-missing-imports]
+  - repo: https://github.com/twu/skjold
+    rev: v0.6.2
+    hooks:
+      - id: skjold
+        name: "skjold: Auditing dependencies for known vulnerabilities."
+        entry: skjold audit
+        language: python
+        language_version: python3
+        files: ^(uv.lock)$
