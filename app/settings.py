@@ -26,5 +26,10 @@ class Settings(BaseSettings):
 
     EXCLUDED_PATHS: re.Pattern = re.compile(r"^(/docs|/openapi.json)$")
 
+    # Debug mode settings
+    DEBUG_AUTH: bool = False
+    DEBUG_AUTH_USERNAME: str = "acika"
+    DEBUG_AUTH_PASSWORD: str = "12345"
+
 
 app_settings = Settings()

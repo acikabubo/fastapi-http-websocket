@@ -67,12 +67,17 @@ class AuthBackend(AuthenticationBackend):
         try:
             kc_manager = KeycloakManager()
 
-            # FIXME: Simulate keycloak user login
-            token = kc_manager.login("acika", "12345")
-            access_token = token["access_token"]
-            print()
-            print(access_token)
-            print()
+            # Debug mode: bypass token validation (ONLY for development)
+            if app_settings.DEBUG_AUTH:
+                logger.warning(
+                    "DEBUG_AUTH is enabled - using debug credentials. "
+                    "NEVER enable this in production!"
+                )
+                token = kc_manager.login(
+                    app_settings.DEBUG_AUTH_USERNAME,
+                    app_settings.DEBUG_AUTH_PASSWORD,
+                )
+                access_token = token["access_token"]
 
             # Decode access token and get user data
             user_data = kc_manager.openid.decode_token(access_token)
