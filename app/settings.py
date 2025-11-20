@@ -19,6 +19,7 @@ class Settings(BaseSettings):
 
     # Redis settings
     REDIS_IP: str = "localhost"
+    REDIS_PORT: int = 6379
 
     USER_SESSION_REDIS_KEY_PREFIX: str = "session:"
     MAIN_REDIS_DB: int = 1
@@ -49,6 +50,16 @@ class Settings(BaseSettings):
     DEBUG_AUTH: bool = False
     DEBUG_AUTH_USERNAME: str = "acika"
     DEBUG_AUTH_PASSWORD: str = "12345"
+
+    # Database initialization settings
+    DB_INIT_RETRY_INTERVAL: int = 2
+    DB_INIT_MAX_RETRIES: int = 10
+
+    # Pagination defaults
+    DEFAULT_PAGE_SIZE: int = 20
+
+    # Logging settings
+    LOG_FILE_PATH: str = "logs/logging_errors.log"
 
 
 app_settings = Settings()

@@ -31,15 +31,23 @@ async_session = sessionmaker(
 )
 
 
-# FIXME: Maybe is good to use docker container health check?
-async def wait_and_init_db(retry_interval=2, max_retries=10):
+async def wait_and_init_db(
+    retry_interval: int = None,
+    max_retries: int = None,
+) -> None:
     """
-    Wait until the database is available.
+    Wait until the database is available and initialize tables.
 
-    Parameters:
-    - retry_interval (int): Time in seconds to wait between retries.
-    - max_retries (int): Maximum number of retries before giving up.
+    Args:
+        retry_interval: Time in seconds between retries.
+            Defaults to app_settings.DB_INIT_RETRY_INTERVAL
+        max_retries: Maximum number of retries before giving up.
+            Defaults to app_settings.DB_INIT_MAX_RETRIES
     """
+    if retry_interval is None:
+        retry_interval = app_settings.DB_INIT_RETRY_INTERVAL
+    if max_retries is None:
+        max_retries = app_settings.DB_INIT_MAX_RETRIES
     for attempt in range(max_retries):
         try:
             # Test a lightweight connection to check if the DB is ready

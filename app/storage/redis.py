@@ -23,7 +23,7 @@ class RedisPool:
     @classmethod
     async def _create_instance(cls, db):
         pool = ConnectionPool.from_url(
-            f"redis://{app_settings.REDIS_IP}:6379",
+            f"redis://{app_settings.REDIS_IP}:{app_settings.REDIS_PORT}",
             db=db,
             encoding="utf-8",
             decode_responses=True,

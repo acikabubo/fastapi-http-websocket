@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends
 from app.models.author import Author
 from app.schemas.author import AuthorQueryParams
 from app.schemas.response import PaginatedResponseModel
+from app.settings import app_settings
 from app.storage.db import get_paginated_results
 
 router = APIRouter()
@@ -50,7 +51,7 @@ async def get_authors_endpoint(
 )
 async def get_paginated_authors_endpoint(
     page: int = 1,
-    per_page: int = 20,
+    per_page: int = app_settings.DEFAULT_PAGE_SIZE,
     q: AuthorQueryParams = Depends(),
 ) -> PaginatedResponseModel[Author]:
     """

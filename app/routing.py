@@ -85,21 +85,51 @@ class PackageRouter:
         """
         return self.handlers_registry[pkg_id]
 
+    def _has_handler(self, pkg_id: int) -> bool:
+        """Check if a handler is registered for the given package ID."""
+        return pkg_id in self.handlers_registry
+
+    def _check_permission(self, pkg_id: int, user: UserModel) -> bool:
+        """Check if user has permission for the package ID."""
+        return self.rbac.check_ws_permission(pkg_id, user)
+
+    def _validate_request(
+        self, request: RequestModel
+    ) -> ResponseModel[dict[str, Any]] | None:
+        """
+        Validate request data against registered schema.
+
+        Returns:
+            ResponseModel with error if validation fails, None if valid.
+        """
+        json_schema, validator_func = self.validators_registry[request.pkg_id]
+
+        if validator_func is None or json_schema is None:
+            return None
+
+        # Convert Pydantic model to JSON schema if needed
+        if hasattr(json_schema, "model_json_schema"):
+            json_schema = json_schema.model_json_schema()
+
+        return validator_func(request, json_schema)
+
     async def handle_request(
         self, user: UserModel, request: RequestModel
     ) -> ResponseModel[dict[str, Any]]:
         """
-        This code acts like a traffic controller for incoming requests. It checks if the request is valid, if the user has permission to make the request, and then directs the request to the right handler function to process it.
-        Handles a request by finding the appropriate handler and validator for the request's package ID (pkg_id), validating the request data if a validator is registered, and then calling the registered handler function.
+        Handle incoming WebSocket request with validation and permission checks.
+
+        This method acts as a router, checking if the request is valid,
+        if the user has permission, and directing to the appropriate handler.
 
         Args:
-            user (UserModel): The user making the request.
-            request (RequestModel): The request object containing the package ID and other request data.
+            user: The user making the request.
+            request: The request object containing pkg_id and data.
 
         Returns:
-            ResponseModel[dict[str, Any]]: The response object containing the result of the request handling.
+            ResponseModel with the result of request handling.
         """
-        if request.pkg_id not in self.handlers_registry:
+        if not self._has_handler(request.pkg_id):
             return ResponseModel.err_msg(
                 request.pkg_id,
                 request.req_id,
@@ -107,9 +137,7 @@ class PackageRouter:
                 status_code=RSPCode.ERROR,
             )
 
-        has_permission = self.rbac.check_ws_permission(request.pkg_id, user)
-
-        if not has_permission:
+        if not self._check_permission(request.pkg_id, user):
             return ResponseModel.err_msg(
                 request.pkg_id,
                 request.req_id,
@@ -117,19 +145,10 @@ class PackageRouter:
                 status_code=RSPCode.PERMISSION_DENIED,
             )
 
-        json_schema, validator_func = self.validators_registry[request.pkg_id]
-
-        # FIXME: Maybe is better first to check if validator func exists and then check if json_schema is not None
-        if validator_func is not None and json_schema is not None:
-            if hasattr(json_schema, "model_json_schema"):
-                json_schema = json_schema.model_json_schema()
-
-            if validation_result := validator_func(request, json_schema):
-                return validation_result
+        if validation_error := self._validate_request(request):
+            return validation_error
 
         handler = self.__get_handler(request.pkg_id)
-
-        # return await handler(request, session)
         return await handler(request)
 
 
