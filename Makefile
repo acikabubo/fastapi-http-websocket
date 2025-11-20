@@ -30,6 +30,9 @@ serve:
 	@echo "Staring DHC Scada Backend Server..."
 	@uvicorn app:application --host 0.0.0.0 --reload --log-config uvicorn_logging.json
 
+test:
+	@echo "Running tests with pytest..."
+	@uv run pytest tests
 
 # To execute this commands first need to be executed `make shell`
 ws-handlers:

@@ -4,9 +4,17 @@ Pytest configuration and fixtures for testing.
 This module provides shared fixtures for authentication, database,
 and other common testing utilities.
 """
+import os
 from unittest.mock import Mock, patch
 
 import pytest
+
+# Set required environment variables for testing before importing app modules
+os.environ.setdefault("KEYCLOAK_REALM", "test-realm")
+os.environ.setdefault("KEYCLOAK_CLIENT_ID", "test-client")
+os.environ.setdefault("KEYCLOAK_BASE_URL", "http://localhost:8080/")
+os.environ.setdefault("KEYCLOAK_ADMIN_USERNAME", "admin")
+os.environ.setdefault("KEYCLOAK_ADMIN_PASSWORD", "admin")
 
 
 @pytest.fixture
@@ -43,6 +51,8 @@ def mock_user_data():
         "given_name": "Test",
         "family_name": "User",
         "email": "testuser@example.com",
+        "exp": 9999999999,
+        "azp": "test-client",
         "realm_access": {
             "roles": [
                 "offline_access",
@@ -50,6 +60,14 @@ def mock_user_data():
                 "get-authors",
                 "uma_authorization",
             ]
+        },
+        "resource_access": {
+            "test-client": {
+                "roles": [
+                    "admin",
+                    "get-authors",
+                ]
+            }
         },
     }
 
@@ -124,6 +142,8 @@ def admin_user_data():
         "given_name": "Admin",
         "family_name": "User",
         "email": "admin@example.com",
+        "exp": 9999999999,
+        "azp": "test-client",
         "realm_access": {
             "roles": [
                 "offline_access",
@@ -132,6 +152,14 @@ def admin_user_data():
                 "uma_authorization",
                 "default-roles-app",
             ]
+        },
+        "resource_access": {
+            "test-client": {
+                "roles": [
+                    "admin",
+                    "get-authors",
+                ]
+            }
         },
     }
 
@@ -150,5 +178,12 @@ def limited_user_data():
         "given_name": "Limited",
         "family_name": "User",
         "email": "limited@example.com",
+        "exp": 9999999999,
+        "azp": "test-client",
         "realm_access": {"roles": ["offline_access"]},
+        "resource_access": {
+            "test-client": {
+                "roles": []
+            }
+        },
     }
