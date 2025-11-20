@@ -1,3 +1,4 @@
+DEBUG_AUTH=true
 KEYCLOAK_REALM=HW-App
 KEYCLOAK_CLIENT_ID=auth-hw-frontend
 

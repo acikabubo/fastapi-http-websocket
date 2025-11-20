@@ -17,6 +17,13 @@ services:
     env_file:
       - .pg_env
 
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
   hw-redis:
     image: redis:alpine
     container_name: hw-redis
@@ -28,6 +35,13 @@ services:
       - 6379:6379
 
     command: redis-server --notify-keyspace-events KEA
+
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
 
   hw-server:
     build:
@@ -51,10 +65,20 @@ services:
     env_file:
       - .srv_env
 
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
     depends_on:
-      - hw-db
-      - hw-redis
-      - hw-keycloak
+      hw-db:
+        condition: service_healthy
+      hw-redis:
+        condition: service_healthy
+      hw-keycloak:
+        condition: service_healthy
 
     # command: sh -c "uvicorn app:application --host 0.0.0.0 --port 8000"
 
@@ -76,8 +100,16 @@ services:
 
     command: -v start-dev --import-realm
 
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/8080"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
     depends_on:
-      - hw-db
+      hw-db:
+        condition: service_healthy
 
   shell:
     extends: hw-server
@@ -96,9 +128,12 @@ services:
     command: "/usr/bin/tmux -L server"
 
     depends_on:
-      - hw-db
-      - hw-keycloak
-      - hw-redis
+      hw-db:
+        condition: service_healthy
+      hw-keycloak:
+        condition: service_healthy
+      hw-redis:
+        condition: service_healthy
 
 volumes:
   postgres-hw-data:

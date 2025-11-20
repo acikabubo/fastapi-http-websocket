@@ -44,7 +44,9 @@ class Settings(BaseSettings):
             f"@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
         )
 
-    EXCLUDED_PATHS: re.Pattern = re.compile(r"^(/docs|/openapi.json)$")
+    EXCLUDED_PATHS: re.Pattern = re.compile(
+        r"^(/docs|/openapi.json|/health)$"
+    )
 
     # Debug mode settings
     DEBUG_AUTH: bool = False
