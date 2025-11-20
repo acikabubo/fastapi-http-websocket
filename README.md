@@ -1,440 +1,601 @@
-# Authentication and Authorization
-## Overview
+# FastAPI HTTP & WebSocket Application
 
-**Authentication** and **Authorization** are critical components in any secure web application:
+A production-ready FastAPI application implementing both HTTP REST API and WebSocket handlers with role-based access control (RBAC), Keycloak authentication, and PostgreSQL database integration.
 
-- **Authentication** ensures that users are who they claim to be, typically using credentials like username and password or tokens.
-- **Authorization** determines what actions authenticated users are permitted to perform based on their roles or permissions.
+## Table of Contents
 
-This FastAPI implementation leverages middleware and custom backends to handle both authentication and authorization seamlessly.
-## Implementation Details
+- [Features](#features)
+- [Prerequisites](#prerequisites)
+- [Quick Start](#quick-start)
+- [Installation](#installation)
+- [Configuration](#configuration)
+- [Usage](#usage)
+  - [HTTP API](#http-api)
+  - [WebSocket API](#websocket-api)
+- [Architecture Overview](#architecture-overview)
+- [API Reference](#api-reference)
+- [Development](#development)
+- [Testing](#testing)
+- [Troubleshooting](#troubleshooting)
+- [Contributing](#contributing)
+- [License](#license)
 
-### Authentication
+## Features
 
-Authentication is handled by the `AuthenticationMiddleware` from **Starlette**.
+- **Dual Protocol Support**: HTTP REST API and WebSocket real-time communication
+- **Authentication**: Keycloak-based JWT token authentication
+- **Authorization**: Fine-grained RBAC with role-based permissions
+- **Database**: PostgreSQL with async SQLModel/SQLAlchemy
+- **Caching**: Redis integration for session management
+- **Package Router**: Custom routing system for WebSocket request handling
+- **Type Safety**: Strict type checking with mypy
+- **Code Quality**: Pre-commit hooks with ruff, bandit, and security scanning
+- **Production Ready**: Docker containerization with health checks
 
-- **Authentication Backend**:
-  - A custom `AuthBackend` processes authentication logic, validating user credentials or tokens and attaching user information to the request.
+## Prerequisites
 
-### Authorization
+- **Python**: 3.13+ (specified in [pyproject.toml:6](pyproject.toml#L6))
+- **uv**: Modern Python package manager ([installation guide](https://github.com/astral-sh/uv))
+- **Docker & Docker Compose**: For containerized services
+- **PostgreSQL**: 14+ (provided via Docker)
+- **Redis**: 7+ (provided via Docker)
+- **Keycloak**: Authentication server (provided via Docker)
 
-Authorization is enforced through a custom middleware `PermAuthHTTPMiddleware`:
+## Quick Start
 
-- **Permission Map**:
-  - Defined as a JSON structure (e.g., `ACTIONS_FILE_PATH`) that maps action IDs to permissions like `"create_author"` or `"create_genre"`.
-  - The middleware checks user permissions against this map to ensure they can perform requested actions.
+```bash
+# 1. Clone the repository
+git clone <repository-url>
+cd fastapi-http-websocket
 
+# 2. Set up environment variables
+cp .env.example .env  # Edit with your configuration
+
+# 3. Start all services (PostgreSQL, Redis, Keycloak)
+make start
+
+# 4. Install dependencies and run database migrations
+uv sync
+make migrate  # If migrations exist
+
+# 5. Start the development server with hot-reload
+make serve
+```
+
+The application will be available at `http://localhost:8000`
+
+## Installation
+
+### Local Development Setup
+
+```bash
+# Install uv package manager (if not already installed)
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Install project dependencies
+uv sync
+
+# Install pre-commit hooks
+uv run pre-commit install
+```
+
+### Docker Setup
+
+```bash
+# Build all containers
+make build
+
+# Start services in detached mode
+make start
+
+# View logs
+docker-compose logs -f
+
+# Stop services
+make stop
+
+# Enter development shell
+make shell
+```
+
+## Configuration
+
+### Environment Variables
+
+Create a `.env` file in the project root with the following variables:
+
+```bash
+# Keycloak Configuration
+KEYCLOAK_BASE_URL=http://localhost:8080
+KEYCLOAK_REALM=your-realm
+KEYCLOAK_CLIENT_ID=your-client-id
+KEYCLOAK_ADMIN_USERNAME=admin
+KEYCLOAK_ADMIN_PASSWORD=admin
+
+# Database Configuration
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5432
+POSTGRES_DB=your_database
+POSTGRES_USER=your_user
+POSTGRES_PASSWORD=your_password
+
+# Redis Configuration
+REDIS_IP=localhost
+REDIS_PORT=6379
+MAIN_REDIS_DB=0
+AUTH_REDIS_DB=1
+
+# Application Configuration
+ACTIONS_FILE_PATH=actions.json  # RBAC permissions file
+LOG_LEVEL=INFO
+```
+
+### RBAC Configuration
+
+Define role-based permissions in `actions.json`:
 
 ```json
 {
     "roles": [
-      "role1",
-      "role2",
-      "role3",
+        "admin",
+        "user",
+        "guest"
     ],
     "ws": {
-        "<PkgID>": "<required-role>"
+        "1": "user",
+        "2": "admin"
     },
     "http": {
-        "<request-path>": {
-           "request-method": "<required-role>"
+        "/api/authors": {
+            "GET": "user",
+            "POST": "admin"
         }
     }
 }
 ```
 
-### Routers
+## Usage
 
-#### Package router
+### HTTP API
 
-I'll analyze the code and create comprehensive Markdown documentation explaining its purpose, components, and functionality.
+#### Authentication
 
-# Package Router Documentation
+All HTTP requests (except excluded paths) require Bearer token authentication:
 
-## Overview
-This code defines a robust routing and request handling system for a FastAPI-based web application, with a focus on WebSocket and API request management. The primary components are the `PackageRouter` class and the `collect_subrouters()` function.
+```bash
+# Login to get access token
+curl -X POST http://localhost:8000/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username": "user", "password": "password"}'
 
-## Key Components
-
-### 1. PackageRouter Class
-
-#### Purpose
-The `PackageRouter` is a dynamic routing mechanism that:
-- Registers request handlers for different package IDs
-- Validates incoming requests
-- Checks user permissions
-- Routes requests to appropriate handler functions
-
-#### Key Methods
-
-##### `__init__()`
-Initializes registries for:
-- `handlers_registry`: Maps package IDs to handler functions
-- `validators_registry`: Stores JSON schemas and validator functions
-- `required_roles`: Defines role-based access control for different package IDs
-
-##### `register()` Decorator
-A powerful decorator that allows registering handler functions and validators for specific package IDs.
-
-**Features:**
-- Can register multiple package IDs simultaneously
-- Supports optional JSON schema validation
-- Prevents duplicate registrations
-
-**Example Usage:**
-```python
-@pkg_router.register(PkgID.USER_LOGIN, json_schema=login_schema)
-async def handle_user_login(request):
-    # Login handling logic
+# Use token in subsequent requests
+curl -X GET http://localhost:8000/api/authors \
+  -H "Authorization: Bearer <your-token>"
 ```
 
-##### `check_permission()`
-Validates user roles against required roles for a specific package ID.
+#### Available Endpoints
 
-##### `handle_request()`
-The core request handling method that:
-1. Validates the package ID
-2. Checks user permissions
-3. Applies optional request validation
-4. Calls the appropriate handler function
+- `GET /health` - Health check endpoint
+- `GET /api/authors` - Get authors list
+- `POST /api/authors` - Create new author (requires admin role)
 
-### 2. `collect_subrouters()` Function
+See [app/api/http/](app/api/http/) for all available HTTP endpoints.
 
-#### Purpose
-Automatically discovers and registers HTTP and WebSocket routers from specific application directories.
+### WebSocket API
 
-#### Key Features:
-- Dynamically imports router modules
-- Adds routers to a main `APIRouter`
-- Logs registered routers
+#### Establishing Connection
 
-## Design Patterns and Techniques
+```javascript
+// Connect with authentication token
+const ws = new WebSocket('ws://localhost:8000/web?token=<your-jwt-token>');
 
-### Dynamic Module Discovery
-Uses `pkgutil.iter_modules()` to automatically discover and import router modules.
+ws.onopen = () => {
+    console.log('Connected to WebSocket');
+};
 
-### Decorator-based Registration
-Implements a flexible registration mechanism using decorators.
-
-### Role-based Access Control
-Integrates permission checking based on predefined role requirements.
-
-### Validation Workflow
-Supports optional JSON schema validation before request processing.
-
-## Configuration
-
-### Actions Configuration
-Roles and permissions are loaded from an `actions.json` file specified by `ACTIONS_FILE_PATH`.
-
-## Error Handling
-
-### Request Handling Errors
-Returns structured error responses for scenarios like:
-- Missing package ID handlers
-- Insufficient user permissions
-- Validation failures
-
-## Example Workflow
-
-```python
-# Register a handler for user login
-@pkg_router.register(PkgID.USER_LOGIN, json_schema=login_schema)
-async def login_handler(request):
-    # Process login
-    return ResponseModel.success(...)
-
-# Automatic routing and permission checking happens in handle_request()
-response = await pkg_router.handle_request(user, request)
+ws.onmessage = (event) => {
+    const response = JSON.parse(event.data);
+    console.log('Received:', response);
+};
 ```
 
----
+#### Request Format
 
-## Workflow
-
-1. **Middleware Integration**:
-    - `PermAuthHTTPMiddleware` intercepts incoming HTTP requests.
-    - It retrieves user permissions and validates them against the required action.
-
-2. **Logged User Context**:
-    - The `request.user` object, populated by `AuthBackend`, provides the current user’s details for logging and permission validation.
-
-3. **Task Management**:
-    - Background tasks like `kc_user_session_task` are initiated at application startup to manage user sessions (e.g., tracking Keycloak sessions).
-
-# Managers
-
-## RBAC Manager (Role-based access control `rbac_manager.py`)
-
-### Overview
-This code implements a Role-Based Access Control (RBAC) system, which acts as a security guard to check if users have permission to access different parts of an application. Think of it as a bouncer at a club who checks if people have the right type of ticket to enter different areas.
-
-### Inputs and Outputs
-
-#### Inputs:
-- A JSON file containing role configurations that defines who can access what
-- User information including their roles
-
-#### Outputs:
-- Boolean decisions (`True/False`) about whether a user is allowed to access something
-
-### Implementation Details
-The `RBACManager` class uses a design pattern called Singleton (through the `new` method) to ensure only one instance of the security checker exists. When it starts up, it reads role configurations from a JSON file and organizes them into two categories:
-
-- **`ws`** for WebSocket permissions
-- **`http`** for web request permissions
-
-### Main Functions
-
-#### 1. `check_ws_permission`
-This function checks if a user can access WebSocket features:
-
-- Takes a package ID number and user information as input
-- Looks up what role is required for that package ID
-- Checks if the user has that role in their list of roles
-- Logs a message and returns `False` if permission is denied
-
-#### 2. `check_http_permission`
-This function checks if a user can access specific web endpoints:
-
-- Takes a web request as input
-- Examines the URL path and request type (GET, POST, etc.)
-- Checks if the user has the required role
-- Logs detailed messages for denied permissions
-
-### Logic Flow
-1. Load configuration from JSON file
-2. When a permission check is needed, look up the required role
-3. Check if the user has that role
-4. Return `True` if they have permission, `False` if they don't
-
-### Data Transformation
-The code transforms the JSON configuration into easily searchable dictionaries (like lookup tables) where it can quickly find what role is needed for any given access attempt. This makes the permission-checking process fast and efficient.
-
-### Purpose
-This security system helps protect different parts of the application by ensuring users can only access features they're supposed to, based on their assigned roles.
-
-## Websocket connection manager
-
-The `ConnectionManager` class manages WebSocket connections for a FastAPI application, enabling connection handling and message broadcasting.
-
-### Key Features
-
-- **Connection Management**:
-  - Maintains a list of active WebSocket connections (`active_connections`).
-  - Provides methods to add (`connect`) and remove (`disconnect`) WebSocket connections.
-
-- **Broadcasting**:
-  - Allows sending a message to all active WebSocket connections using the `broadcast` method.
-
-- **Logging**:
-  - Logs connection and disconnection events for debugging purposes, including the unique identifier of each WebSocket object.
-
-### Methods
-
-#### `connect(websocket: WebSocket)`
-- Accepts and adds a new WebSocket connection to the `active_connections` list.
-- Logs the addition of the WebSocket connection.
-
-#### `disconnect(websocket: WebSocket)`
-- Removes a WebSocket connection from the `active_connections` list.
-- Logs the removal of the WebSocket connection.
-- Includes a TODO to handle cases where the user might not be logged in.
-
-#### `broadcast(message: dict)`
-- Sends a JSON-encoded message to all active WebSocket connections asynchronously.
-
-### Purpose
-
-The `ConnectionManager` class centralizes WebSocket connection management and simplifies real-time communication in a FastAPI application. It is particularly useful for scenarios like:
-- Broadcasting updates to multiple clients.
-- Managing active WebSocket connections efficiently.
-
-### Example Usage
-
-```python
-from fastapi import FastAPI, WebSocket
-
-app = FastAPI()
-
-@app.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket):
-    await websocket.accept()
-    connection_manager.connect(websocket)
-    try:
-        while True:
-            data = await websocket.receive_json()
-            await connection_manager.broadcast(data)
-    except:
-        connection_manager.disconnect(websocket)
-```
-
-## Keycloak manager
-
-The `KeycloakManager` class is a **singleton** that simplifies interactions with a Keycloak server by managing two clients:
-
-1. **`KeycloakAdmin` Client**: Handles administrative tasks within Keycloak.
-2. **`KeycloakOpenID` Client**: Supports OpenID Connect operations, such as user authentication.
-
-### Key Features
-
-- **Singleton Design Pattern**:
-  - Ensures only one instance of `KeycloakManager` exists in the application.
-  - Managed via the `__new__` method.
-
-- **Initialization**:
-  - Configures the `KeycloakAdmin` and `KeycloakOpenID` clients with credentials and settings from environment variables:
-    - `KEYCLOAK_ADMIN_USERNAME`
-    - `KEYCLOAK_ADMIN_PASSWORD`
-    - `KEYCLOAK_BASE_URL`
-    - `KEYCLOAK_REALM`
-    - `KEYCLOAK_CLIENT_ID`
-
-- **Login Functionality**:
-  - Provides a `login` method to authenticate a user using their **username** and **password**.
-  - Returns an access token for subsequent API calls.
-
-### Purpose
-
-The `KeycloakManager` class centralizes configuration and functionality for:
-- Authenticating users.
-- Performing administrative tasks.
-- Ensuring thread safety through the singleton design.
-
-This design improves reusability, simplifies code management, and abstracts the complexity of interacting with Keycloak.
-
-### Example Usage
-
-```python
-keycloak_manager = KeycloakManager()
-
-# Authenticate a user
-token = keycloak_manager.login(username="user1", password="password123")
-print(f"Access Token: {token}")
-```
-
-# API and WS handers documentation
-
-## Establish WebSocket connection
-
-```mermaid
-sequenceDiagram
-    actor C as Client
-    participant WA as Web Application
-    participant S as Backend-Server
-    participant DB as PostgreSQL
-
-    alt Establishing WebSocket connection
-        C->>WA: <br/>
-        WA->>S: GET /web
-        WA->>S: Established WebSocket connection
-        S->>WA: Send initial data to client
-    end
-```
-
-## Make WebSocket Request/Response
-
-### Request data format
-
-#### Regular request data
 ```json
 {
-    "pkg_id": "<int>",
-    "req_id": "<uuid>",
-    "data": {...}
+    "pkg_id": 1,
+    "req_id": "550e8400-e29b-41d4-a716-446655440000",
+    "data": {}
 }
 ```
 
-#### Request for paginated data
+**Paginated Request:**
 ```json
-{
-    "pkg_id": "<int>",
-    "req_id": "<uuid>",
-}
-
-Without pagination params default are page=1 and per_page=20
-
 {
     "pkg_id": 2,
-    "req_id": "<uuid>",
+    "req_id": "550e8400-e29b-41d4-a716-446655440000",
     "data": {
         "page": 1,
-        "per_page": 5
+        "per_page": 20
     }
 }
 ```
 
-### Response data format
+*Note: If pagination params are omitted, defaults are `page=1` and `per_page=20`*
 
-#### Response for regular request
+#### Response Format
+
+**Regular Response:**
 ```json
 {
-    "pkg_id": "Same <int> like request",
-    "req_id": "Same <UUID> like request",
-    "status": 0,
+    "pkg_id": 1,
+    "req_id": "550e8400-e29b-41d4-a716-446655440000",
+    "status_code": 0,
     "data": {...}
 }
 ```
 
-#### Response for paginated request
+**Paginated Response:**
 ```json
 {
-    "pkg_id": "Same <int> like request",
-    "req_id": "Same <UUID> like request",
+    "pkg_id": 2,
+    "req_id": "550e8400-e29b-41d4-a716-446655440000",
     "status_code": 0,
     "meta": {
         "page": 1,
         "per_page": 20,
-        "total": 4,
-        "pages": 1
+        "total": 45,
+        "pages": 3
     },
     "data": [...]
 }
 ```
 
-```json
-{
-    "pkg_id": "Same <int> like request",
-    "req_id": "Same <UUID> like request",
-    "status_code": 0,
-    "meta": {
-        "page": 1,
-        "per_page": 5,
-        "total": 4,
-        "pages": 1
-    },
-    "data": [...]
-}
-```
+#### WebSocket Flow Diagram
 
 ```mermaid
 sequenceDiagram
     actor C as Client
     participant WA as Web Application
-    participant S as BackendServer
+    participant S as Backend Server
+
+    alt Establishing WebSocket Connection
+        C->>WA: User action
+        WA->>S: GET /web?token=<jwt>
+        S-->>WA: 101 Switching Protocols
+        S->>WA: Send initial data to client
+    end
 
     alt Make WebSocket Request/Response
-        C->>WA: <br/>
-        WA->>S: GET /web
-        S-->>WA: 101 Switching Protocols
-        WA->>S: Send request with data like above
-        S->>S: Handler the request
-        S-->WA: Return the response
+        WA->>S: Send request with pkg_id & data
+        S->>S: Validate permissions & handle request
+        S-->>WA: Return response with status_code
     end
 ```
 
-## Make HTTP Request/Response
+## Architecture Overview
 
-```mermaid
-sequenceDiagram
-    actor C as Client
-    participant WA as Web Application
-    participant S as BackendServer
+### Request Flow
 
+**HTTP Requests:**
+1. Request hits FastAPI endpoint
+2. `AuthenticationMiddleware` authenticates user via Keycloak token
+3. `PermAuthHTTPMiddleware` checks RBAC permissions against `actions.json`
+4. Request reaches endpoint handler in [app/api/http/](app/api/http/)
 
-    alt Make HTTP Rest Request/Response
-        C->>WA: <br/>
-        WA->>S: GET /web
-        S->>WA: Server send response
-    end
+**WebSocket Requests:**
+1. Client connects to `/web` with JWT token in query params
+2. `PackageAuthWebSocketEndpoint` authenticates the connection
+3. Client sends JSON with `pkg_id`, `req_id`, and `data`
+4. `PackageRouter` validates permissions, validates data schema, and dispatches to handler
+5. Handler returns `ResponseModel` sent back to client
+
+### Core Components
+
+#### PackageRouter
+
+Central routing system for WebSocket requests defined in [app/routing.py](app/routing.py):
+
+```python
+# Register a handler
+@pkg_router.register(PkgID.GET_AUTHORS, json_schema=AuthorSchema)
+async def get_authors_handler(request: RequestModel) -> ResponseModel:
+    # Handler logic
+    return ResponseModel.success(request.pkg_id, request.req_id, data=[...])
 ```
+
+**Features:**
+- Dynamic handler registration using decorators
+- Optional JSON schema validation
+- Built-in permission checking
+- Type-safe request/response models
+
+#### Authentication Backend
+
+[app/auth.py](app/auth.py) - Keycloak JWT token validation:
+- Decodes JWT tokens from Authorization header (HTTP) or query string (WebSocket)
+- Extracts user data into `UserModel` with roles
+- Configurable excluded paths via `EXCLUDED_PATHS` regex
+
+#### RBAC Manager
+
+[app/managers/rbac_manager.py](app/managers/rbac_manager.py) - Singleton permission manager:
+- Loads role definitions from `actions.json`
+- `check_ws_permission(pkg_id, user)` - Validates WebSocket permissions
+- `check_http_permission(request)` - Validates HTTP permissions
+
+#### Keycloak Manager
+
+[app/managers/keycloak_manager.py](app/managers/keycloak_manager.py) - Singleton Keycloak client:
+- Manages `KeycloakAdmin` and `KeycloakOpenID` clients
+- `login(username, password)` - Returns access token
+- Configured via environment variables
+
+#### WebSocket Connection Manager
+
+[app/managers/websocket_connection_manager.py](app/managers/websocket_connection_manager.py):
+- Manages active WebSocket connections
+- `broadcast(message)` - Sends message to all connected clients
+- Connection lifecycle tracking with logging
+
+#### Database
+
+[app/storage/db.py](app/storage/db.py) - PostgreSQL with async SQLModel:
+- `get_paginated_results(model, page, per_page, filters=...)` - Pagination helper
+- Custom filter functions via `apply_filters` parameter
+- Automatic retry logic in `wait_and_init_db()`
+
+### Directory Structure
+
+```
+app/
+├── __init__.py                 # Application factory
+├── api/
+│   ├── http/                   # HTTP endpoint routers
+│   │   ├── author.py
+│   │   └── health.py
+│   └── ws/
+│       ├── consumers/          # WebSocket endpoint classes
+│       ├── handlers/           # WebSocket request handlers
+│       └── constants.py        # PkgID and RSPCode enums
+├── managers/                   # Singleton managers
+│   ├── rbac_manager.py
+│   ├── keycloak_manager.py
+│   └── websocket_connection_manager.py
+├── middlewares/                # Custom middleware
+├── models/                     # SQLModel database models
+├── schemas/                    # Pydantic validation schemas
+├── tasks/                      # Background tasks
+└── storage/                    # Database and Redis utilities
+```
+
+## API Reference
+
+### WebSocket Package IDs
+
+Available `PkgID` values defined in [app/api/ws/constants.py](app/api/ws/constants.py):
+
+| PkgID | Value | Description | Required Role |
+|-------|-------|-------------|---------------|
+| `GET_AUTHORS` | 1 | Retrieve author list | `user` |
+| `GET_PAGINATED_AUTHORS` | 2 | Retrieve paginated authors | `admin` |
+| `THIRD` | 3 | Reserved for future use | TBD |
+
+### Response Status Codes
+
+`RSPCode` enumeration in [app/api/ws/constants.py:4-30](app/api/ws/constants.py#L4-L30):
+
+| Code | Value | Description |
+|------|-------|-------------|
+| `OK` | 0 | Operation completed successfully |
+| `ERROR` | 1 | General error occurred |
+| `INVALID_DATA` | 2 | Provided data is invalid or malformed |
+| `PERMISSION_DENIED` | 3 | User lacks required permissions |
+| `ACTIVE_HEATING_SCHEDULE` | 4 | Operation conflicts with active heating schedule |
+| `ACTIVE_TAG` | 5 | Operation conflicts with active tag |
+
+### Creating New WebSocket Handlers
+
+```bash
+# Add new PkgID to app/api/ws/constants.py
+# Then generate handler from template
+make new-ws-handlers
+
+# Or manually create in app/api/ws/handlers/
+```
+
+See [CLAUDE.md](CLAUDE.md#websocket-handler-management) for detailed instructions.
+
+## Development
+
+For comprehensive development workflows, commands, and best practices, see **[CLAUDE.md](CLAUDE.md)**.
+
+### Common Commands
+
+```bash
+# Start development server with hot-reload
+make serve
+
+# Run tests
+uv run pytest
+
+# Run single test
+uv run pytest tests/test_check.py::test_function_name
+
+# Code quality checks
+make ruff-check          # Linting
+uvx ruff format          # Formatting
+uvx mypy app/            # Type checking
+uvx interrogate app/     # Docstring coverage (≥80%)
+
+# Security scanning
+make bandit-scan         # SAST scanning
+make skjold-scan         # Dependency vulnerabilities
+make dead-code-scan      # Find unused code
+
+# WebSocket handlers
+make ws-handlers         # Show PkgID table
+make new-ws-handlers     # Generate new handler
+```
+
+### Pre-commit Hooks
+
+All commits must pass:
+- **ruff**: Linting and formatting (79 char line length)
+- **mypy**: Strict type checking
+- **interrogate**: ≥80% docstring coverage
+- **typos**: Spell checking
+- **bandit**: Security scanning (low severity threshold)
+- **skjold**: Dependency vulnerability checks
+
+### Code Style Requirements
+
+- **Line length**: 79 characters
+- **Type hints**: Required on all functions (mypy --strict)
+- **Docstrings**: Required on all public functions, classes, and methods
+- **Formatting**: Double quotes, 4-space indentation
+
+## Testing
+
+```bash
+# Run all tests with coverage
+uv run pytest
+
+# Run with verbose output
+uv run pytest -v
+
+# Run specific test file
+uv run pytest tests/test_routing.py
+
+# Run with asyncio debug mode
+uv run pytest --log-cli-level=DEBUG
+```
+
+Tests use:
+- `pytest-asyncio` with `asyncio_mode = "auto"`
+- `pytest-mock` for mocking Keycloak interactions
+- Isolated database sessions for database tests
+
+## Troubleshooting
+
+### Common Issues
+
+#### Connection Refused Errors
+
+**Problem**: `Connection refused` when connecting to services
+
+**Solution**:
+```bash
+# Verify services are running
+docker-compose ps
+
+# Restart services
+make stop
+make start
+
+# Check logs for errors
+docker-compose logs -f
+```
+
+#### Keycloak Authentication Failures
+
+**Problem**: `401 Unauthorized` or invalid token errors
+
+**Solutions**:
+1. Verify Keycloak is running: `curl http://localhost:8080`
+2. Check realm and client configuration in `.env`
+3. Ensure token hasn't expired (tokens have limited lifetime)
+4. Verify user has required roles in Keycloak admin console
+
+#### Database Migration Issues
+
+**Problem**: Database schema out of sync
+
+**Solutions**:
+```bash
+# Reset database (WARNING: destroys data)
+docker-compose down -v
+make start
+
+# Or manually run migrations
+uv run alembic upgrade head
+```
+
+#### WebSocket Connection Drops
+
+**Problem**: WebSocket connections disconnect unexpectedly
+
+**Solutions**:
+1. Check token validity in query parameters
+2. Verify user has permissions for requested `pkg_id` in `actions.json`
+3. Check server logs for permission denied errors
+4. Ensure Redis is running for session management
+
+#### Import Errors
+
+**Problem**: `ModuleNotFoundError` when running the application
+
+**Solutions**:
+```bash
+# Reinstall dependencies
+uv sync
+
+# Clear Python cache
+find . -type d -name "__pycache__" -exec rm -rf {} +
+find . -type f -name "*.pyc" -delete
+```
+
+#### Pre-commit Hook Failures
+
+**Problem**: Commits blocked by pre-commit hooks
+
+**Solutions**:
+```bash
+# Run individual hooks to identify issues
+uvx ruff check --config=pyproject.toml  # Linting
+uvx mypy app/                            # Type checking
+uvx interrogate app/                     # Docstrings
+
+# Auto-fix formatting issues
+uvx ruff format
+```
+
+### Getting Help
+
+- Check application logs: `docker-compose logs -f`
+- Enable debug logging: Set `LOG_LEVEL=DEBUG` in `.env`
+- Review [CLAUDE.md](CLAUDE.md) for detailed development guidance
+- Check Keycloak admin console: `http://localhost:8080/admin`
+
+## Contributing
+
+### Development Workflow
+
+1. Create a feature branch from `main`
+2. Make your changes following code style requirements
+3. Ensure all pre-commit hooks pass
+4. Write tests for new functionality
+5. Update documentation if needed
+6. Submit a pull request to `main` branch
+
+### Code Standards
+
+- All code must pass pre-commit hooks (ruff, mypy, interrogate, etc.)
+- Minimum 80% docstring coverage required
+- Type hints required on all functions
+- Follow 79-character line length limit
+- Write tests for new features and bug fixes
+
+### Security
+
+- Never commit sensitive data (`.env` files, tokens, passwords)
+- Run security scans before submitting PR: `make bandit-scan && make skjold-scan`
+- Report security vulnerabilities privately to maintainers
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+---
+
+**Built with**: FastAPI, PostgreSQL, Redis, Keycloak, and modern Python tooling

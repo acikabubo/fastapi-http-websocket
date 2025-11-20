@@ -18,6 +18,15 @@
     "python.testing.autoTestDiscoverOnSaveEnabled": true,
     //Spelling
     "cSpell.userWords": [
-        "asyncpg"
+        "asyncio",
+        "asyncpg",
+        "Docstrings",
+        "fastapi",
+        "mypy",
+        "pycache",
+        "Pydantic",
+        "pyproject",
+        "pytest",
+        "skjold"
     ],
 }
