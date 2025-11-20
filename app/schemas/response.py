@@ -9,10 +9,10 @@ from app.schemas.generic_typing import GenericSQLModelType
 
 
 class MetadataModel(BaseModel):
-    page: Annotated[int, Field(gt=1)]
-    per_page: Annotated[int, Field(gt=1)]
-    total: Annotated[int, Field(gt=0)]
-    pages: Annotated[int, Field(gt=0)]
+    page: Annotated[int, Field(ge=1)]
+    per_page: Annotated[int, Field(ge=1)]
+    total: Annotated[int, Field(ge=0)]
+    pages: Annotated[int, Field(ge=0)]
 
 
 class BroadcastDataModel[GenericSQLModelType](BaseModel):
@@ -25,17 +25,19 @@ class ResponseModel[GenericSQLModelType](BaseModel):
     pkg_id: PkgID = Field(frozen=True)
     req_id: UUID = Field(frozen=True)
     status_code: Optional[RSPCode] = RSPCode.OK
-    meta: Optional[MetadataModel | dict] = {}
-    data: Optional[dict[str, Any] | list[GenericSQLModelType]] = {}
+    meta: Optional[MetadataModel | dict] = None
+    data: Optional[dict[str, Any] | list[GenericSQLModelType]] = None
 
     @classmethod
     def ok_msg(
         cls,
         pkg_id: PkgID,
         req_id: UUID,
-        data: Optional[dict[str, Any]] = {},
+        data: Optional[dict[str, Any]] = None,
         msg: Optional[str] = None,
     ) -> "ResponseModel":
+        if data is None:
+            data = {}
         if msg:
             data["msg"] = msg
         return cls(
@@ -47,10 +49,12 @@ class ResponseModel[GenericSQLModelType](BaseModel):
         cls,
         pkg_id: PkgID,
         req_id: UUID,
-        data: Optional[dict[str, Any]] = {},
+        data: Optional[dict[str, Any]] = None,
         msg: Optional[str] = None,
         status_code: Optional[RSPCode] = RSPCode.ERROR,
     ) -> "ResponseModel":
+        if data is None:
+            data = {}
         if msg:
             data["msg"] = msg
         return cls(

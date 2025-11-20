@@ -7,7 +7,7 @@ from starlette.authentication import UnauthenticatedUser
 from starlette.endpoints import WebSocketEndpoint
 from starlette.websockets import WebSocket
 
-from app import ws_clients
+from app.connection_registry import ws_clients
 from app.logging import logger
 from app.managers.websocket_connection_manager import connection_manager
 from app.schemas.response import BroadcastDataModel, ResponseModel

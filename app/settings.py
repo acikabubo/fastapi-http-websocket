@@ -24,6 +24,25 @@ class Settings(BaseSettings):
     MAIN_REDIS_DB: int = 1
     AUTH_REDIS_DB: int = 10
 
+    # Database settings
+    DB_USER: str = "hw-user"
+    DB_PASSWORD: str = "hw-pass"
+    DB_HOST: str = "hw-db"
+    DB_PORT: int = 5432
+    DB_NAME: str = "hw-db"
+    DB_POOL_SIZE: int = 20
+    DB_MAX_OVERFLOW: int = 10
+    DB_POOL_RECYCLE: int = 3600
+    DB_POOL_PRE_PING: bool = True
+
+    @property
+    def DATABASE_URL(self) -> str:
+        """Construct the database URL from individual components."""
+        return (
+            f"postgresql+asyncpg://{self.DB_USER}:{self.DB_PASSWORD}"
+            f"@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
+        )
+
     EXCLUDED_PATHS: re.Pattern = re.compile(r"^(/docs|/openapi.json)$")
 
     # Debug mode settings

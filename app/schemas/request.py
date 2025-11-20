@@ -15,5 +15,5 @@ class RequestModel(BaseModel):
 
 
 class PaginatedRequestModel(BaseModel):
-    page: Annotated[int, Field(gt=1)]
-    per_page: Annotated[int, Field(gt=1)]
+    page: Annotated[int, Field(ge=1)]
+    per_page: Annotated[int, Field(ge=1)]

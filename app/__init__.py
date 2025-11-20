@@ -14,7 +14,6 @@ from app.storage.redis import RRedis
 from app.tasks.kc_user_session import kc_user_session_task
 
 tasks = []
-ws_clients = {}
 
 
 async def proba(_, content):

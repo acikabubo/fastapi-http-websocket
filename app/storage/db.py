@@ -10,18 +10,21 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import NullPool
 from sqlmodel import SQLModel, func, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.logging import logger
 from app.schemas.generic_typing import GenericSQLModelType
 from app.schemas.response import MetadataModel
-
-DB_URL = "postgresql+asyncpg://hw-user:hw-pass@hw-db:5432/hw-db"
+from app.settings import app_settings
 
 engine: AsyncEngine = create_async_engine(
-    DB_URL, echo=False, poolclass=NullPool
+    app_settings.DATABASE_URL,
+    echo=False,
+    pool_size=app_settings.DB_POOL_SIZE,
+    max_overflow=app_settings.DB_MAX_OVERFLOW,
+    pool_recycle=app_settings.DB_POOL_RECYCLE,
+    pool_pre_ping=app_settings.DB_POOL_PRE_PING,
 )
 async_session = sessionmaker(
     engine, expire_on_commit=False, class_=AsyncSession

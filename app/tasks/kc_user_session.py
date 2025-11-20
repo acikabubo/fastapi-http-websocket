@@ -1,6 +1,6 @@
 from asyncio import CancelledError, TimeoutError, sleep
 
-import app  # FIXME: Import like this to avoid circular import. Try another way to use ws_clients!
+from app.connection_registry import ws_clients
 from app.logging import logger
 from app.settings import app_settings
 from app.storage.redis import get_auth_redis_connection
@@ -45,9 +45,9 @@ async def kc_user_session_task():
 
             # Close websocket connection and delete user
             # relation with websocket connection
-            if ws_conn := app.ws_clients.get(evt_key):
+            if ws_conn := ws_clients.get(evt_key):
                 await ws_conn.close()
-                del app.ws_clients[evt_key]
+                del ws_clients[evt_key]
 
             logger.info(f'Session for user "{evt_key}" has been expired')
 
