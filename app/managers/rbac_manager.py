@@ -1,13 +1,14 @@
+from fastapi import Request
+
 from app.logging import logger
 from app.schemas.roles import ROLE_CONFIG_SCHEMA
 from app.schemas.user import UserModel
 from app.settings import app_settings
 from app.utils import read_json_file
+from app.utils.singleton import SingletonMeta
 
 
-class RBACManager:
-    __instance = None
-
+class RBACManager(metaclass=SingletonMeta):
     def __init__(self):
         """
         Initializes the RBAC (Role-Based Access Control) manager by reading the role configuration from a JSON file and storing it in the `ws` and `http` attributes.
@@ -47,7 +48,7 @@ class RBACManager:
 
     def check_http_permission(
         self,
-        request,
+        request: Request,
     ) -> bool:
         """
         Checks if the user has the required role to access the requested HTTP endpoint.
@@ -76,8 +77,3 @@ class RBACManager:
             has_permission = False
 
         return has_permission
-
-    def __new__(cls):
-        if cls.__instance is None:
-            cls.__instance = super().__new__(cls)
-        return cls.__instance

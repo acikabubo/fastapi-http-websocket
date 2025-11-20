@@ -12,7 +12,7 @@ from app.schemas.request import RequestModel
 from app.schemas.response import ResponseModel
 from app.storage.db import get_paginated_results
 
-filters_schema: JsonSchemaType = {
+get_authors_schema: JsonSchemaType = {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "type": "object",
     "properties": {
@@ -59,7 +59,7 @@ async def get_authors_handler(request: RequestModel) -> ResponseModel[Author]:
         return ResponseModel(
             pkg_id=request.pkg_id,
             req_id=request.req_id,
-            data=authors,
+            data=[author.model_dump() for author in authors],
         )
     except Exception as ex:
         logger.error(ex)
@@ -71,7 +71,7 @@ async def get_authors_handler(request: RequestModel) -> ResponseModel[Author]:
         )
 
 
-filters_schema: JsonSchemaType = {
+get_paginated_authors_schema: JsonSchemaType = {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "type": "object",
     "properties": {
@@ -92,7 +92,7 @@ filters_schema: JsonSchemaType = {
 
 @pkg_router.register(
     PkgID.GET_PAGINATED_AUTHORS,
-    json_schema=filters_schema,
+    json_schema=get_paginated_authors_schema,
     validator_callback=validator,
 )
 async def get_paginated_authors_handler(
@@ -113,7 +113,7 @@ async def get_paginated_authors_handler(
         return ResponseModel(
             pkg_id=request.pkg_id,
             req_id=request.req_id,
-            data=authors,
+            data=[author.model_dump() for author in authors],
             meta=meta,
         )
     except Exception as ex:

@@ -10,19 +10,9 @@ from app.managers.rbac_manager import RBACManager
 from app.middlewares.action import PermAuthHTTPMiddleware
 from app.routing import collect_subrouters
 from app.storage.db import wait_and_init_db
-from app.storage.redis import RRedis
 from app.tasks.kc_user_session import kc_user_session_task
 
 tasks = []
-
-
-async def proba(_, content):
-    """
-    Proba
-    """
-    print()
-    print("tuka si")
-    print()
 
 
 def startup():
@@ -43,13 +33,9 @@ def startup():
         await wait_and_init_db()
         logger.info("Initialized database and tables")
 
-        print("STARTUP")
+        logger.info("Application startup initiated")
         tasks.append(create_task(kc_user_session_task()))
         logger.info("Created task for user session")
-
-        # Subscribe to Redis channels
-        r = await RRedis()
-        await r.subscribe("proba", proba)
 
     return wrapper
 
@@ -67,7 +53,7 @@ def shutdown():
         handling any exceptions that may occur during shutdown without interrupting
         the shutdown process.
         """
-        print("SHUTDOWN")
+        logger.info("Application shutdown initiated")
         # Run loop until tasks done
         ensure_future(gather(*tasks, return_exceptions=True))
 

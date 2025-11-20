@@ -8,6 +8,7 @@ from redis.asyncio import ConnectionPool, Redis
 from app.logging import logger
 from app.schemas.user import UserModel
 from app.settings import app_settings
+from app.utils.singleton import SingletonMeta
 
 
 class RedisPool:
@@ -123,11 +124,7 @@ class RedisHandler(object):
         self.event_handlers[channel].add_callback((callback, kwargs))
 
 
-class RRedis(object):
-    __instance = None
+class RRedis(RedisHandler, metaclass=SingletonMeta):
+    """Singleton Redis handler for pub/sub operations."""
 
-    async def __new__(cls):
-        if cls.__instance is None:
-            cls.__instance = RedisHandler()
-
-        return cls.__instance
+    pass

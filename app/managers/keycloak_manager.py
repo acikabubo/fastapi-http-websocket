@@ -1,35 +1,17 @@
 from keycloak import KeycloakOpenID
 
 from app.settings import app_settings
+from app.utils.singleton import SingletonMeta
 
 
-class KeycloakManager:
-    __instance = None
-
+class KeycloakManager(metaclass=SingletonMeta):
     def __init__(self):
         """
         Initialize KeycloakManager instance.
 
-        This method initializes two Keycloak clients: `admin` and `openid`.
-        The `admin` client is used for administrative tasks, while the `openid` client is used for OpenID Connect operations.
-
-        Parameters:
-        None
-
-        Returns:
-        None
+        This method initializes the KeycloakOpenID client for OpenID
+        Connect operations.
         """
-        # FIXME: Unnecessary admin client, probably should be removed
-        # from keycloak import KeycloakAdmin
-        # from app.settings import KEYCLOAK_ADMIN_PASSWORD KEYCLOAK_ADMIN_USERNAME
-        # self.admin = KeycloakAdmin(
-        #     server_url=KEYCLOAK_BASE_URL,
-        #     username=KEYCLOAK_ADMIN_USERNAME,
-        #     password=KEYCLOAK_ADMIN_PASSWORD,
-        #     realm_name=KEYCLOAK_REALM,
-        #     user_realm_name="master",
-        # )
-
         self.openid = KeycloakOpenID(
             server_url=f"{app_settings.KEYCLOAK_BASE_URL}/",
             client_id=app_settings.KEYCLOAK_CLIENT_ID,
@@ -48,8 +30,3 @@ class KeycloakManager:
         str: The access token obtained after successful authentication.
         """
         return self.openid.token(username=username, password=password)
-
-    def __new__(cls):
-        if cls.__instance is None:
-            cls.__instance = super().__new__(cls)
-        return cls.__instance
