@@ -62,11 +62,11 @@ async def get_authors_handler(request: RequestModel) -> ResponseModel[Author]:
             data=[author.model_dump() for author in authors],
         )
     except Exception as ex:
-        logger.error(ex)
+        logger.error(f"Error retrieving authors: {ex}")
         return ResponseModel.err_msg(
             request.pkg_id,
             request.req_id,
-            msg="Error occurred while handle get authors",
+            msg="Failed to retrieve authors",
             status_code=RSPCode.ERROR,
         )
 
@@ -117,9 +117,10 @@ async def get_paginated_authors_handler(
             meta=meta,
         )
     except Exception as ex:
-        logger.error(ex)
+        logger.error(f"Error retrieving paginated authors: {ex}")
         return ResponseModel.err_msg(
             request.pkg_id,
             request.req_id,
-            msg="Error occurred while handle get paginated authors",
+            msg="Failed to retrieve paginated authors",
+            status_code=RSPCode.ERROR,
         )

@@ -32,9 +32,9 @@ class ConnectionManager:
         Removes the specified WebSocket connection from the list of active connections managed by this `ConnectionManager` instance.
 
         Args:
-            websocket (WebSocket): The WebSocket connection to be removed from the list of active connections.
+            websocket (WebSocket): The WebSocket connection to be removed
+                from the list of active connections.
         """
-        # TODO: if user is not logged in ???
         if websocket not in self.active_connections:
             return
 

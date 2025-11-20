@@ -116,7 +116,7 @@ class PackageAuthWebSocketEndpoint(WebSocketEndpoint):
 
         self.user: UserModel = self.scope["user"]
 
-        # FIXME: Try to make it better
+        # Reject unauthenticated connections
         if isinstance(self.user, UnauthenticatedUser) or self.user is None:
             logger.debug(
                 "Client is not logged in, websocket connection will be closed!"

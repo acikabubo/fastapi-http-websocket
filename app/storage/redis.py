@@ -30,7 +30,7 @@ class RedisPool:
         )
         redis_instance = await Redis.from_pool(pool)
 
-        # TODO: Try not to use partial
+        # Attach helper method to Redis instance for convenience
         redis_instance.add_kc_user_session = partial(
             cls.add_kc_user_session, redis_instance
         )

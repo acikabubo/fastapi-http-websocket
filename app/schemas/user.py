@@ -11,12 +11,6 @@ class UserModel(BaseModel):
     username: str = Field(..., alias="preferred_username")
     roles: list[str] = []
 
-    # FIXME: Unnecessary fields, probably should be removed
-    # given_name: str
-    # family_name: str
-    # email: str
-    # attributes: dict[str, Any] = {}
-
     def __init__(self, **kwargs):
         # Get client roles
         kwargs["roles"] = (
