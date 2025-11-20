@@ -1,11 +1,66 @@
+fail_fast: true
 repos:
-  - repo: https://github.com/pre-commit/pre-commit-hooks
+  # Basic file formatting and validation hooks
+  - repo: 'https://github.com/pre-commit/pre-commit-hooks'
     rev: v2.3.0
     hooks:
       - id: check-yaml
       - id: end-of-file-fixer
       - id: trailing-whitespace
-  - repo: https://github.com/crate-ci/typos
+
+  # Spell checking tool
+  - repo: 'https://github.com/crate-ci/typos'
     rev: v1.28.4
     hooks:
       - id: typos
+        name: "typos: Spell checking tool"
+
+  # Python docstring coverage checker
+  - repo: 'https://github.com/econchick/interrogate'
+    rev: 1.7.0
+    hooks:
+      - id: interrogate
+        name: "interrogate: Python docstring coverage checker"
+        args:
+          - '-vv'
+          # - '--quiet'
+          - '--fail-under=80'
+        pass_filenames: false
+
+  # Python linter and formatter
+  - repo: 'https://github.com/astral-sh/ruff-pre-commit'
+    rev: v0.8.4
+    hooks:
+      - id: ruff
+      - id: ruff-format
+
+  # Static type checker
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: ''  # Use the sha / tag you want to point at
+    hooks:
+      - id: mypy
+        name: "mypy: Static type checker"
+        args: [--strict, --ignore-missing-imports]
+
+  # Security vulnerability scanner for dependencies
+  - repo: https://github.com/twu/skjold
+    rev: v0.6.2
+    hooks:
+      - id: skjold
+        name: "skjold: Auditing dependencies for known vulnerabilities."
+        entry: skjold audit
+        language: python
+        language_version: python3
+        files: ^(uv.lock)$
+
+  # Local security vulnerability scanner using Bandit
+  - repo: local
+    hooks:
+      - id: bandit-vulnerability-check
+        name: "bandit: Local security vulnerability scanner"
+        entry: uvx bandit
+        # args: [-r, -x, /tests/]
+        args: [-lll, --recursive, .]
+        language: system
+        files: ''
+        exclude: ^(/tests/)$

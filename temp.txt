@@ -1,0 +1,1 @@
+{% if cookiecutter.use_keycloak == "yes" %}db{% endif %}

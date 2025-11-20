@@ -1,4 +1,5 @@
-*.pyc
+g*.pyc
 logs/*
 !logs/.gitkeep
 .worktree
+.security_reports/*

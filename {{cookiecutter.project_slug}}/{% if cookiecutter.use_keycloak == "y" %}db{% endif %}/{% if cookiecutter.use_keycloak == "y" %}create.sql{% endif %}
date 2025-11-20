@@ -1,1 +1,1 @@
-CREATE DATABASE "hw-keycloak-db";
+CREATE DATABASE "{{cookiecutter.project_slug}}-keycloak-db";
