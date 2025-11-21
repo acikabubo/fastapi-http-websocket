@@ -13,10 +13,7 @@ from {{cookiecutter.module_name}}.managers.websocket_connection_manager import c
 from {{cookiecutter.module_name}}.schemas.response import BroadcastDataModel, ResponseModel
 from {{cookiecutter.module_name}}.schemas.user import UserModel
 from {{cookiecutter.module_name}}.settings import app_settings
-{% if cookiecutter.use_redis == "y" and cookiecutter.use_keycloak == "y" %}
 from {{cookiecutter.module_name}}.storage.redis import get_auth_redis_connection
-{% endif %}
-
 
 
 class UUIDEncoder(json.JSONEncoder):

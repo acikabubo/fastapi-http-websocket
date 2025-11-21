@@ -11,7 +11,6 @@ class Settings(BaseSettings):
     # Debug mode settings
     DEBUG_AUTH: bool = False
 
-    {% if cookiecutter.use_keycloak == "y" %}
     # Keycloak settings
     KEYCLOAK_REALM: str
     KEYCLOAK_CLIENT_ID: str
@@ -23,9 +22,7 @@ class Settings(BaseSettings):
 
     DEBUG_AUTH_USERNAME: str = "acika"
     DEBUG_AUTH_PASSWORD: str = "12345"
-    {% endif %}
 
-    {% if cookiecutter.use_redis == "y" %}
     # Redis settings
     REDIS_IP: str = "localhost"
     REDIS_PORT: int = 6379
@@ -33,7 +30,6 @@ class Settings(BaseSettings):
     USER_SESSION_REDIS_KEY_PREFIX: str = "session:"
     MAIN_REDIS_DB: int = 1
     AUTH_REDIS_DB: int = 10
-    {% endif %}
 
     # Database settings
     DB_USER: str = "hw-user"
@@ -57,8 +53,6 @@ class Settings(BaseSettings):
     EXCLUDED_PATHS: re.Pattern = re.compile(
         r"^(/docs|/openapi.json|/health)$"
     )
-
-
 
     # Database initialization settings
     DB_INIT_RETRY_INTERVAL: int = 2

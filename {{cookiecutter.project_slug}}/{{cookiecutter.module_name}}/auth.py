@@ -8,18 +8,13 @@ from fastapi.security import (
 )
 from fastapi.security.utils import get_authorization_scheme_param
 from jwcrypto.jwt import JWTExpired
-{% if cookiecutter.use_keycloak == "y" %}
 from keycloak.exceptions import KeycloakAuthenticationError
-{% endif %}
 from starlette.authentication import AuthCredentials, AuthenticationBackend
 
-from app.logging import logger
-
-{% if cookiecutter.use_keycloak == "y" %}
-from app.managers.keycloak_manager import KeycloakManager
-{% endif %}
-from app.schemas.user import UserModel
-from app.settings import app_settings
+from {{cookiecutter.module_name}}.logging import logger
+from {{cookiecutter.module_name}}.managers.keycloak_manager import KeycloakManager
+from {{cookiecutter.module_name}}.schemas.user import UserModel
+from {{cookiecutter.module_name}}.settings import app_settings
 
 
 class AuthBackend(AuthenticationBackend):
@@ -70,10 +65,6 @@ class AuthBackend(AuthenticationBackend):
         _, access_token = get_authorization_scheme_param(auth_access_token)
 
         try:
-            user: UserModel | None = None
-            roles = []
-
-            {% if cookiecutter.use_keycloak == "y" %}
             kc_manager = KeycloakManager()
 
             # Debug mode: bypass token validation (ONLY for development)
@@ -94,10 +85,8 @@ class AuthBackend(AuthenticationBackend):
             # Make logged in user object
             user: UserModel = UserModel(**user_data)
             roles = user.roles if user.roles else []
-            {% endif %}
 
             return AuthCredentials(roles), user
-        {% if cookiecutter.use_keycloak == "y" %}
         except JWTExpired as ex:
             logger.error(f"JWT token expired: {ex}")
             return
@@ -109,13 +98,11 @@ class AuthBackend(AuthenticationBackend):
         except ValueError as ex:
             logger.error(f"Error occurred while decode auth token: {ex}")
             return
-        {% endif %}
         except Exception as ex:
             logger.error(f"Unexpected error during authentication: {ex}")
             return
 
 
-{% if cookiecutter.use_keycloak == "y" %}
 # USED FOR DEVELOP
 def basic_auth_keycloak_user(
     credentials: Annotated[HTTPBasicCredentials, Depends(HTTPBasic())],
@@ -142,4 +129,3 @@ def basic_auth_keycloak_user(
             detail="Invalid credentials",
             headers={"WWW-Authenticate": "Basic"},
         )
-{% endif %}

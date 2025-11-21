@@ -3,6 +3,7 @@ from typing import List
 from fastapi import WebSocket
 
 from {{cookiecutter.module_name}}.logging import logger
+from {{cookiecutter.module_name}}.schemas.response import BroadcastDataModel
 
 
 class ConnectionManager:
@@ -31,9 +32,9 @@ class ConnectionManager:
         Removes the specified WebSocket connection from the list of active connections managed by this `ConnectionManager` instance.
 
         Args:
-            websocket (WebSocket): The WebSocket connection to be removed from the list of active connections.
+            websocket (WebSocket): The WebSocket connection to be removed
+                from the list of active connections.
         """
-        # TODO: if user is not logged in ???
         if websocket not in self.active_connections:
             return
 
@@ -42,7 +43,7 @@ class ConnectionManager:
             f"websocket objects ({id(websocket)}) removed from active connections"
         )
 
-    async def broadcast(self, message: dict):
+    async def broadcast(self, message: BroadcastDataModel):
         """
         Broadcasts the provided message to all active WebSocket connections managed by this `ConnectionManager` instance.
 

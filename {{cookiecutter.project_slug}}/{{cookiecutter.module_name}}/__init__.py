@@ -10,9 +10,7 @@ from {{cookiecutter.module_name}}.managers.rbac_manager import RBACManager
 from {{cookiecutter.module_name}}.middlewares.action import PermAuthHTTPMiddleware
 from {{cookiecutter.module_name}}.routing import collect_subrouters
 from {{cookiecutter.module_name}}.storage.db import wait_and_init_db
-{% if cookiecutter.use_redis == "y" and cookiecutter.use_keycloak == "y" %}
 from {{cookiecutter.module_name}}.tasks.kc_user_session import kc_user_session_task
-{% endif %}
 
 
 tasks = []
@@ -37,10 +35,9 @@ def startup():
         logger.info("Initialized database and tables")
 
         logger.info("Application startup initiated")
-        {% if cookiecutter.use_redis == "y" and cookiecutter.use_keycloak == "y" %}
+
         tasks.append(create_task(kc_user_session_task()))
         logger.info("Created task for user session")
-        {% endif %}
 
     return wrapper
 

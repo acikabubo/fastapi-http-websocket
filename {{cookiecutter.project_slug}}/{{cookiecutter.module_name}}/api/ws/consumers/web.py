@@ -51,7 +51,7 @@ class Web(PackageAuthWebSocketEndpoint):
             logger.debug(f"Received data: {data}")
 
             response = await pkg_router.handle_request(
-                self.scope["user"], request
+                self.user, request
             )
 
             await websocket.send_response(response)

@@ -1,13 +1,14 @@
+from fastapi import Request
+
 from {{cookiecutter.module_name}}.logging import logger
 from {{cookiecutter.module_name}}.schemas.roles import ROLE_CONFIG_SCHEMA
 from {{cookiecutter.module_name}}.schemas.user import UserModel
-from {{cookiecutter.module_name}}.settings import ACTIONS_FILE_PATH
+from {{cookiecutter.module_name}}.settings import app_settings
 from {{cookiecutter.module_name}}.utils import read_json_file
+from {{cookiecutter.module_name}}.utils.singleton import SingletonMeta
 
 
-class RBACManager:
-    __instance = None
-
+class RBACManager(metaclass=SingletonMeta):
     def __init__(self):
         """
         Initializes the RBAC (Role-Based Access Control) manager by reading the role configuration from a JSON file and storing it in the `ws` and `http` attributes.
@@ -17,7 +18,9 @@ class RBACManager:
         The `http` attribute is a dictionary that maps HTTP request paths and methods to the required role for accessing the corresponding HTTP endpoint.
         """
 
-        __roles = read_json_file(ACTIONS_FILE_PATH, ROLE_CONFIG_SCHEMA)
+        __roles = read_json_file(
+            app_settings.ACTIONS_FILE_PATH, ROLE_CONFIG_SCHEMA
+        )
 
         self.ws: dict[str, str] = __roles["ws"]
         self.http: dict[str, dict[str, str]] = __roles["http"]
@@ -45,7 +48,7 @@ class RBACManager:
 
     def check_http_permission(
         self,
-        request,
+        request: Request,
     ) -> bool:
         """
         Checks if the user has the required role to access the requested HTTP endpoint.
@@ -74,8 +77,3 @@ class RBACManager:
             has_permission = False
 
         return has_permission
-
-    def __new__(cls):
-        if cls.__instance is None:
-            cls.__instance = super().__new__(cls)
-        return cls.__instance

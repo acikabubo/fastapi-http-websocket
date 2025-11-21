@@ -2,7 +2,5 @@
     "project_name": "Project",
     "project_description": "",
     "project_slug": "{{ cookiecutter.project_name.lower().replace(' ', '_') }}",
-    "module_name": "src",
-    "use_redis": "y",
-    "use_keycloak": "y"
+    "module_name": "src"
 }
