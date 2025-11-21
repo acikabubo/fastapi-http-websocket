@@ -1,12 +1,11 @@
+KEYCLOAK_REALM=HW-App
+KEYCLOAK_CLIENT_ID=auth-hw-frontend
+
 KEYCLOAK_BASE_URL=http://{{cookiecutter.project_slug}}-keycloak:8080
 
 KEYCLOAK_ADMIN_USERNAME="admin"
 KEYCLOAK_ADMIN_PASSWORD="admin"
 
-KEYCLOAK_REALM=HW-App
-KEYCLOAK_CLIENT_ID=auth-hw-frontend
-
-REDIS_IP="{{cookiecutter.project_slug}}-redis"
-
+REDIS_IP="{{cookiecutter.project_slug}}-redis-redis"
 MAIN_REDIS_DB = 1
 AUTH_REDIS_DB = 10

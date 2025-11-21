@@ -1,4 +1,4 @@
-g*.pyc
+*.pyc
 logs/*
 !logs/.gitkeep
 .worktree

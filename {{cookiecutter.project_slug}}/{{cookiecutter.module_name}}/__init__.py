@@ -1,9 +1,5 @@
 # Uvicorn application factory <https://www.uvicorn.org/#application-factories>
-from asyncio import (
-    create_task,
-    ensure_future,
-    gather,
-)
+from asyncio import create_task, ensure_future, gather
 
 from fastapi import FastAPI
 from starlette.middleware.authentication import AuthenticationMiddleware
@@ -13,17 +9,13 @@ from {{cookiecutter.module_name}}.logging import logger
 from {{cookiecutter.module_name}}.managers.rbac_manager import RBACManager
 from {{cookiecutter.module_name}}.middlewares.action import PermAuthHTTPMiddleware
 from {{cookiecutter.module_name}}.routing import collect_subrouters
-from {{cookiecutter.module_name}}.schemas.roles import ROLE_CONFIG_SCHEMA
-from {{cookiecutter.module_name}}.settings import ACTIONS_FILE_PATH
 from {{cookiecutter.module_name}}.storage.db import wait_and_init_db
-from {{cookiecutter.module_name}}.utils import read_json_file
 {% if cookiecutter.use_redis == "y" and cookiecutter.use_keycloak == "y" %}
 from {{cookiecutter.module_name}}.tasks.kc_user_session import kc_user_session_task
 {% endif %}
 
 
 tasks = []
-ws_clients = {}
 
 
 def startup():
@@ -32,11 +24,19 @@ def startup():
     """
 
     async def wrapper():
+        """
+        Asynchronous initialization wrapper that:
+        - Sets up the database and tables
+        - Creates a user session background task
+        - Subscribes to Redis channels for real-time messaging
+
+        This wrapper handles all startup operations that require async/await syntax.
+        """
         # Create the database and tables
         await wait_and_init_db()
         logger.info("Initialized database and tables")
 
-        print("STARTUP")
+        logger.info("Application startup initiated")
         {% if cookiecutter.use_redis == "y" and cookiecutter.use_keycloak == "y" %}
         tasks.append(create_task(kc_user_session_task()))
         logger.info("Created task for user session")
@@ -51,7 +51,14 @@ def shutdown():
     """
 
     async def wrapper():
-        print("SHUTDOWN")
+        """
+        Asynchronous shutdown wrapper that ensures all pending tasks complete gracefully.
+
+        Uses gather() to wait for all tasks in the global tasks list to finish,
+        handling any exceptions that may occur during shutdown without interrupting
+        the shutdown process.
+        """
+        logger.info("Application shutdown initiated")
         # Run loop until tasks done
         ensure_future(gather(*tasks, return_exceptions=True))
 
@@ -85,8 +92,8 @@ def application() -> FastAPI:
     )
 
     # Add event handlers
-    app.add_event_handler("startup", startup())  # FIXME: Is it necessary?
-    app.add_event_handler("shutdown", shutdown())  # FIXME: Is it necessary?
+    app.add_event_handler("startup", startup())
+    app.add_event_handler("shutdown", shutdown())
 
     # Collect routers
     app.include_router(collect_subrouters())

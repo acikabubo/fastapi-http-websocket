@@ -30,3 +30,4 @@ ROLE_CONFIG_SCHEMA: JsonSchemaType = {
     "required": ["roles", "ws", "http"],
     "additionalProperties": False,
 }
+

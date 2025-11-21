@@ -1,24 +1,14 @@
+import asyncio
 import logging
 from functools import partial
-from asyncio import (
-    CancelledError,
-    TimeoutError,
-    create_task,
-    iscoroutinefunction,
-    sleep,
-)
 from json import loads
 
 from redis.asyncio import ConnectionPool, Redis
 
-from {{cookiecutter.module_name}}.schemas.user import UserModel
-from {{cookiecutter.module_name}}.settings import (
-    REDIS_IP,
-    USER_SESSION_REDIS_KEY_PREFIX,
-    AUTH_REDIS_DB,
-    MAIN_REDIS_DB,
-)
 from {{cookiecutter.module_name}}.logging import logger
+from {{cookiecutter.module_name}}.schemas.user import UserModel
+from {{cookiecutter.module_name}}.settings import app_settings
+from {{cookiecutter.module_name}}.utils.singleton import SingletonMeta
 
 
 class RedisPool:
@@ -33,28 +23,31 @@ class RedisPool:
     @classmethod
     async def _create_instance(cls, db):
         pool = ConnectionPool.from_url(
-            f"redis://{REDIS_IP}:6379",
+            f"redis://{app_settings.REDIS_IP}:{app_settings.REDIS_PORT}",
             db=db,
             encoding="utf-8",
             decode_responses=True,
         )
         redis_instance = await Redis.from_pool(pool)
 
-        # TODO: Try not to use partial
+        # Attach helper method to Redis instance for convenience
         redis_instance.add_kc_user_session = partial(
             cls.add_kc_user_session, redis_instance
         )
+
         return redis_instance
 
     @staticmethod
     async def add_kc_user_session(r: Redis, user: UserModel):
-        user_session_key = USER_SESSION_REDIS_KEY_PREFIX + user.username
+        user_session_key = (
+            app_settings.USER_SESSION_REDIS_KEY_PREFIX + user.username
+        )
         await r.set(user_session_key, 1)
         await r.pexpire(user_session_key, (user.expired_seconds + 10) * 1000)
         logger.debug(f"Added user session in redis for: {user.username}")
 
 
-async def get_redis_connection(db=MAIN_REDIS_DB):
+async def get_redis_connection(db=app_settings.MAIN_REDIS_DB):
     try:
         return await RedisPool.get_instance(db)
     except Exception as ex:
@@ -62,7 +55,7 @@ async def get_redis_connection(db=MAIN_REDIS_DB):
 
 
 async def get_auth_redis_connection():
-    return await get_redis_connection(db=AUTH_REDIS_DB)
+    return await get_redis_connection(db=app_settings.AUTH_REDIS_DB)
 
 
 class REventHandler:
@@ -113,28 +106,25 @@ class REventHandler:
                 await asyncio.sleep(0.5)
 
 
-class RedisHandler:
+class RedisHandler(object):
     event_handlers = {}
     tasks = []
 
     async def subscribe(self, channel, callback, **kwargs):
         if not asyncio.iscoroutinefunction(callback):
-            raise ValueError("Callback must be a coroutine")
+            raise ValueError("Callback argument must be a coroutine")
 
         if channel not in self.event_handlers:
             redis = await get_redis_connection()
             handler = REventHandler(redis, channel)
+
             self.event_handlers[channel] = handler
             self.tasks.append(asyncio.create_task(handler.loop()))
 
         self.event_handlers[channel].add_callback((callback, kwargs))
 
 
-class RRedis:
-    __instance = None
+class RRedis(RedisHandler, metaclass=SingletonMeta):
+    """Singleton Redis handler for pub/sub operations."""
 
-    @classmethod
-    async def get_instance(cls):
-        if cls.__instance is None:
-            cls.__instance = RedisHandler()
-        return cls.__instance
+    pass

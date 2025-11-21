@@ -4,9 +4,6 @@ from fastapi import APIRouter
 from pydantic import ValidationError
 
 from {{cookiecutter.module_name}}.api.ws.handlers import load_handlers
-from {{cookiecutter.module_name}}.api.ws import (
-    handlers,  # FIXME: Need this import for handler registration, try to find better way
-)
 from {{cookiecutter.module_name}}.api.ws.websocket import PackageAuthWebSocketEndpoint
 from {{cookiecutter.module_name}}.logging import logger
 from {{cookiecutter.module_name}}.routing import pkg_router
@@ -24,19 +21,35 @@ class Web(PackageAuthWebSocketEndpoint):
 
     The `Web` class inherits from `PackageAuthWebSocketEndpoint` and implements the following methods:
 
-    - `on_connect`: Called when a WebSocket connection is established. Calls the parent class's `on_connect` method.
     - `on_receive`: Called when data is received on the WebSocket connection. Logs the received data, creates a `RequestModel` instance from the data, handles the request using the `pkg_router`, and sends the response back to the client.
-    - `on_disconnect`: Called when the WebSocket connection is closed. Calls the parent class's `on_disconnect` method.
     """
 
-    # TODO: There is no need of this method
-    async def on_connect(self, websocket):
-        await super().on_connect(websocket)
-
     async def on_receive(self, websocket, data: dict[str, Any]):
+        """
+        Handles incoming WebSocket messages by processing the request and sending back a response.
+
+        This method performs the following steps:
+        1. Validates and converts the received data into a RequestModel
+        2. Routes the request through pkg_router with user authentication
+        3. Sends the response back through the WebSocket
+        4. Closes the connection if validation fails
+
+        Args:
+            websocket: The WebSocket connection instance
+            data (dict[str, Any]): The received message data as a dictionary
+
+        Raises:
+            ValidationError: If the received data cannot be parsed into a valid RequestModel.
+                            This will result in the WebSocket connection being closed.
+
+        Note:
+            On validation failure, the connection is closed and the error is logged
+            with the username for debugging purposes.
+        """
         try:
-            logger.debug(f"Receive data: {data}")
             request = RequestModel(**data)
+            logger.debug(f"Received data: {data}")
+
             response = await pkg_router.handle_request(
                 self.scope["user"], request
             )
@@ -48,6 +61,3 @@ class Web(PackageAuthWebSocketEndpoint):
                 f"Received invalid data: {data} from user {self.user.username}"
             )
             await websocket.close()
-
-    async def on_disconnect(self, websocket, close_code):
-        await super().on_disconnect(websocket, close_code)

@@ -1,0 +1,32 @@
+from keycloak import KeycloakOpenID
+
+from {{cookiecutter.module_name}}.settings import app_settings
+from {{cookiecutter.module_name}}.utils.singleton import SingletonMeta
+
+
+class KeycloakManager(metaclass=SingletonMeta):
+    def __init__(self):
+        """
+        Initialize KeycloakManager instance.
+
+        This method initializes the KeycloakOpenID client for OpenID
+        Connect operations.
+        """
+        self.openid = KeycloakOpenID(
+            server_url=f"{app_settings.KEYCLOAK_BASE_URL}/",
+            client_id=app_settings.KEYCLOAK_CLIENT_ID,
+            realm_name=app_settings.KEYCLOAK_REALM,
+        )
+
+    def login(self, username: str, password: str):
+        """
+        Authenticate a user and obtain a token for subsequent API calls.
+
+        Parameters:
+        username (str): The username of the user to authenticate.
+        password (str): The password of the user to authenticate.
+
+        Returns:
+        str: The access token obtained after successful authentication.
+        """
+        return self.openid.token(username=username, password=password)

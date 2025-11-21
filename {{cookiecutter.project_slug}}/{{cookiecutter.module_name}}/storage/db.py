@@ -10,32 +10,44 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import NullPool
 from sqlmodel import SQLModel, func, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from {{cookiecutter.module_name}}.logging import logger
 from {{cookiecutter.module_name}}.schemas.generic_typing import GenericSQLModelType
 from {{cookiecutter.module_name}}.schemas.response import MetadataModel
-
-DB_URL = "postgresql+asyncpg://{{cookiecutter.project_slug}}-user:{{cookiecutter.project_slug}}-pass@{{cookiecutter.project_slug}}-db:5432/{{cookiecutter.project_slug}}-db"
+from {{cookiecutter.module_name}}.settings import app_settings
 
 engine: AsyncEngine = create_async_engine(
-    DB_URL, echo=False, poolclass=NullPool
+    app_settings.DATABASE_URL,
+    echo=False,
+    pool_size=app_settings.DB_POOL_SIZE,
+    max_overflow=app_settings.DB_MAX_OVERFLOW,
+    pool_recycle=app_settings.DB_POOL_RECYCLE,
+    pool_pre_ping=app_settings.DB_POOL_PRE_PING,
 )
 async_session = sessionmaker(
     engine, expire_on_commit=False, class_=AsyncSession
 )
 
 
-async def wait_and_init_db(retry_interval=2, max_retries=10):
+async def wait_and_init_db(
+    retry_interval: int = None,
+    max_retries: int = None,
+) -> None:
     """
-    Wait until the database is available.
+    Wait until the database is available and initialize tables.
 
-    Parameters:
-    - retry_interval (int): Time in seconds to wait between retries.
-    - max_retries (int): Maximum number of retries before giving up.
+    Args:
+        retry_interval: Time in seconds between retries.
+            Defaults to app_settings.DB_INIT_RETRY_INTERVAL
+        max_retries: Maximum number of retries before giving up.
+            Defaults to app_settings.DB_INIT_MAX_RETRIES
     """
+    if retry_interval is None:
+        retry_interval = app_settings.DB_INIT_RETRY_INTERVAL
+    if max_retries is None:
+        max_retries = app_settings.DB_INIT_MAX_RETRIES
     for attempt in range(max_retries):
         try:
             # Test a lightweight connection to check if the DB is ready
@@ -93,9 +105,9 @@ async def get_paginated_results(
 
     if filters:
         if apply_filters:
-            query = apply_filters(query, model, filters)
+            query: Select = apply_filters(query, model, filters)
         else:
-            query = default_apply_filters(query, model, filters)
+            query: Select = default_apply_filters(query, model, filters)
 
     async with async_session() as s:
         # Calculate total

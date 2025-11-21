@@ -1,15 +1,25 @@
-from typing import Any, Callable, Dict, List, Optional, TypeVar, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Optional,
+    TypeVar,
+    Union,
+)
 
 from sqlmodel import SQLModel
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from {{cookiecutter.module_name}}.schemas.request import RequestModel
 
+if TYPE_CHECKING:
+    from app.schemas.response import ResponseModel
+
 GenericSQLModelType = TypeVar("GenericSQLModelType", bound=SQLModel)
 
 # Type definitions
-JsonSchemaType = Dict[
-    str, Union[str, int, float, bool, List[Any], "JsonSchemaType"]
+JsonSchemaType = dict[
+    str, Union[str, int, float, bool, list[Any], "JsonSchemaType"]
 ]
 ValidatorType = Callable[
     [RequestModel, JsonSchemaType], Optional["ResponseModel"]

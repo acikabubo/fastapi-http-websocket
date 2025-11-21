@@ -1,13 +1,13 @@
 {
     "roles": [
-      "get-authors"
+      "<role-1>"
     ],
     "ws": {
-        "1": "get-authors"
+        "<pkg-id-1>": "<role-1>"
     },
     "http": {
-        "/authors": {
-           "GET": "get-authors"
+        "/<url-path>": {
+           "<method>": "<role-1>"
         }
     }
 }
