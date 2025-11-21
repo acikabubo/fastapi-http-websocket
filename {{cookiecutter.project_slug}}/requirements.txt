@@ -10,13 +10,8 @@ pre-commit==4.0.1
 pydantic-settings==2.7.0
 pytest-mock==3.14.0
 pytest==8.3.4
-python-decouple==3.8
-{% if cookiecutter.use_keycloak == "y" %}
 python-keycloak==5.1.1
-{% endif %}
-{% if cookiecutter.use_redis == "y" %}
 redis==5.2.1
-{% endif %}
 ruff==0.8.4
 skjold==0.6.2
 sqlalchemy==2.0.36
