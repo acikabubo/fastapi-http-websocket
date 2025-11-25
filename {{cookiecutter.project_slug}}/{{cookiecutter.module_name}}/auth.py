@@ -16,6 +16,30 @@ from {{cookiecutter.module_name}}.managers.keycloak_manager import KeycloakManag
 from {{cookiecutter.module_name}}.schemas.user import UserModel
 from {{cookiecutter.module_name}}.settings import app_settings
 
+class AuthenticationError(Exception):
+    """
+    Custom exception for authentication failures.
+
+    This exception provides structured error information for authentication failures,
+    allowing better error handling and debugging.
+
+    Attributes:
+        reason: A machine-readable error code (e.g., 'token_expired', 'invalid_credentials')
+        detail: Human-readable error details
+    """
+
+    def __init__(self, reason: str, detail: str) -> None:
+        """
+        Initialize the AuthenticationError.
+
+        Args:
+            reason: A machine-readable error code indicating the failure type
+            detail: Human-readable description of the error
+        """
+        self.reason = reason
+        self.detail = detail
+        super().__init__(f"{reason}: {detail}")
+
 
 class AuthBackend(AuthenticationBackend):
     """
@@ -89,18 +113,15 @@ class AuthBackend(AuthenticationBackend):
             return AuthCredentials(roles), user
         except JWTExpired as ex:
             logger.error(f"JWT token expired: {ex}")
-            return
+            raise AuthenticationError("token_expired", str(ex))
 
         except KeycloakAuthenticationError as ex:
             logger.error(f"Invalid credentials: {ex}")
-            return
+            raise AuthenticationError("invalid_credentials", str(ex))
 
         except ValueError as ex:
             logger.error(f"Error occurred while decode auth token: {ex}")
-            return
-        except Exception as ex:
-            logger.error(f"Unexpected error during authentication: {ex}")
-            return
+            raise AuthenticationError("token_decode_error", str(ex))
 
 
 # USED FOR DEVELOP
