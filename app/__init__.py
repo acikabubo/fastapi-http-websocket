@@ -93,7 +93,8 @@ def application() -> FastAPI:
     # Collect routers
     app.include_router(collect_subrouters())
 
-    # Middlewares
+    # Middlewares (execute in REVERSE order of registration)
+    # Execution flow: AuthenticationMiddleware → PermAuthHTTPMiddleware
     app.add_middleware(PermAuthHTTPMiddleware, rbac=RBACManager())
     app.add_middleware(AuthenticationMiddleware, backend=AuthBackend())
 
