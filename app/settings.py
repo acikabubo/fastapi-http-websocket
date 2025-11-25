@@ -1,5 +1,7 @@
+import os
 import re
 
+from pydantic import SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -25,9 +27,9 @@ class Settings(BaseSettings):
     MAIN_REDIS_DB: int = 1
     AUTH_REDIS_DB: int = 10
 
-    # Database settings
-    DB_USER: str = "hw-user"
-    DB_PASSWORD: str = "hw-pass"
+    # Database settings (credentials MUST be provided via environment)
+    DB_USER: str
+    DB_PASSWORD: SecretStr
     DB_HOST: str = "hw-db"
     DB_PORT: int = 5432
     DB_NAME: str = "hw-db"
@@ -39,17 +41,27 @@ class Settings(BaseSettings):
     @property
     def DATABASE_URL(self) -> str:
         """Construct the database URL from individual components."""
+        password = self.DB_PASSWORD.get_secret_value()
         return (
-            f"postgresql+asyncpg://{self.DB_USER}:{self.DB_PASSWORD}"
+            f"postgresql+asyncpg://{self.DB_USER}:{password}"
             f"@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
         )
 
     EXCLUDED_PATHS: re.Pattern = re.compile(r"^(/docs|/openapi.json|/health)$")
 
-    # Debug mode settings
+    # Debug mode settings (for local development/testing)
+    # Users should create a Keycloak account and put credentials here for testing
     DEBUG_AUTH: bool = False
-    DEBUG_AUTH_USERNAME: str = "acika"
-    DEBUG_AUTH_PASSWORD: str = "12345"
+    DEBUG_AUTH_USERNAME: str = ""  # Set your Keycloak username for local dev
+    DEBUG_AUTH_PASSWORD: str = ""  # Set your Keycloak password for local dev
+
+    @field_validator("DEBUG_AUTH")
+    @classmethod
+    def validate_debug_auth(cls, v: bool) -> bool:
+        """Prevent DEBUG_AUTH from being enabled in production."""
+        if v and os.getenv("ENVIRONMENT") == "production":
+            raise ValueError("DEBUG_AUTH cannot be enabled in production environment")
+        return v
 
     # Database initialization settings
     DB_INIT_RETRY_INTERVAL: int = 2

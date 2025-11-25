@@ -17,6 +17,10 @@ os.environ.setdefault("KEYCLOAK_BASE_URL", "http://localhost:8080/")
 os.environ.setdefault("KEYCLOAK_ADMIN_USERNAME", "admin")
 os.environ.setdefault("KEYCLOAK_ADMIN_PASSWORD", "admin")
 
+# Database credentials (required after removing hardcoded defaults)
+os.environ.setdefault("DB_USER", "test-user")
+os.environ.setdefault("DB_PASSWORD", "test-password")
+
 
 @pytest.fixture
 def mock_keycloak_token():

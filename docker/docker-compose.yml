@@ -63,6 +63,7 @@ services:
     user: ${UID}:${GID}
 
     env_file:
+      - ../.env
       - .srv_env
 
     healthcheck:
