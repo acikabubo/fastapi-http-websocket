@@ -1,13 +1,5 @@
 {
-    "roles": [
-      "<role-1>"
-    ],
-    "ws": {
-        "<pkg-id-1>": "<role-1>"
-    },
-    "http": {
-        "/<url-path>": {
-           "<method>": "<role-1>"
-        }
-    }
+    "roles": [],
+    "ws": {},
+    "http": {}
 }

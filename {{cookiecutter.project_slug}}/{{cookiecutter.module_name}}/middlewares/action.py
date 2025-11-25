@@ -10,10 +10,10 @@ from {{cookiecutter.module_name}}.settings import app_settings
 
 class PermAuthHTTPMiddleware(BaseHTTPMiddleware):
     """
-    HTTP middleware for role-based access control (RBAC).
+    Middleware for HTTP permission-based authentication and authorization.
 
-    This middleware intercepts HTTP requests and validates user permissions
-    against the configured role requirements from actions.json.
+    Checks user authentication and RBAC permissions for incoming HTTP requests,
+    excluding configured paths from authentication requirements.
     """
 
     def __init__(self, app: ASGIApp, rbac: RBACManager):

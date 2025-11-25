@@ -18,7 +18,6 @@ async def kc_user_session_task():
     """
     # Get auth redis instance
     r = await get_auth_redis_connection()
-
     rch = None
 
     while True:

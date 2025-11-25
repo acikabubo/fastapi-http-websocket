@@ -9,6 +9,13 @@ from {{cookiecutter.module_name}}.utils.singleton import SingletonMeta
 
 
 class RBACManager(metaclass=SingletonMeta):
+    """
+    Singleton manager for Role-Based Access Control (RBAC).
+
+    Manages permission checking for WebSocket and HTTP endpoints based on
+    user roles defined in the actions configuration file.
+    """
+
     def __init__(self):
         """
         Initializes the RBAC (Role-Based Access Control) manager by reading the role configuration from a JSON file and storing it in the `ws` and `http` attributes.
@@ -29,20 +36,28 @@ class RBACManager(metaclass=SingletonMeta):
         """
         Checks if the user has the required role to access the requested WebSocket endpoint.
 
+        If no role is configured for the pkg_id, access is granted by default.
+
         Args:
             pkg_id (int): The ID of the package being accessed.
             user (UserModel): The user making the request.
 
         Returns:
-            bool: True if the user has the required role, False otherwise.
-                required_role: str | None = self.ws.get(str(pkg_id))
+            bool: True if the user has the required role or no role is required, False otherwise.
         """
         required_role = self.ws.get(str(pkg_id))
+
+        # If no role is configured for this pkg_id, allow access
+        if required_role is None:
+            return True
 
         has_permission: bool = required_role in user.roles
 
         if has_permission is False:
-            logger.info(f"Permission denied for user {user.username}")
+            logger.info(
+                f"Permission denied for user {user.username} on pkg_id {pkg_id}. "
+                f"Required role: {required_role}"
+            )
 
         return has_permission
 
@@ -53,11 +68,13 @@ class RBACManager(metaclass=SingletonMeta):
         """
         Checks if the user has the required role to access the requested HTTP endpoint.
 
+        If no role is configured for the endpoint path and method, access is granted by default.
+
         Args:
             request (fastapi.Request): The incoming HTTP request.
 
         Returns:
-            bool: True if the user has the required role, False otherwise.
+            bool: True if the user has the required role or no role is required, False otherwise.
         """
         has_permission = True
 

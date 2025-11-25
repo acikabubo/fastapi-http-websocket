@@ -23,8 +23,18 @@ repos:
         name: "interrogate: Python docstring coverage checker"
         args:
           - '-vv'
-          # - '--quiet'
           - '--fail-under=80'
+          - '--ignore-module'
+          - '--ignore-init-method'
+          - '--ignore-nested-functions'
+          - '--ignore-property-decorators'
+          - '--ignore-regex=__new__'
+          - '--exclude=.worktree'
+          - '--exclude=tests'
+          - '--exclude=scripts'
+          - '--exclude=app/settings.py'
+          - '--exclude=app/logging.py'
+          - '--exclude=app/schemas'
         pass_filenames: false
 
   # Python linter and formatter

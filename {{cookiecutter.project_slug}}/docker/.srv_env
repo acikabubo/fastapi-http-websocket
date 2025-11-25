@@ -6,6 +6,6 @@ KEYCLOAK_BASE_URL=http://{{cookiecutter.project_slug}}-keycloak:8080
 KEYCLOAK_ADMIN_USERNAME="admin"
 KEYCLOAK_ADMIN_PASSWORD="admin"
 
-REDIS_IP="{{cookiecutter.project_slug}}-redis-redis"
+REDIS_IP="{{cookiecutter.project_slug}}-redis"
 MAIN_REDIS_DB = 1
 AUTH_REDIS_DB = 10

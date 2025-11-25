@@ -14,7 +14,9 @@ class Settings(BaseSettings):
     # Keycloak settings
     KEYCLOAK_REALM: str
     KEYCLOAK_CLIENT_ID: str
-    KEYCLOAK_BASE_URL: str = "http://hw-keycloak:8080/"
+    KEYCLOAK_BASE_URL: str = (
+        "http://{{cookiecutter.project_slug}}-keycloak:8080/"
+    )
 
     # Keycloak admin credentials
     KEYCLOAK_ADMIN_USERNAME: str
@@ -32,11 +34,11 @@ class Settings(BaseSettings):
     AUTH_REDIS_DB: int = 10
 
     # Database settings
-    DB_USER: str = "hw-user"
-    DB_PASSWORD: str = "hw-pass"
-    DB_HOST: str = "hw-db"
+    DB_USER: str = "{{cookiecutter.project_slug}}-user"
+    DB_PASSWORD: str = "{{cookiecutter.project_slug}}-pass"
+    DB_HOST: str = "{{cookiecutter.project_slug}}-db"
     DB_PORT: int = 5432
-    DB_NAME: str = "hw-db"
+    DB_NAME: str = "{{cookiecutter.project_slug}}-db"
     DB_POOL_SIZE: int = 20
     DB_MAX_OVERFLOW: int = 10
     DB_POOL_RECYCLE: int = 3600
@@ -50,9 +52,7 @@ class Settings(BaseSettings):
             f"@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
         )
 
-    EXCLUDED_PATHS: re.Pattern = re.compile(
-        r"^(/docs|/openapi.json|/health)$"
-    )
+    EXCLUDED_PATHS: re.Pattern = re.compile(r"^(/docs|/openapi.json|/health)$")
 
     # Database initialization settings
     DB_INIT_RETRY_INTERVAL: int = 2
