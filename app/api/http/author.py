@@ -10,13 +10,12 @@ router = APIRouter()
 
 
 @router.post("/authors", summary="Create new author")
-async def create_author_endpoint(author: Author = Author) -> Author:
+async def create_author_endpoint(author: Author) -> Author:
     """
     Creates a new author in the database.
 
     Args:
         author (Author): The author object to create.
-        session (AsyncSession): The database session to use for the operation.
 
     Returns:
         Author: The created author object.

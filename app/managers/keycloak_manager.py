@@ -5,6 +5,12 @@ from app.utils.singleton import SingletonMeta
 
 
 class KeycloakManager(metaclass=SingletonMeta):
+    """
+    Singleton manager for Keycloak authentication operations.
+
+    Provides OpenID Connect authentication and token management for the application.
+    """
+
     def __init__(self):
         """
         Initialize KeycloakManager instance.

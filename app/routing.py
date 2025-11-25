@@ -19,6 +19,13 @@ from app.schemas.user import UserModel
 
 
 class PackageRouter:
+    """
+    Router for WebSocket package-based requests.
+
+    Manages registration and dispatching of WebSocket handlers based on package IDs,
+    including validation and permission checking for each request.
+    """
+
     def __init__(self):
         """
         Initializes the `PackageRouter` class with empty dictionaries to store registered handlers and validators for different package IDs (PkgID).

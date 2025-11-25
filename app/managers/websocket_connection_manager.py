@@ -7,6 +7,13 @@ from app.schemas.response import BroadcastDataModel
 
 
 class ConnectionManager:
+    """
+    Manager for active WebSocket connections.
+
+    Tracks connected WebSocket clients and provides broadcast capabilities
+    for sending messages to all active connections.
+    """
+
     def __init__(self):
         """
         Initializes a new instance of the `ConnectionManager` class.

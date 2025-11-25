@@ -17,6 +17,8 @@ from app.storage.redis import get_auth_redis_connection
 
 
 class UUIDEncoder(json.JSONEncoder):
+    """Custom JSON encoder that handles UUID objects."""
+
     def default(self, obj):
         """
         Overrides the default JSON serialization behavior of the `json.JSONEncoder` class to handle `UUID` objects.
@@ -29,6 +31,8 @@ class UUIDEncoder(json.JSONEncoder):
 
 
 class PackagedWebSocket(WebSocket):
+    """Extended WebSocket class for sending packaged responses."""
+
     async def send_response(
         self, data: BroadcastDataModel | ResponseModel
     ) -> None:
@@ -46,6 +50,13 @@ class PackagedWebSocket(WebSocket):
 
 
 class PackageAuthWebSocketEndpoint(WebSocketEndpoint):
+    """
+    WebSocket endpoint with authentication and package routing.
+
+    Handles WebSocket connections with Keycloak authentication and manages
+    the connection lifecycle including authorization and session management.
+    """
+
     encoding = "json"
     websocket_class: Type[WebSocket] = PackagedWebSocket
 

@@ -10,6 +10,7 @@ Options:
     --json: Output full token response as JSON
     --refresh: Also display refresh token
 """
+
 import argparse
 import json
 import sys

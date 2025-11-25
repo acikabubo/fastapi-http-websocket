@@ -3,6 +3,7 @@ Example test file demonstrating authentication testing patterns.
 
 This file shows how to test endpoints with both mocked and real authentication.
 """
+
 import uuid
 import pytest
 from unittest.mock import patch
@@ -55,9 +56,7 @@ class TestMockAuthentication:
         """
         rbac = RBACManager()
 
-        has_permission = rbac.check_ws_permission(
-            PkgID.GET_AUTHORS, mock_user
-        )
+        has_permission = rbac.check_ws_permission(PkgID.GET_AUTHORS, mock_user)
 
         assert has_permission is True
 
@@ -79,9 +78,7 @@ class TestMockAuthentication:
         assert has_permission is False
 
     @pytest.mark.asyncio
-    async def test_handler_returns_permission_denied(
-        self, limited_user_data
-    ):
+    async def test_handler_returns_permission_denied(self, limited_user_data):
         """
         Test handler returns permission denied for unauthorized user.
 
@@ -139,6 +136,29 @@ class TestMockAuthentication:
                 limited_user, request
             )
             assert limited_response.status_code == RSPCode.PERMISSION_DENIED
+
+    @pytest.mark.asyncio
+    async def test_rbac_default_allow_unconfigured_pkg_id(
+        self, limited_user_data
+    ):
+        """
+        Test RBAC allows access to pkg_ids not configured in actions.json.
+
+        This tests the "default allow" behavior where pkg_ids without
+        explicit role requirements are accessible to all authenticated users.
+
+        Args:
+            limited_user_data: Fixture providing user with minimal roles
+        """
+        limited_user = UserModel(**limited_user_data)
+        rbac = RBACManager()
+
+        # Use a pkg_id that is not in actions.json (assuming 999 is not configured)
+        # Since limited_user has no special roles, this tests default allow
+        has_permission = rbac.check_ws_permission(999, limited_user)
+
+        # Should allow access since pkg_id 999 is not in actions.json
+        assert has_permission is True
 
 
 class TestRealKeycloakAuthentication:
@@ -258,9 +278,7 @@ class TestAuthenticationMiddleware:
             # Without authentication middleware on test app,
             # this endpoint should be callable
             # The test just verifies the endpoint exists and is callable
-            response = client.post(
-                "/authors", json={"name": "Test Author"}
-            )
+            response = client.post("/authors", json={"name": "Test Author"})
 
             # Endpoint exists (not 404) and is callable
             assert response.status_code != 404

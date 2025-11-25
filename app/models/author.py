@@ -9,6 +9,14 @@ from app.storage.db import async_session
 
 
 class Author(SQLModel, table=True):
+    """
+    SQLModel representing an author entity in the database.
+
+    Attributes:
+        id: Primary key identifier for the author
+        name: Name of the author
+    """
+
     __table_args__ = {"extend_existing": True}  # for pydoc
 
     id: Optional[int] = Field(default=None, primary_key=True)

@@ -1,4 +1,5 @@
 """Health check endpoint for monitoring service status."""
+
 from fastapi import APIRouter, status
 from pydantic import BaseModel
 from sqlalchemy import text

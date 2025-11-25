@@ -30,6 +30,8 @@ get_authors_schema: JsonSchemaType = {
 
 
 class GetAuthorsModel(BaseModel):
+    """Schema for filtering authors in get_authors requests."""
+
     id: Optional[int] = None
     name: Optional[str] = None
 

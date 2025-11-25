@@ -12,4 +12,3 @@
 GET http://{{baseUrl}}/authors
 Content-Type: application/json
 Authorization: Bearer YOUR_TOKEN_HERE
-

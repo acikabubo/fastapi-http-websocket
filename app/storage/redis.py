@@ -12,6 +12,12 @@ from app.utils.singleton import SingletonMeta
 
 
 class RedisPool:
+    """
+    Redis connection pool manager.
+
+    Manages Redis connection instances per database index with connection pooling.
+    """
+
     __instances = {}
 
     @classmethod
@@ -59,6 +65,12 @@ async def get_auth_redis_connection():
 
 
 class REventHandler:
+    """
+    Event handler for Redis pub/sub channels.
+
+    Manages subscriptions and callbacks for Redis pub/sub messages.
+    """
+
     @staticmethod
     def get_logger():
         return logging.getLogger(REventHandler.__name__)
@@ -107,6 +119,13 @@ class REventHandler:
 
 
 class RedisHandler(object):
+    """
+    Handler for Redis pub/sub subscriptions.
+
+    Manages multiple Redis event handlers and their associated tasks for
+    subscribing to and processing messages from Redis channels.
+    """
+
     event_handlers = {}
     tasks = []
 

@@ -9,6 +9,13 @@ from app.settings import app_settings
 
 
 class PermAuthHTTPMiddleware(BaseHTTPMiddleware):
+    """
+    Middleware for HTTP permission-based authentication and authorization.
+
+    Checks user authentication and RBAC permissions for incoming HTTP requests,
+    excluding configured paths from authentication requirements.
+    """
+
     def __init__(self, app: ASGIApp, rbac: RBACManager):
         super().__init__(app)
         self.rbac: RBACManager = rbac

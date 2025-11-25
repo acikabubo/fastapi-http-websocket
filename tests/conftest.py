@@ -4,6 +4,7 @@ Pytest configuration and fixtures for testing.
 This module provides shared fixtures for authentication, database,
 and other common testing utilities.
 """
+
 import os
 from unittest.mock import Mock, patch
 
@@ -123,9 +124,7 @@ def auth_headers(mock_keycloak_token):
     Returns:
         dict: Headers dictionary with Authorization header
     """
-    return {
-        "Authorization": f"Bearer {mock_keycloak_token['access_token']}"
-    }
+    return {"Authorization": f"Bearer {mock_keycloak_token['access_token']}"}
 
 
 @pytest.fixture
@@ -181,9 +180,5 @@ def limited_user_data():
         "exp": 9999999999,
         "azp": "test-client",
         "realm_access": {"roles": ["offline_access"]},
-        "resource_access": {
-            "test-client": {
-                "roles": []
-            }
-        },
+        "resource_access": {"test-client": {"roles": []}},
     }
