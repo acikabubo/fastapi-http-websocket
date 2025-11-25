@@ -8,6 +8,7 @@ A production-ready FastAPI application implementing both HTTP REST API and WebSo
 - [Prerequisites](#prerequisites)
 - [Quick Start](#quick-start)
 - [Installation](#installation)
+- [Documentation](#documentation)
 - [Configuration](#configuration)
 - [Usage](#usage)
   - [HTTP API](#http-api)
@@ -599,3 +600,32 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ---
 
 **Built with**: FastAPI, PostgreSQL, Redis, Keycloak, and modern Python tooling
+
+## Documentation
+
+### 📚 Complete Documentation
+
+All project documentation is organized in the [`docs/`](docs/) directory:
+
+#### Getting Started
+- **[Authentication Quick Start](docs/guides/QUICKSTART_AUTH.md)** - Get tokens and start making requests
+- **[Testing Guide](docs/guides/TESTING.md)** - How to test the application
+
+#### In-Depth Guides
+- **[Authentication Guide](docs/guides/AUTHENTICATION.md)** - Complete guide to Keycloak authentication
+- **[Architecture Overview](docs/architecture/OVERVIEW.md)** - System architecture and design
+
+#### Planning & Improvements
+- **[Codebase Improvements](docs/improvements/CODEBASE_IMPROVEMENTS.md)** - Comprehensive improvement report (58 issues)
+- **[RBAC Alternatives](docs/architecture/RBAC_ALTERNATIVES.md)** - Permission system design options
+
+#### For Contributors
+- **[CLAUDE.md](CLAUDE.md)** - Development guidelines and project structure
+
+### 🎯 Quick Links
+
+**Need a token?** → [Quick Start](docs/guides/QUICKSTART_AUTH.md)
+**Testing endpoints?** → [Testing Guide](docs/guides/TESTING.md)
+**Understanding the code?** → [Architecture](docs/architecture/OVERVIEW.md)
+**Want to contribute?** → [CLAUDE.md](CLAUDE.md)
+
