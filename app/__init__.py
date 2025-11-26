@@ -1,5 +1,5 @@
 # Uvicorn application factory <https://www.uvicorn.org/#application-factories>
-from asyncio import create_task, ensure_future, gather
+from asyncio import create_task, gather
 
 from fastapi import FastAPI
 from starlette.middleware.authentication import AuthenticationMiddleware
@@ -54,8 +54,10 @@ def shutdown():
         the shutdown process.
         """
         logger.info("Application shutdown initiated")
-        # Run loop until tasks done
-        ensure_future(gather(*tasks, return_exceptions=True))
+        if tasks:
+            logger.info(f"Waiting for {len(tasks)} background tasks to complete")
+            await gather(*tasks, return_exceptions=True)
+            logger.info("All background tasks completed")
 
     return wrapper
 
