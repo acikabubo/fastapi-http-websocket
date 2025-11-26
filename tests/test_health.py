@@ -94,7 +94,7 @@ async def test_health_endpoint_database_unhealthy(client):
     ):
         response = client.get("/health")
 
-    assert response.status_code == 200
+    assert response.status_code == 503
     data = response.json()
     assert data["status"] == "unhealthy"
     assert data["database"] == "unhealthy"
@@ -127,7 +127,7 @@ async def test_health_endpoint_redis_unhealthy(client):
     ):
         response = client.get("/health")
 
-    assert response.status_code == 200
+    assert response.status_code == 503
     data = response.json()
     assert data["status"] == "unhealthy"
     assert data["database"] == "healthy"
@@ -159,7 +159,7 @@ async def test_health_endpoint_all_services_unhealthy(client):
     ):
         response = client.get("/health")
 
-    assert response.status_code == 200
+    assert response.status_code == 503
     data = response.json()
     assert data["status"] == "unhealthy"
     assert data["database"] == "unhealthy"

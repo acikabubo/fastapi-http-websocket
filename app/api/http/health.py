@@ -1,6 +1,6 @@
 """Health check endpoint for monitoring service status."""
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter, Response, status
 from pydantic import BaseModel
 from sqlalchemy import text
 
@@ -27,7 +27,7 @@ class HealthResponse(BaseModel):
     summary="Health check endpoint",
     tags=["health"],
 )
-async def health_check() -> HealthResponse:
+async def health_check(response: Response) -> HealthResponse:
     """
     Check health status of the application and its dependencies.
 
@@ -37,6 +37,7 @@ async def health_check() -> HealthResponse:
 
     Returns:
         HealthResponse: Health status of the service and dependencies.
+        Returns 503 Service Unavailable if any service is unhealthy.
 
     Raises:
         HTTPException: If any critical service is unavailable.
@@ -65,6 +66,9 @@ async def health_check() -> HealthResponse:
         if db_status == "healthy" and redis_status == "healthy"
         else "unhealthy"
     )
+
+    if overall_status == "unhealthy":
+        response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
 
     return HealthResponse(
         status=overall_status, database=db_status, redis=redis_status
