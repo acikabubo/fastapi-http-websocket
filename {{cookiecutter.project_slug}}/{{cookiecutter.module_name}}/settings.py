@@ -32,7 +32,7 @@ class Settings(BaseSettings):
     # Database settings (credentials MUST be provided via environment)
     DB_USER: str
     DB_PASSWORD: SecretStr
-    DB_HOST: str = "{{cookiecutter.project_slug}}hw-db"
+    DB_HOST: str = "{{cookiecutter.project_slug}}-db"
     DB_PORT: int = 5432
     DB_NAME: str = "{{cookiecutter.project_slug}}-db"
     DB_POOL_SIZE: int = 20
