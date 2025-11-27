@@ -1,4 +1,56 @@
+"""Post-generation hook for cookiecutter template.
+
+This script runs after the project is generated from the template.
+It creates a .env file from .env.example for convenience.
+"""
+
+import logging
+import shutil
+from pathlib import Path
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(message)s",
+)
+logger = logging.getLogger(__name__)
+
+
+def create_env_file() -> None:
+    """Create .env file from .env.example in the generated project."""
+    # Get the current directory (generated project root)
+    project_root = Path.cwd()
+
+    env_example = project_root / ".env.example"
+    env_file = project_root / ".env"
+
+    # Create .env from .env.example if it exists
+    if env_example.exists():
+        if not env_file.exists():
+            shutil.copy(env_example, env_file)
+            logger.info(
+                "✓ Created %s",
+                env_file.relative_to(project_root.parent),
+            )
+        else:
+            logger.warning(
+                "⚠ %s already exists, skipping creation",
+                env_file.name,
+            )
+    else:
+        logger.warning(
+            "⚠ %s not found, skipping .env creation",
+            env_example.name,
+        )
+
+
 if __name__ == "__main__":
-    print()
-    print("POST GET PROJECT")
-    print()
+    logger.info("")
+    logger.info("Running post-generation setup...")
+    logger.info("")
+
+    create_env_file()
+
+    logger.info("")
+    logger.info("✓ Project setup complete!")
+    logger.info("")
