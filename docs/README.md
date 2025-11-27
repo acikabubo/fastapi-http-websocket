@@ -11,6 +11,7 @@ This directory contains all project documentation organized by category.
 ### Development Guides
 - [Testing Guide](guides/TESTING.md) - How to test the application
 - [Authentication Guide](guides/AUTHENTICATION.md) - Working with Keycloak auth
+- [User Action Logging](guides/USER_ACTION_LOGGING.md) - Implementing audit logs and user activity tracking
 
 ### Architecture & Design
 - [Project Architecture](architecture/OVERVIEW.md) - System architecture overview
@@ -36,7 +37,8 @@ docs/
 ├── guides/                            # How-to guides
 │   ├── AUTHENTICATION.md             # Auth setup and usage
 │   ├── QUICKSTART_AUTH.md            # Quick auth reference
-│   └── TESTING.md                    # Testing guide
+│   ├── TESTING.md                    # Testing guide
+│   └── USER_ACTION_LOGGING.md        # Audit logging guide
 ├── improvements/                      # Improvement tracking
 │   └── CODEBASE_IMPROVEMENTS.md      # Comprehensive review
 └── archive/                           # Historical documents
