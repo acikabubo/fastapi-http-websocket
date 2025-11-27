@@ -1,5 +1,6 @@
 """Singleton metaclass for creating singleton pattern instances."""
 
+import threading
 from typing import Any, Dict
 
 
@@ -9,6 +10,7 @@ class SingletonMeta(type):
 
     Classes using this metaclass will only have one instance per class.
     Subsequent calls to instantiate the class return the existing instance.
+    Thread-safe implementation using double-check locking pattern.
 
     Example:
         class MyManager(metaclass=SingletonMeta):
@@ -22,10 +24,13 @@ class SingletonMeta(type):
     """
 
     _instances: Dict[type, Any] = {}
+    _lock: threading.Lock = threading.Lock()
 
     def __call__(cls, *args: Any, **kwargs: Any) -> Any:
         """
         Control instance creation to ensure only one instance exists.
+
+        Uses double-check locking pattern for thread safety in async contexts.
 
         Args:
             *args: Positional arguments for instance initialization.
@@ -35,5 +40,8 @@ class SingletonMeta(type):
             The singleton instance of the class.
         """
         if cls not in cls._instances:
-            cls._instances[cls] = super().__call__(*args, **kwargs)
+            with cls._lock:
+                # Double-check locking pattern
+                if cls not in cls._instances:
+                    cls._instances[cls] = super().__call__(*args, **kwargs)
         return cls._instances[cls]
