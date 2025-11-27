@@ -47,15 +47,18 @@ def shutdown():
 
     async def wrapper():
         """
-        Asynchronous shutdown wrapper that ensures all pending tasks complete gracefully.
+        Asynchronous shutdown wrapper that cancels and waits for background tasks.
 
-        Uses gather() to wait for all tasks in the global tasks list to finish,
-        handling any exceptions that may occur during shutdown without interrupting
-        the shutdown process.
+        Cancels all running background tasks and waits for them to complete their
+        cleanup. Uses gather() with return_exceptions=True to handle CancelledError
+        exceptions gracefully during the cancellation process.
         """
         logger.info("Application shutdown initiated")
         if tasks:
-            logger.info(f"Waiting for {len(tasks)} background tasks to complete")
+            logger.info(f"Cancelling {len(tasks)} background tasks")
+            for task in tasks:
+                task.cancel()
+            logger.info("Waiting for background tasks to complete cleanup")
             await gather(*tasks, return_exceptions=True)
             logger.info("All background tasks completed")
 
