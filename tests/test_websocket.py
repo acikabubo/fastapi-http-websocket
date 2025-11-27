@@ -426,28 +426,30 @@ class TestWebSocketEdgeCases:
     @pytest.mark.asyncio
     async def test_handler_exception_handling(self, mock_user):
         """
-        Test that handler exceptions are properly caught and reported.
+        Test that handler database exceptions are properly caught and reported.
 
         Args:
             mock_user: Fixture providing UserModel instance
         """
+        from sqlalchemy.exc import SQLAlchemyError
+
         request = RequestModel(
             pkg_id=PkgID.GET_AUTHORS,
             req_id=str(uuid.uuid4()),
             data={},
         )
 
-        # Mock the database call to raise an exception
+        # Mock the database call to raise a SQLAlchemy exception
         with patch(
             "app.models.author.Author.get_list", new_callable=AsyncMock
         ) as mock_get_list:
-            mock_get_list.side_effect = Exception("Database error")
+            mock_get_list.side_effect = SQLAlchemyError("Database error")
 
             response = await pkg_router.handle_request(mock_user, request)
 
-            # Handler should catch exception and return error response
+            # Handler should catch database exception and return error response
             assert response.status_code == RSPCode.ERROR
-            assert "Failed to retrieve authors" in response.data.get("msg", "")
+            assert "Database error occurred" in response.data.get("msg", "")
 
     @pytest.mark.asyncio
     async def test_paginated_handler_execution(self, mock_user):

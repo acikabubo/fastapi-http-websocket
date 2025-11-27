@@ -1,6 +1,7 @@
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
+from sqlalchemy.exc import SQLAlchemyError
 
 from app.api.ws.constants import PkgID, RSPCode
 from app.api.ws.validation import validator
@@ -52,7 +53,7 @@ async def get_authors_handler(request: RequestModel) -> ResponseModel[Author]:
         ResponseModel[Author]: The response model containing the list of authors.
 
     Raises:
-        Exception: If an error occurs while handling the request.
+        Exception: If an unexpected error occurs while handling the request.
     """
     try:
         filters = request.data.get("filters", {})
@@ -63,14 +64,23 @@ async def get_authors_handler(request: RequestModel) -> ResponseModel[Author]:
             req_id=request.req_id,
             data=[author.model_dump() for author in authors],
         )
-    except Exception as ex:
-        logger.error(f"Error retrieving authors: {ex}")
+    except SQLAlchemyError as ex:
+        logger.error(f"Database error retrieving authors: {ex}")
         return ResponseModel.err_msg(
             request.pkg_id,
             request.req_id,
-            msg="Failed to retrieve authors",
+            msg="Database error occurred",
             status_code=RSPCode.ERROR,
         )
+    except (ValidationError, AttributeError) as ex:
+        logger.error(f"Validation error: {ex}")
+        return ResponseModel.err_msg(
+            request.pkg_id,
+            request.req_id,
+            msg="Invalid filter parameters",
+            status_code=RSPCode.INVALID_DATA,
+        )
+    # Let unexpected errors propagate for proper logging
 
 
 get_paginated_authors_schema: JsonSchemaType = {
@@ -107,7 +117,7 @@ async def get_paginated_authors_handler(
         ResponseModel[Author]: The response model containing the paginated list of authors.
 
     Raises:
-        Exception: If an error occurs while handling the request.
+        Exception: If an unexpected error occurs while handling the request.
     """
     try:
         authors, meta = await get_paginated_results(Author, **request.data)
@@ -118,11 +128,20 @@ async def get_paginated_authors_handler(
             data=[author.model_dump() for author in authors],
             meta=meta,
         )
-    except Exception as ex:
-        logger.error(f"Error retrieving paginated authors: {ex}")
+    except SQLAlchemyError as ex:
+        logger.error(f"Database error retrieving paginated authors: {ex}")
         return ResponseModel.err_msg(
             request.pkg_id,
             request.req_id,
-            msg="Failed to retrieve paginated authors",
+            msg="Database error occurred",
             status_code=RSPCode.ERROR,
         )
+    except (ValidationError, AttributeError) as ex:
+        logger.error(f"Validation error: {ex}")
+        return ResponseModel.err_msg(
+            request.pkg_id,
+            request.req_id,
+            msg="Invalid pagination parameters",
+            status_code=RSPCode.INVALID_DATA,
+        )
+    # Let unexpected errors propagate for proper logging
