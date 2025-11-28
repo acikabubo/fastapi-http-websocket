@@ -8,6 +8,11 @@ This is a **Cookiecutter template** for generating FastAPI applications with bot
 
 **Required Services:** Redis and Keycloak are required components. This simplified architecture ensures consistency and reduces complexity.
 
+## Additional Documentation
+
+- **[Development Patterns & Best Practices](docs/DEVELOPMENT_PATTERNS.md)** - Recommended patterns for database session management, error handling, testing, and security
+- Add more documentation files in the `docs/` folder as needed
+
 ## Template Variables
 
 When working with this template, be aware of these Cookiecutter variables:
