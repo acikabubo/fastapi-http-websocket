@@ -1,3 +1,4 @@
+import asyncio
 from typing import List
 
 from fastapi import WebSocket
@@ -52,13 +53,40 @@ class ConnectionManager:
 
     async def broadcast(self, message: BroadcastDataModel):
         """
-        Broadcasts the provided message to all active WebSocket connections managed by this `ConnectionManager` instance.
+        Broadcasts message to all active connections concurrently.
+
+        Uses asyncio.gather to send messages to all connections in parallel,
+        improving performance when broadcasting to many connections.
 
         Args:
-            message (dict): The message to be broadcast to all active connections.
+            message (BroadcastDataModel): The message to be broadcast to all
+                active connections.
         """
-        for connection in self.active_connections:
-            await connection.send_json(message)
+        if not self.active_connections:
+            return
+
+        # Create a snapshot of connections to avoid modification during iteration
+        connections_snapshot = list(self.active_connections)
+
+        async def safe_send(connection: WebSocket):
+            """
+            Safely sends a message to a single connection with error handling.
+
+            Args:
+                connection (WebSocket): The WebSocket connection to send to.
+            """
+            try:
+                await connection.send_json(message.model_dump(mode="json"))
+            except Exception as e:
+                logger.warning(
+                    f"Failed to send to connection {id(connection)}: {e}"
+                )
+                self.disconnect(connection)
+
+        await asyncio.gather(
+            *[safe_send(conn) for conn in connections_snapshot],
+            return_exceptions=True,
+        )
 
 
 connection_manager = ConnectionManager()
