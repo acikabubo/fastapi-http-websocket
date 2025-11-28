@@ -37,11 +37,16 @@ class PkgID(IntEnum):
     Package identifier enumeration for different types of data requests.
 
     This enum defines identifiers used to distinguish between different types
-    of data package requests in the system.
+    of data package requests in the system. Add your own package IDs here
+    when implementing WebSocket handlers.
 
-    Attributes:
-        GET_AUTHORS (1): Request to retrieve author list
-        GET_PAGINATED_AUTHORS (2): Request to retrieve paginated author list
-        THIRD (3): Third type of request (purpose undefined)
+    Example:
+        >>> class PkgID(IntEnum):
+        ...     GET_USERS = 1
+        ...     CREATE_USER = 2
+        ...     UPDATE_USER = 3
     """
-    pass
+
+    # Test-only package ID used by the test suite
+    # You can remove this and add your own package IDs
+    TEST_HANDLER = 999
