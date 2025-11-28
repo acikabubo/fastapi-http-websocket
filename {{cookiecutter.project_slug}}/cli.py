@@ -100,12 +100,13 @@ def generate_new_ws_handler():
         )
 
         # Write the rendered module to a file
-        with open(f"{module_name}.py", "w") as f:
+        output_path = f"{{{{cookiecutter.module_name}}}}/api/ws/handlers/{module_name}.py"
+        with open(output_path, "w") as f:
             f.write(module_code)
 
         print()
         print(
-            "Module is successfully generated. You can find it in {{cookiecutter.module_name}}.api.ws.handlers"
+            f"Module is successfully generated at: {output_path}"
         )
 
 
