@@ -1,3 +1,4 @@
+import time
 from typing import Any
 
 from fastapi import APIRouter
@@ -10,6 +11,11 @@ from app.logging import logger
 from app.routing import pkg_router
 from app.schemas.request import RequestModel
 from app.settings import app_settings
+from app.utils.metrics import (
+    ws_message_processing_duration_seconds,
+    ws_messages_received_total,
+    ws_messages_sent_total,
+)
 from app.utils.rate_limiter import rate_limiter
 
 load_handlers()
@@ -68,15 +74,27 @@ class Web(PackageAuthWebSocketEndpoint):
             )
             return
 
+        # Track received message
+        ws_messages_received_total.inc()
+
         try:
             request = RequestModel(**data)
             logger.debug(f"Received data: {data}")
 
+            # Track message processing duration
+            start_time = time.time()
             response = await pkg_router.handle_request(
                 self.scope["user"], request
             )
+            duration = time.time() - start_time
+
+            # Record processing duration
+            ws_message_processing_duration_seconds.labels(
+                pkg_id=str(request.pkg_id)
+            ).observe(duration)
 
             await websocket.send_response(response)
+            ws_messages_sent_total.inc()
             logger.debug(f"Successfully sent response for {request.pkg_id}")
         except ValidationError:
             logger.debug(

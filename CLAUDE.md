@@ -204,6 +204,31 @@ make new-ws-handlers
   - `WS_MAX_CONNECTIONS_PER_USER`: Max concurrent WebSocket connections (default: 5)
   - `WS_MESSAGE_RATE_LIMIT`: WebSocket messages per minute (default: 100)
 
+**Prometheus Metrics (`app/utils/metrics.py`, `app/middlewares/prometheus.py`):**
+- Comprehensive metrics collection for monitoring and observability
+- `PrometheusMiddleware`: Automatically tracks HTTP request metrics
+  - Request counts by method, endpoint, and status code
+  - Request duration histograms with configurable buckets
+  - In-progress request gauges
+- WebSocket metrics tracking in `websocket.py` and `web.py`:
+  - Active connections gauge
+  - Connection totals by status (accepted, rejected_auth, rejected_limit)
+  - Message counts (received/sent)
+  - Message processing duration histograms by pkg_id
+- Database and Redis metrics defined for future instrumentation:
+  - Query duration histograms by operation type
+  - Active connections gauge
+  - Error counters by operation and error type
+- Authentication and rate limiting metrics:
+  - Auth attempt counters by status
+  - Token validation counters
+  - Rate limit hit counters by limit type
+- Application-level metrics:
+  - Error counters by type and handler
+  - App info gauge with version and environment
+- Metrics endpoint at `/metrics` (excluded from auth and rate limiting)
+- Compatible with Prometheus scraping
+
 ### Directory Structure
 
 - `app/__init__.py`: Application factory with startup/shutdown handlers
@@ -212,9 +237,9 @@ make new-ws-handlers
 - `app/api/ws/consumers/`: WebSocket endpoint classes (e.g., `Web`)
 - `app/api/ws/constants.py`: `PkgID` and `RSPCode` enums
 - `app/managers/`: Singleton managers (RBAC, Keycloak, WebSocket connections)
-- `app/middlewares/`: Custom middleware (`PermAuthHTTPMiddleware`, `RateLimitMiddleware`)
+- `app/middlewares/`: Custom middleware (`PermAuthHTTPMiddleware`, `RateLimitMiddleware`, `PrometheusMiddleware`)
 - `app/models/`: SQLModel database models
-- `app/utils/`: Utility modules (`rate_limiter.py` for rate limiting)
+- `app/utils/`: Utility modules (`rate_limiter.py`, `metrics.py`)
 - `app/schemas/`: Pydantic models for request/response validation
 - `app/tasks/`: Background tasks (e.g., `kc_user_session_task`)
 - `app/storage/`: Database and Redis utilities
@@ -392,3 +417,68 @@ return ResponseModel.success(
 **Redis pub/sub:**
 - Use `RRedis()` singleton from `app/storage/redis.py`
 - Subscribe in startup handler: `await r.subscribe("channel", callback)`
+
+### Monitoring with Prometheus
+
+**Accessing Metrics:**
+- Metrics endpoint: `GET /metrics`
+- Excluded from authentication and rate limiting
+- Returns Prometheus text format
+
+**Key Metrics Available:**
+```
+# HTTP Metrics
+http_requests_total{method,endpoint,status_code}
+http_request_duration_seconds{method,endpoint}
+http_requests_in_progress{method,endpoint}
+
+# WebSocket Metrics
+ws_connections_active
+ws_connections_total{status}  # status: accepted, rejected_auth, rejected_limit
+ws_messages_received_total
+ws_messages_sent_total
+ws_message_processing_duration_seconds{pkg_id}
+
+# Application Metrics
+app_info{version,python_version,environment}
+rate_limit_hits_total{limit_type}
+auth_attempts_total{status}
+```
+
+**Setting up Prometheus (Docker):**
+```yaml
+# docker-compose.yml
+services:
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+
+# prometheus.yml
+scrape_configs:
+  - job_name: 'fastapi-app'
+    static_configs:
+      - targets: ['app:8000']
+    metrics_path: '/metrics'
+    scrape_interval: 15s
+```
+
+**Custom Metrics:**
+```python
+from app.utils.metrics import http_requests_total
+
+# Increment counter
+http_requests_total.labels(
+    method="POST",
+    endpoint="/api/custom",
+    status_code=201
+).inc()
+
+# Observe histogram
+from app.utils.metrics import db_query_duration_seconds
+db_query_duration_seconds.labels(operation="select").observe(0.045)
+```
