@@ -391,9 +391,10 @@ class TestWebSocketBroadcast:
             # Broadcast message
             await connection_manager.broadcast(broadcast_msg)
 
-            # Verify both websockets received the message
-            mock_ws1.send_json.assert_called_once_with(broadcast_msg)
-            mock_ws2.send_json.assert_called_once_with(broadcast_msg)
+            # Verify both websockets received the message (as serialized dict)
+            expected_data = broadcast_msg.model_dump(mode="json")
+            mock_ws1.send_json.assert_called_once_with(expected_data)
+            mock_ws2.send_json.assert_called_once_with(expected_data)
         finally:
             # Cleanup
             connection_manager.disconnect(mock_ws1)

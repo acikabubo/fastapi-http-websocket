@@ -21,13 +21,17 @@ class UUIDEncoder(json.JSONEncoder):
 
     def default(self, obj):
         """
-        Overrides the default JSON serialization behavior of the `json.JSONEncoder` class to handle `UUID` objects.
-        If the object being serialized is a `UUID` instance, it returns the string representation of the UUID.
-        Otherwise, it falls back to the default behavior of the parent `json.JSONEncoder.default()` method.
+        Convert UUID objects to strings for JSON serialization.
+
+        Args:
+            obj: The object to serialize.
+
+        Returns:
+            str: String representation of UUID, or delegates to parent.
         """
         if isinstance(obj, UUID):
             return str(obj)
-        return json.JSONEncoder.default(self, obj)
+        return super().default(obj)
 
 
 class PackagedWebSocket(WebSocket):

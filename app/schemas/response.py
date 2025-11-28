@@ -17,7 +17,7 @@ class MetadataModel(BaseModel):
 
 class BroadcastDataModel[GenericSQLModelType](BaseModel):
     pkg_id: PkgID = Field(frozen=True)
-    req_id: UUID = Field(frozen=True)
+    req_id: UUID = Field(default=UUID(int=0), frozen=True)
     data: dict[str, Any] | list[GenericSQLModelType]
 
 
