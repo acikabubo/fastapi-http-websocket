@@ -85,9 +85,10 @@ async def get_paginated_results(
     apply_filters: Optional[
         Callable[[Select, Type[GenericSQLModelType], Dict[str, Any]], Select]
     ] = None,
+    skip_count: bool = False,
 ) -> tuple[list[GenericSQLModelType], MetadataModel]:
     """
-    Get paginated results from a SQLModel query.
+    Get paginated results from a SQLModel query with optional count optimization.
 
     This function executes a SQLModel query, applies any provided filters, and returns the paginated results along with metadata about the query.
 
@@ -97,9 +98,10 @@ async def get_paginated_results(
         per_page (int, optional): The number of results to return per page. Defaults to 20.
         filters (Dict[str, Any] | None, optional): A dictionary of filters to apply to the query.
         apply_filters (Optional[Callable[[Select, Type[GenericSQLModelType], Dict[str, Any]], Select]], optional): A custom function to apply filters to the query. If not provided, the `default_apply_filters` function will be used.
+        skip_count (bool, optional): Skip the count query for performance. When True, total will be -1. Defaults to False.
 
     Returns:
-        tuple[list[GenericSQLModelType], MetadataModel]: A tuple containing the list of results and a `MetadataModel` instance with pagination metadata.
+        tuple[list[GenericSQLModelType], MetadataModel]: A tuple containing the list of results and a `MetadataModel` instance with pagination metadata. When skip_count is True, total will be -1 and pages will be 0.
     """
     query = select(model)
 
@@ -111,17 +113,25 @@ async def get_paginated_results(
 
     async with async_session() as s:
         # Calculate total
-        total_result = await s.exec(
-            select(func.count()).select_from(query.subquery())
-        )
-        total = total_result.one()
+        if skip_count:
+            total = -1
+        else:
+            # More efficient count on primary key instead of subquery
+            count_query = select(func.count(model.id))
+            if filters:
+                if apply_filters:
+                    count_query = apply_filters(count_query, model, filters)
+                else:
+                    count_query = default_apply_filters(count_query, model, filters)
+            total_result = await s.exec(count_query)
+            total = total_result.one()
 
         # Collect/format meta data
         meta_data = MetadataModel(
             page=page,
             per_page=per_page,
             total=total,
-            pages=math.ceil(total / per_page),
+            pages=math.ceil(total / per_page) if total > 0 else 0,
         )
 
         # Get items
@@ -136,6 +146,9 @@ def default_apply_filters(
 ) -> Select:
     """
     Apply default filters to a SQLModel query.
+
+    String filters use case-insensitive ILIKE pattern matching with wildcards.
+    Other types use exact equality matching or IN clauses for lists/tuples.
 
     Args:
         query (Select): The SQLModel query to apply filters to.
@@ -153,6 +166,9 @@ def default_apply_filters(
             attr = getattr(model, key)
             if isinstance(value, (list, tuple)):
                 query = query.filter(attr.in_(value))
+            elif isinstance(value, str):
+                # Use case-insensitive ILIKE for string filters
+                query = query.filter(attr.ilike(f"%{value}%"))
             else:
                 query = query.filter(attr == value)
         else:
