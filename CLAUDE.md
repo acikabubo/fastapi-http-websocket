@@ -2,7 +2,23 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## IMPORTANT: Syncing Changes with Worktree Template
+## IMPORTANT: Git Workflow and Worktree Syncing
+
+### GitHub Issue Workflow
+
+When working on GitHub issues, follow this workflow:
+
+1. **Fix the issue** - Make the necessary code changes
+2. **Sync to worktree** - If changes affect `app/` or `tests/`, replicate to `.worktree/` template
+3. **Commit to develop** - Commit changes to the `develop` branch with descriptive message including "Fixes #<issue_number>"
+4. **Push to develop** - Push the commit to `origin/develop`
+5. **Commit to worktree** - If worktree files were modified, commit them to the `project-template-develop` branch
+6. **Push worktree** - Push worktree changes to `origin/project-template-develop`
+7. **Close the issue** - Use `gh issue close <number>` with a descriptive comment
+
+**CRITICAL**: Before committing and pushing changes to `.worktree/` folder, you MUST ask the user for confirmation first.
+
+### Syncing Changes with Worktree Template
 
 **CRITICAL RULE**: When making changes to code files in the main project (`app/`, `tests/`, etc.), you MUST replicate those changes to the corresponding files in the `.worktree/` cookiecutter template.
 
@@ -11,6 +27,19 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Exception**: Do NOT sync `CLAUDE.md` between main project and worktree (they have different purposes)
 
 This ensures new projects generated from the cookiecutter template include all bug fixes and improvements.
+
+### Git Commit Guidelines
+
+When committing changes:
+- Use conventional commit format: `fix:`, `feat:`, `refactor:`, etc.
+- Include `Fixes #<issue_number>` in the commit message if closing an issue
+- Always include the Claude Code footer:
+  ```
+  🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+  Co-Authored-By: Claude <noreply@anthropic.com>
+  ```
+- For worktree commits, clearly indicate it's syncing changes from the main project
 
 ## Project Overview
 
