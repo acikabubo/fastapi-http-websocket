@@ -1,10 +1,11 @@
 from fastapi import APIRouter, Depends
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.models.author import Author
 from app.schemas.author import AuthorQueryParams
 from app.schemas.response import PaginatedResponseModel
 from app.settings import app_settings
-from app.storage.db import get_paginated_results
+from app.storage.db import async_session, get_paginated_results
 
 router = APIRouter()
 
@@ -20,7 +21,9 @@ async def create_author_endpoint(author: Author) -> Author:
     Returns:
         Author: The created author object.
     """
-    return await Author.create(author)
+    async with async_session() as session:
+        async with session.begin():
+            return await Author.create(session, author)
 
 
 @router.get(
@@ -40,7 +43,10 @@ async def get_authors_endpoint(
     Returns:
         list[Author]: A list of author objects matching the provided query parameters.
     """
-    return await Author.get_list(**q.model_dump(exclude_none=True))
+    async with async_session() as session:
+        return await Author.get_list(
+            session, **q.model_dump(exclude_none=True)
+        )
 
 
 @router.get(

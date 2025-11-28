@@ -11,7 +11,7 @@ from app.routing import pkg_router
 from app.schemas.generic_typing import JsonSchemaType
 from app.schemas.request import RequestModel
 from app.schemas.response import ResponseModel
-from app.storage.db import get_paginated_results
+from app.storage.db import async_session, get_paginated_results
 
 get_authors_schema: JsonSchemaType = {
     "$schema": "http://json-schema.org/draft-07/schema#",
@@ -57,7 +57,8 @@ async def get_authors_handler(request: RequestModel) -> ResponseModel[Author]:
     """
     try:
         filters = request.data.get("filters", {})
-        authors = await Author.get_list(**filters)
+        async with async_session() as session:
+            authors = await Author.get_list(session, **filters)
 
         return ResponseModel(
             pkg_id=request.pkg_id,

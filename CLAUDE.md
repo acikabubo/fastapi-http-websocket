@@ -249,6 +249,81 @@ All commits must pass:
 - **Formatting**: Double quotes, 4-space indentation
 - **Unused code**: Will be caught by vulture (see `pyproject.toml` for ignored names)
 
+### Database Session Management
+
+**IMPORTANT**: Model methods should accept database sessions as parameters rather than creating their own sessions. This enables:
+- Multiple operations in a single transaction
+- Easier testing with mocked sessions
+- Better transaction control
+
+**Pattern for model methods:**
+```python
+from sqlmodel.ext.asyncio.session import AsyncSession
+
+class MyModel(SQLModel, table=True):
+    @classmethod
+    async def create(
+        cls, session: AsyncSession, instance: "MyModel"
+    ) -> "MyModel":
+        """
+        Creates a new instance in the database.
+
+        Args:
+            session: Database session to use for the operation.
+            instance: The instance to create.
+
+        Returns:
+            The created instance.
+        """
+        try:
+            session.add(instance)
+            await session.flush()
+            await session.refresh(instance)
+            return instance
+        except IntegrityError as e:
+            await session.rollback()
+            logger.error(f"Integrity error: {e}")
+            raise
+
+    @classmethod
+    async def get_list(
+        cls, session: AsyncSession, **filters
+    ) -> list["MyModel"]:
+        """Retrieves a list of instances based on filters."""
+        stmt = select(cls).where(
+            *[getattr(cls, k) == v for k, v in filters.items()]
+        )
+        return (await session.exec(stmt)).all()
+```
+
+**Usage in HTTP endpoints:**
+```python
+from app.storage.db import async_session
+
+@router.post("/my-models")
+async def create_model(instance: MyModel) -> MyModel:
+    async with async_session() as session:
+        async with session.begin():
+            return await MyModel.create(session, instance)
+
+@router.get("/my-models")
+async def get_models():
+    async with async_session() as session:
+        return await MyModel.get_list(session)
+```
+
+**Usage in WebSocket handlers:**
+```python
+async def my_handler(request: RequestModel) -> ResponseModel:
+    async with async_session() as session:
+        items = await MyModel.get_list(session, **request.data.get("filters", {}))
+        return ResponseModel.success(
+            request.pkg_id,
+            request.req_id,
+            data=[item.model_dump() for item in items]
+        )
+```
+
 ### Database Pagination
 
 Use `get_paginated_results()` for all list endpoints:
