@@ -37,14 +37,17 @@ test:
 # To execute this commands first need to be executed `make shell`
 ws-handlers:
 	@echo "Make table with PkgID's and related websocket handlers"
-	@python cli.py ws-handlers
+	@uv run python cli.py ws-handlers
 
 new-ws-handlers:
 	@echo "Generate new websocket handler"
-	@python cli.py generate-new-ws-handler
+	@uv run python cli.py generate-new-ws-handler
 
 code-docs:
-	pydoc -n 0.0.0.0 -p 8080
+	@uv run pydoc -n 0.0.0.0 -p 8080
+
+ipython:
+	@uv run ipython
 
 ruff-check:
 	uvx ruff check --config=pyproject.toml

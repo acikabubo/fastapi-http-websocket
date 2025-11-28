@@ -35,12 +35,11 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 RUN pip install --upgrade pip
 ENV UV_SYSTEM_PYTHON=1
 
-# Copy required file
-COPY pyproject.toml /tmp
+# Copy required file for dependency installation
+COPY pyproject.toml /tmp/pyproject.toml
 
 # Install dependencies and include development dependencies
-RUN uv pip install --requirement /tmp/pyproject.toml
-# RUN uv pip install --requirement /tmp/pyproject.toml --all-extras
+RUN cd /tmp && uv pip install -r pyproject.toml --group dev
 
 # Install fixuid
 RUN USER=devel && \
@@ -57,7 +56,7 @@ USER devel:devel
 # Copy the application code
 COPY . /project
 
-# Install the application dependencies
+# Set working directory
 WORKDIR /project
 
 # Expose the port the app runs on
