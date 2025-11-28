@@ -179,6 +179,31 @@ make new-ws-handlers
 - Custom filter functions can be passed via `apply_filters` parameter
 - Database initialization with retry logic in `wait_and_init_db()`
 
+**Rate Limiting (`app/utils/rate_limiter.py`, `app/middlewares/rate_limit.py`):**
+- Redis-based sliding window algorithm for HTTP and WebSocket rate limiting
+- `RateLimiter`: Tracks request counts per user/IP within configurable time windows
+  - `check_rate_limit(key, limit, window_seconds, burst)` returns (is_allowed, remaining)
+  - Supports burst limits for short-term traffic spikes
+  - Fails open on Redis errors (allows requests)
+- `ConnectionLimiter`: Manages WebSocket connection limits per user
+  - `add_connection(user_id, connection_id)` enforces max connections
+  - `remove_connection(user_id, connection_id)` cleanup on disconnect
+  - Tracks active connections in Redis sets
+- `RateLimitMiddleware`: HTTP middleware adding rate limits to endpoints
+  - Returns 429 Too Many Requests when limits exceeded
+  - Adds X-RateLimit-* headers to all responses
+  - Uses user ID (authenticated) or IP address (unauthenticated) as key
+  - Respects EXCLUDED_PATHS for health checks and docs
+- WebSocket rate limiting in `PackageAuthWebSocketEndpoint`:
+  - Connection limiting in `on_connect()` (closes with WS_1008_POLICY_VIOLATION)
+  - Message rate limiting in `Web.on_receive()` per user
+- Configuration in `app/settings.py`:
+  - `RATE_LIMIT_ENABLED`: Enable/disable rate limiting (default: True)
+  - `RATE_LIMIT_PER_MINUTE`: HTTP request limit per minute (default: 60)
+  - `RATE_LIMIT_BURST`: Burst allowance for traffic spikes (default: 10)
+  - `WS_MAX_CONNECTIONS_PER_USER`: Max concurrent WebSocket connections (default: 5)
+  - `WS_MESSAGE_RATE_LIMIT`: WebSocket messages per minute (default: 100)
+
 ### Directory Structure
 
 - `app/__init__.py`: Application factory with startup/shutdown handlers
@@ -187,8 +212,9 @@ make new-ws-handlers
 - `app/api/ws/consumers/`: WebSocket endpoint classes (e.g., `Web`)
 - `app/api/ws/constants.py`: `PkgID` and `RSPCode` enums
 - `app/managers/`: Singleton managers (RBAC, Keycloak, WebSocket connections)
-- `app/middlewares/`: Custom middleware (`PermAuthHTTPMiddleware`)
+- `app/middlewares/`: Custom middleware (`PermAuthHTTPMiddleware`, `RateLimitMiddleware`)
 - `app/models/`: SQLModel database models
+- `app/utils/`: Utility modules (`rate_limiter.py` for rate limiting)
 - `app/schemas/`: Pydantic models for request/response validation
 - `app/tasks/`: Background tasks (e.g., `kc_user_session_task`)
 - `app/storage/`: Database and Redis utilities

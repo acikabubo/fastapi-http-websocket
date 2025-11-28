@@ -70,6 +70,15 @@ class Settings(BaseSettings):
     # Pagination defaults
     DEFAULT_PAGE_SIZE: int = 20
 
+    # Rate limiting settings
+    RATE_LIMIT_ENABLED: bool = True
+    RATE_LIMIT_PER_MINUTE: int = 60
+    RATE_LIMIT_BURST: int = 10
+
+    # WebSocket rate limiting settings
+    WS_MAX_CONNECTIONS_PER_USER: int = 5
+    WS_MESSAGE_RATE_LIMIT: int = 100  # messages per minute
+
     # Logging settings
     LOG_FILE_PATH: str = "logs/logging_errors.log"
 

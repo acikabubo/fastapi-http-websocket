@@ -1,4 +1,5 @@
 import json
+import uuid
 from typing import Type
 from uuid import UUID
 
@@ -14,6 +15,7 @@ from app.schemas.response import BroadcastDataModel, ResponseModel
 from app.schemas.user import UserModel
 from app.settings import app_settings
 from app.storage.redis import get_auth_redis_connection
+from app.utils.rate_limiter import connection_limiter, rate_limiter
 
 
 class UUIDEncoder(json.JSONEncoder):
@@ -112,16 +114,19 @@ class PackageAuthWebSocketEndpoint(WebSocketEndpoint):
 
     async def on_connect(self, websocket):
         """
-        This method is responsible for handling the connection of a WebSocket client. It performs the following tasks:
+        Handles WebSocket client connection with authentication and rate limiting.
 
-        1. Calls the `on_connect` method of the parent class.
-        2. Retrieves an authenticated Redis connection.
-        3. Retrieves the authenticated user from the WebSocket scope.
-        4. If the user is not authenticated or is `None`, it logs a debug message and closes the WebSocket connection.
-        5. Sets the user's username in Redis with a TTL from the Keycloak session expiration.
-        6. Maps the user's username to the WebSocket instance in the `ws_clients` dictionary.
-        7. Connects the WebSocket to the connection manager.
-        8. Logs a debug message indicating that the client has connected to the WebSocket connection.
+        This method performs the following tasks:
+        1. Calls the parent class on_connect method
+        2. Retrieves authenticated Redis connection
+        3. Validates user authentication
+        4. Enforces per-user connection limits
+        5. Registers the connection in connection manager
+        6. Sets up user session in Redis
+
+        Connection is rejected if:
+        - User is not authenticated
+        - User has exceeded maximum concurrent connections
         """
 
         await super().on_connect(websocket)
@@ -139,6 +144,24 @@ class PackageAuthWebSocketEndpoint(WebSocketEndpoint):
             await websocket.close()
             return
 
+        # Generate unique connection ID
+        self.connection_id = str(uuid.uuid4())
+
+        # Check connection limit
+        connection_allowed = await connection_limiter.add_connection(
+            user_id=self.user.username, connection_id=self.connection_id
+        )
+
+        if not connection_allowed:
+            logger.warning(
+                f"Connection limit exceeded for user {self.user.username}"
+            )
+            await websocket.close(
+                code=status.WS_1008_POLICY_VIOLATION,
+                reason="Maximum concurrent connections exceeded",
+            )
+            return
+
         # Set user username in redis with TTL from expired seconds from keycloak
         await self.r.add_kc_user_session(self.user)
 
@@ -148,19 +171,32 @@ class PackageAuthWebSocketEndpoint(WebSocketEndpoint):
         ] = websocket
 
         connection_manager.connect(websocket)
-        logger.debug("Client connected to the websocket connection")
+        logger.debug(
+            f"Client connected to websocket (connection_id: {self.connection_id})"
+        )
 
     async def on_disconnect(self, websocket, close_code):
         """
-        This method is responsible for handling the disconnection of a WebSocket client. It performs the following tasks:
+        Handles WebSocket client disconnection and cleanup.
 
-        1. Calls the `on_disconnect` method of the parent class.
-        2. Disconnects the WebSocket from the connection manager.
-        3. Logs a debug message indicating that the client has disconnected from the WebSocket connection, including the username of the authenticated user or a message for an unauthenticated user.
+        This method performs the following tasks:
+        1. Calls the parent class on_disconnect method
+        2. Removes connection from connection manager
+        3. Removes connection from connection limiter
+        4. Logs disconnection event with username and close code
         """
 
         await super().on_disconnect(websocket, close_code)
         connection_manager.disconnect(websocket)
+
+        # Remove from connection limiter if connection was established
+        if (
+            not isinstance(self.user, UnauthenticatedUser)
+            and hasattr(self, "connection_id")
+        ):
+            await connection_limiter.remove_connection(
+                user_id=self.user.username, connection_id=self.connection_id
+            )
 
         log_msg = (
             f"Client of user {self.user.username} disconnected with code {close_code}"

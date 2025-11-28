@@ -8,6 +8,7 @@ from app.auth import AuthBackend
 from app.logging import logger
 from app.managers.rbac_manager import RBACManager
 from app.middlewares.action import PermAuthHTTPMiddleware
+from app.middlewares.rate_limit import RateLimitMiddleware
 from app.routing import collect_subrouters
 from app.storage.db import wait_and_init_db
 from app.tasks.kc_user_session import kc_user_session_task
@@ -99,7 +100,8 @@ def application() -> FastAPI:
     app.include_router(collect_subrouters())
 
     # Middlewares (execute in REVERSE order of registration)
-    # Execution flow: AuthenticationMiddleware → PermAuthHTTPMiddleware
+    # Execution flow: AuthenticationMiddleware → PermAuthHTTPMiddleware → RateLimitMiddleware
+    app.add_middleware(RateLimitMiddleware)
     app.add_middleware(PermAuthHTTPMiddleware, rbac=RBACManager())
     app.add_middleware(AuthenticationMiddleware, backend=AuthBackend())
 
