@@ -8,6 +8,7 @@ from {{cookiecutter.module_name}}.auth import AuthBackend
 from {{cookiecutter.module_name}}.logging import logger
 from {{cookiecutter.module_name}}.managers.rbac_manager import RBACManager
 from {{cookiecutter.module_name}}.middlewares.action import PermAuthHTTPMiddleware
+from {{cookiecutter.module_name}}.middlewares.rate_limit import RateLimitMiddleware
 from {{cookiecutter.module_name}}.routing import collect_subrouters
 from {{cookiecutter.module_name}}.storage.db import wait_and_init_db
 from {{cookiecutter.module_name}}.tasks.kc_user_session import kc_user_session_task
@@ -100,7 +101,9 @@ def application() -> FastAPI:
     # Collect routers
     app.include_router(collect_subrouters())
 
-    # Middlewares
+    # Middlewares (execute in REVERSE order of registration)
+    # Execution flow: AuthenticationMiddleware → PermAuthHTTPMiddleware → RateLimitMiddleware
+    app.add_middleware(RateLimitMiddleware)
     app.add_middleware(PermAuthHTTPMiddleware, rbac=RBACManager())
     app.add_middleware(AuthenticationMiddleware, backend=AuthBackend())
 

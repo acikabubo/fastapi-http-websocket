@@ -2,12 +2,15 @@ from typing import Any
 
 from fastapi import APIRouter
 from pydantic import ValidationError
+from starlette import status
 
 from {{cookiecutter.module_name}}.api.ws.handlers import load_handlers
 from {{cookiecutter.module_name}}.api.ws.websocket import PackageAuthWebSocketEndpoint
 from {{cookiecutter.module_name}}.logging import logger
 from {{cookiecutter.module_name}}.routing import pkg_router
 from {{cookiecutter.module_name}}.schemas.request import RequestModel
+from {{cookiecutter.module_name}}.settings import app_settings
+from {{cookiecutter.module_name}}.utils.rate_limiter import rate_limiter
 
 load_handlers()
 
@@ -29,10 +32,11 @@ class Web(PackageAuthWebSocketEndpoint):
         Handles incoming WebSocket messages by processing the request and sending back a response.
 
         This method performs the following steps:
-        1. Validates and converts the received data into a RequestModel
-        2. Routes the request through pkg_router with user authentication
-        3. Sends the response back through the WebSocket
-        4. Closes the connection if validation fails
+        1. Checks message rate limit for the user
+        2. Validates and converts the received data into a RequestModel
+        3. Routes the request through pkg_router with user authentication
+        4. Sends the response back through the WebSocket
+        5. Closes the connection if validation or rate limiting fails
 
         Args:
             websocket: The WebSocket connection instance
@@ -43,9 +47,27 @@ class Web(PackageAuthWebSocketEndpoint):
                             This will result in the WebSocket connection being closed.
 
         Note:
-            On validation failure, the connection is closed and the error is logged
+            On validation or rate limit failure, the connection is closed and the error is logged
             with the username for debugging purposes.
         """
+        # Check message rate limit
+        rate_limit_key = f"ws_msg:user:{self.user.username}"
+        is_allowed, remaining = await rate_limiter.check_rate_limit(
+            key=rate_limit_key,
+            limit=app_settings.WS_MESSAGE_RATE_LIMIT,
+            window_seconds=60,
+        )
+
+        if not is_allowed:
+            logger.warning(
+                f"WebSocket message rate limit exceeded for user {self.user.username}"
+            )
+            await websocket.close(
+                code=status.WS_1008_POLICY_VIOLATION,
+                reason="Message rate limit exceeded",
+            )
+            return
+
         try:
             request = RequestModel(**data)
             logger.debug(f"Received data: {data}")

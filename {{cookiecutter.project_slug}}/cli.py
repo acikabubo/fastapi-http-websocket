@@ -100,7 +100,7 @@ def generate_new_ws_handler():
         )
 
         # Write the rendered module to a file
-        output_path = f"{{{{cookiecutter.module_name}}}}/api/ws/handlers/{module_name}.py"
+        output_path = f"{{cookiecutter.module_name}}/api/ws/handlers/{module_name}.py"
         with open(output_path, "w") as f:
             f.write(module_code)
 

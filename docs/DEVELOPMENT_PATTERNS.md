@@ -5,6 +5,7 @@ This document provides recommended patterns and best practices for developing ap
 ## Table of Contents
 
 - [Database Session Management](#database-session-management)
+- [Rate Limiting](#rate-limiting)
 - [Error Handling](#error-handling)
 - [Testing Patterns](#testing-patterns)
 - [Security Best Practices](#security-best-practices)
@@ -469,6 +470,194 @@ class MyModel(SQLModel, table=True):
         await session.refresh(instance)
         return instance
 ```
+
+---
+
+## Rate Limiting
+
+### Overview
+
+The application includes comprehensive rate limiting for both HTTP and WebSocket connections using Redis-based sliding window algorithm. This prevents abuse and ensures fair resource allocation.
+
+### Components
+
+**RateLimiter** (`{{cookiecutter.module_name}}.utils.rate_limiter`):
+- Tracks request counts per user/IP within configurable time windows
+- Uses Redis sorted sets for efficient sliding window implementation
+- Supports burst limits for short-term traffic spikes
+- Fails open on Redis errors (allows requests)
+
+**ConnectionLimiter** (`{{cookiecutter.module_name}}.utils.rate_limiter`):
+- Manages WebSocket connection limits per user
+- Uses Redis sets to track active connections
+- Automatic cleanup with expiration
+
+**RateLimitMiddleware** (`{{cookiecutter.module_name}}.middlewares.rate_limit`):
+- HTTP middleware for request rate limiting
+- Returns 429 Too Many Requests when limits exceeded
+- Adds X-RateLimit-* headers to responses
+- Uses user ID (authenticated) or IP address (unauthenticated)
+
+### Configuration
+
+Rate limiting settings in `settings.py`:
+
+```python
+# Rate limiting settings
+RATE_LIMIT_ENABLED: bool = True
+RATE_LIMIT_PER_MINUTE: int = 60
+RATE_LIMIT_BURST: int = 10
+
+# WebSocket rate limiting settings
+WS_MAX_CONNECTIONS_PER_USER: int = 5
+WS_MESSAGE_RATE_LIMIT: int = 100  # messages per minute
+```
+
+### HTTP Rate Limiting
+
+The `RateLimitMiddleware` is automatically registered in the application:
+
+```python
+# In {{cookiecutter.module_name}}/__init__.py
+app.add_middleware(RateLimitMiddleware)
+app.add_middleware(PermAuthHTTPMiddleware, rbac=RBACManager())
+app.add_middleware(AuthenticationMiddleware, backend=AuthBackend())
+```
+
+Middleware execution order (reverse of registration):
+1. `AuthenticationMiddleware` - Authenticates user
+2. `PermAuthHTTPMiddleware` - Checks permissions
+3. `RateLimitMiddleware` - Enforces rate limits
+
+### WebSocket Rate Limiting
+
+#### Connection Limiting
+
+WebSocket connection limits are enforced in `PackageAuthWebSocketEndpoint.on_connect()`:
+
+```python
+from {{cookiecutter.module_name}}.utils.rate_limiter import connection_limiter
+
+async def on_connect(self, websocket):
+    # Generate unique connection ID
+    self.connection_id = str(uuid.uuid4())
+
+    # Check connection limit
+    connection_allowed = await connection_limiter.add_connection(
+        user_id=self.user.username,
+        connection_id=self.connection_id
+    )
+
+    if not connection_allowed:
+        await websocket.close(
+            code=status.WS_1008_POLICY_VIOLATION,
+            reason="Maximum concurrent connections exceeded"
+        )
+        return
+```
+
+Cleanup on disconnect:
+
+```python
+async def on_disconnect(self, websocket, close_code):
+    if hasattr(self, "connection_id"):
+        await connection_limiter.remove_connection(
+            user_id=self.user.username,
+            connection_id=self.connection_id
+        )
+```
+
+#### Message Rate Limiting
+
+WebSocket message limits are enforced in `Web.on_receive()`:
+
+```python
+from {{cookiecutter.module_name}}.utils.rate_limiter import rate_limiter
+from {{cookiecutter.module_name}}.settings import app_settings
+
+async def on_receive(self, websocket, data):
+    # Check message rate limit
+    rate_limit_key = f"ws_msg:user:{self.user.username}"
+    is_allowed, remaining = await rate_limiter.check_rate_limit(
+        key=rate_limit_key,
+        limit=app_settings.WS_MESSAGE_RATE_LIMIT,
+        window_seconds=60,
+    )
+
+    if not is_allowed:
+        await websocket.close(
+            code=status.WS_1008_POLICY_VIOLATION,
+            reason="Message rate limit exceeded"
+        )
+        return
+```
+
+### Custom Rate Limiting
+
+You can use the rate limiter directly in your code:
+
+```python
+from {{cookiecutter.module_name}}.utils.rate_limiter import rate_limiter
+
+# Check custom rate limit
+is_allowed, remaining = await rate_limiter.check_rate_limit(
+    key=f"custom:{user_id}:{operation}",
+    limit=10,  # 10 requests
+    window_seconds=60,  # per minute
+    burst=15  # allow burst up to 15
+)
+
+if not is_allowed:
+    raise HTTPException(
+        status_code=429,
+        detail="Rate limit exceeded"
+    )
+```
+
+### Testing Rate Limiting
+
+Example test with mocked Redis:
+
+```python
+from unittest.mock import AsyncMock, MagicMock, patch
+
+@pytest.fixture
+def rate_limiter_with_mock_redis():
+    from {{cookiecutter.module_name}}.utils.rate_limiter import RateLimiter
+
+    with patch("{{cookiecutter.module_name}}.utils.rate_limiter.RRedis") as mock_rredis:
+        mock_redis = AsyncMock()
+        mock_redis.zcard = AsyncMock(return_value=5)
+
+        mock_instance = MagicMock()
+        mock_instance.r = mock_redis
+        mock_rredis.return_value = mock_instance
+
+        limiter = RateLimiter()
+        limiter.redis.r = mock_redis
+
+        yield limiter
+
+@pytest.mark.asyncio
+async def test_rate_limit_allows_request(rate_limiter_with_mock_redis):
+    is_allowed, remaining = await rate_limiter_with_mock_redis.check_rate_limit(
+        key="test_user",
+        limit=10,
+        window_seconds=60
+    )
+
+    assert is_allowed is True
+    assert remaining == 4
+```
+
+### Best Practices
+
+1. **Choose Appropriate Limits**: Balance between preventing abuse and allowing legitimate usage
+2. **Use Burst Limits**: Allow short-term traffic spikes with `burst` parameter
+3. **Monitor Rate Limit Hits**: Log rate limit violations for security monitoring
+4. **Test with Realistic Traffic**: Ensure limits work under actual usage patterns
+5. **Document Limits**: Inform API consumers about rate limits in documentation
+6. **Graceful Degradation**: Always fail open on infrastructure errors
 
 ---
 
