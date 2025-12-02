@@ -182,7 +182,7 @@ services:
 
     volumes:
       - grafana-data:/var/lib/grafana
-      - ../grafana-dashboard.json:/etc/grafana/provisioning/dashboards/fastapi-dashboard.json
+      - ./grafana/provisioning:/etc/grafana/provisioning
 
     depends_on:
       - prometheus
