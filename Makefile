@@ -36,6 +36,10 @@ test:
 	@echo "Running tests with pytest..."
 	@uv run pytest tests
 
+test-coverage:
+	@echo "Running tests with coverage..."
+	@uv run pytest --cov=app --cov-report=term-missing --cov-report=html tests
+
 # To execute this commands first need to be executed `make shell`
 ws-handlers:
 	@echo "Make table with PkgID's and related websocket handlers"
