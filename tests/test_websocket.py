@@ -87,8 +87,9 @@ class TestWebSocketAuthentication:
             return_value=mock_redis,
         ), patch("app.api.ws.websocket.connection_manager") as mock_cm, patch(
             "app.api.ws.websocket.ws_clients", {}
-        ):
+        ), patch("app.api.ws.websocket.connection_limiter") as mock_conn_limiter:
             mock_cm.connect = MagicMock()
+            mock_conn_limiter.add_connection = AsyncMock(return_value=True)
 
             # Call on_connect
             await endpoint.on_connect(mock_websocket)
