@@ -15,6 +15,7 @@ from {{cookiecutter.module_name}}.schemas.response import BroadcastDataModel, Re
 from {{cookiecutter.module_name}}.schemas.user import UserModel
 from {{cookiecutter.module_name}}.settings import app_settings
 from {{cookiecutter.module_name}}.storage.redis import get_auth_redis_connection
+from {{cookiecutter.module_name}}.utils.metrics import ws_connections_active, ws_connections_total
 from {{cookiecutter.module_name}}.utils.rate_limiter import connection_limiter, rate_limiter
 
 
@@ -141,6 +142,7 @@ class PackageAuthWebSocketEndpoint(WebSocketEndpoint):
             logger.debug(
                 "Client is not logged in, websocket connection will be closed!"
             )
+            ws_connections_total.labels(status="rejected_auth").inc()
             await websocket.close()
             return
 
@@ -156,6 +158,7 @@ class PackageAuthWebSocketEndpoint(WebSocketEndpoint):
             logger.warning(
                 f"Connection limit exceeded for user {self.user.username}"
             )
+            ws_connections_total.labels(status="rejected_limit").inc()
             await websocket.close(
                 code=status.WS_1008_POLICY_VIOLATION,
                 reason="Maximum concurrent connections exceeded",
@@ -171,6 +174,8 @@ class PackageAuthWebSocketEndpoint(WebSocketEndpoint):
         ] = websocket
 
         connection_manager.connect(websocket)
+        ws_connections_total.labels(status="accepted").inc()
+        ws_connections_active.inc()
         logger.debug(
             f"Client connected to websocket (connection_id: {self.connection_id})"
         )
@@ -197,6 +202,8 @@ class PackageAuthWebSocketEndpoint(WebSocketEndpoint):
             await connection_limiter.remove_connection(
                 user_id=self.user.username, connection_id=self.connection_id
             )
+            # Decrement active connections metric
+            ws_connections_active.dec()
 
         log_msg = (
             f"Client of user {self.user.username} disconnected with code {close_code}"

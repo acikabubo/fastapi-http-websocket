@@ -1,7 +1,7 @@
 [project]
-name = "{{cookiecutter.project_name}}"
+name = "project"
 version = "0.1.0"
-description = "{{cookiecutter.project_description}}"
+description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.13"
 
@@ -11,6 +11,7 @@ dependencies = [
     "greenlet>=3.2.4",
     "icecream>=2.1.8",
     "jsonschema>=4.25.1",
+    "prometheus-client>=0.21.1",
     "pydantic-settings>=2.12.0",
     "python-keycloak>=5.8.1",
     "redis>=7.1.0",
@@ -123,9 +124,9 @@ exclude = [
     ".worktree",
     "tests",
     "scripts",
-    "{{cookiecutter.module_name}}/settings.py",
-    "{{cookiecutter.module_name}}/logging.py",
-    "{{cookiecutter.module_name}}/schemas/*"
+    "app/settings.py",
+    "app/logging.py",
+    "app/schemas/*"
 ]
 
 [tool.skjold]
