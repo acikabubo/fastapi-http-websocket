@@ -26,6 +26,8 @@ A production-ready FastAPI application implementing both HTTP REST API and WebSo
 - **Dual Protocol Support**: HTTP REST API and WebSocket real-time communication
 - **Authentication**: Keycloak-based JWT token authentication
 - **Authorization**: Fine-grained RBAC with role-based permissions
+- **Rate Limiting**: Redis-based sliding window rate limiting for HTTP and WebSocket
+- **Monitoring**: Comprehensive Prometheus metrics with Grafana dashboards
 - **Database**: PostgreSQL with async SQLModel/SQLAlchemy
 - **Caching**: Redis integration for session management
 - **Package Router**: Custom routing system for WebSocket request handling
@@ -610,6 +612,7 @@ All project documentation is organized in the [`docs/`](docs/) directory:
 #### Getting Started
 - **[Authentication Quick Start](docs/guides/QUICKSTART_AUTH.md)** - Get tokens and start making requests
 - **[Testing Guide](docs/guides/TESTING.md)** - How to test the application
+- **[Monitoring Setup](MONITORING.md)** - Prometheus & Grafana monitoring guide
 
 #### In-Depth Guides
 - **[Authentication Guide](docs/guides/AUTHENTICATION.md)** - Complete guide to Keycloak authentication

@@ -135,9 +135,64 @@ services:
         condition: service_healthy
       hw-redis:
         condition: service_healthy
+      prometheus:
+        condition: service_started
+      grafana:
+        condition: service_started
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: hw-prometheus
+    hostname: prometheus
+
+    networks:
+      - hw-network
+
+    ports:
+      - "9090:9090"
+
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: hw-grafana
+    hostname: grafana
+
+    networks:
+      - hw-network
+
+    ports:
+      - "3000:3000"
+
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ../grafana-dashboard.json:/etc/grafana/provisioning/dashboards/fastapi-dashboard.json
+
+    depends_on:
+      - prometheus
+
+    restart: unless-stopped
 
 volumes:
   postgres-hw-data:
+  prometheus-data:
+  grafana-data:
 
 
 networks:

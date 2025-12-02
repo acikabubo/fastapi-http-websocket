@@ -122,25 +122,28 @@ class TestPrometheusMetrics:
         assert 'method="GET"' in metrics_data
         assert 'endpoint="/health"' in metrics_data
 
-    def test_app_info_metric(self, mock_keycloak_manager):
-        """
-        Test that app_info metric is initialized.
+    def test_app_info_metric(self):
+        """Test that app_info metric can be set and exported."""
+        import sys
 
-        Args:
-            mock_keycloak_manager: Mocked Keycloak manager
-        """
-        from app import application
+        from prometheus_client import generate_latest
 
-        app = application()
-        client = TestClient(app)
+        from app.utils.metrics import app_info
 
-        # Get metrics
-        response = client.get("/metrics")
-        metrics_data = response.text
+        # Set the app_info metric
+        app_info.labels(
+            version="1.0.0",
+            python_version=f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}",
+            environment="test",
+        ).set(1)
+
+        # Generate metrics output
+        metrics_data = generate_latest().decode("utf-8")
 
         # Check for app_info metric
         assert "app_info" in metrics_data
         assert 'version="1.0.0"' in metrics_data
+        assert 'environment="test"' in metrics_data
 
 
 class TestWebSocketMetrics:

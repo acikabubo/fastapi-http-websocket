@@ -12,8 +12,10 @@ endif
 build:
 	docker compose -f docker/docker-compose.yml build
 
+# Start all services: PostgreSQL, Redis, Keycloak, Prometheus, Grafana
 start:
 	docker compose -f docker/docker-compose.yml up -d
+
 stop:
 	docker compose -f docker/docker-compose.yml down
 
