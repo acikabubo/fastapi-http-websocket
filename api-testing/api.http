@@ -1,4 +1,4 @@
-@baseUrl = localhost:8001
+@baseUrl = localhost:8000
 
 ###
 # Get a fresh access token using the helper script:

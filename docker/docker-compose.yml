@@ -55,7 +55,7 @@ services:
       - hw-network
 
     ports:
-      - "8001:8000"
+      - "8000:8000"
 
     volumes:
       - .:/project
@@ -117,7 +117,7 @@ services:
     container_name: hw-server-shell
 
     ports:
-      - 8001:8000
+      - 8000:8000
       - 56781:5678
       - 8081:8080
 

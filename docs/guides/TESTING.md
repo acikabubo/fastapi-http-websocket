@@ -115,14 +115,14 @@ export DEBUG_AUTH=false
 TOKEN=$(python scripts/get_token.py acika 12345 | grep -A1 "Access Token" | tail -1 | xargs)
 
 # 2. Make authenticated request
-curl -X GET "http://localhost:8001/authors" \
+curl -X GET "http://localhost:8000/authors" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json"
 ```
 
 **Using VS Code REST Client (api-testing/api.http):**
 ```http
-@baseUrl = localhost:8001
+@baseUrl = localhost:8000
 
 ### GET Request Example
 GET http://{{baseUrl}}/authors
@@ -133,7 +133,7 @@ Authorization: Bearer eyJhbGci...YOUR_TOKEN_HERE...
 **Using HTTPie:**
 ```bash
 TOKEN=$(python scripts/get_token.py acika 12345 | grep -A1 "Access Token" | tail -1 | xargs)
-http GET localhost:8001/authors "Authorization: Bearer $TOKEN"
+http GET localhost:8000/authors "Authorization: Bearer $TOKEN"
 ```
 
 ### WebSocket Endpoints
@@ -147,7 +147,7 @@ npm install -g wscat
 TOKEN=$(python scripts/get_token.py acika 12345 | grep -A1 "Access Token" | tail -1 | xargs)
 
 # Connect
-wscat -c "ws://localhost:8001/web?Authorization=Bearer $TOKEN"
+wscat -c "ws://localhost:8000/web?Authorization=Bearer $TOKEN"
 
 # Send message
 {"pkg_id": 1, "req_id": "test-123", "data": {}}
@@ -155,7 +155,7 @@ wscat -c "ws://localhost:8001/web?Authorization=Bearer $TOKEN"
 
 **Using VS Code REST Client (api-testing/ws.http):**
 ```http
-WS ws://localhost:8001/web?Authorization=Bearer YOUR_TOKEN_HERE
+WS ws://localhost:8000/web?Authorization=Bearer YOUR_TOKEN_HERE
 
 {"pkg_id": 1, "req_id": "123qweasd"}
 ```

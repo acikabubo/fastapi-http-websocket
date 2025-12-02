@@ -60,10 +60,10 @@ python scripts/get_token.py acika 12345
 TOKEN=$(python scripts/get_token.py acika 12345 | grep -A1 "Access Token" | tail -1 | xargs)
 
 # Use with curl
-curl -H "Authorization: Bearer $TOKEN" http://localhost:8001/authors
+curl -H "Authorization: Bearer $TOKEN" http://localhost:8000/authors
 
 # Use with HTTPie
-http GET localhost:8001/authors "Authorization: Bearer $TOKEN"
+http GET localhost:8000/authors "Authorization: Bearer $TOKEN"
 ```
 
 **When to use:** Scripts, automated testing, CI/CD pipelines
@@ -101,14 +101,14 @@ async def test_real_auth():
 
 **Using VS Code REST Client:**
 ```http
-GET http://localhost:8001/authors
+GET http://localhost:8000/authors
 Authorization: Bearer YOUR_TOKEN_HERE
 ```
 
 **Using cURL:**
 ```bash
 TOKEN=$(python scripts/get_token.py acika 12345 | grep -A1 "Access Token" | tail -1 | xargs)
-curl -H "Authorization: Bearer $TOKEN" http://localhost:8001/authors
+curl -H "Authorization: Bearer $TOKEN" http://localhost:8000/authors
 ```
 
 #### WebSocket Endpoints
@@ -117,12 +117,12 @@ curl -H "Authorization: Bearer $TOKEN" http://localhost:8001/authors
 ```bash
 npm install -g wscat
 TOKEN=$(python scripts/get_token.py acika 12345 | grep -A1 "Access Token" | tail -1 | xargs)
-wscat -c "ws://localhost:8001/web?Authorization=Bearer $TOKEN"
+wscat -c "ws://localhost:8000/web?Authorization=Bearer $TOKEN"
 ```
 
 **Using VS Code REST Client:**
 ```http
-WS ws://localhost:8001/web?Authorization=Bearer YOUR_TOKEN_HERE
+WS ws://localhost:8000/web?Authorization=Bearer YOUR_TOKEN_HERE
 {"pkg_id": 1, "req_id": "test-123", "data": {}}
 ```
 
@@ -225,7 +225,7 @@ export DEBUG_AUTH=true
 make serve
 
 # Test without tokens (quick iteration)
-curl http://localhost:8001/authors
+curl http://localhost:8000/authors
 ```
 
 ### Workflow 4: Manual Testing with Real Tokens
@@ -239,7 +239,7 @@ make serve
 
 # Get token and test
 TOKEN=$(python scripts/get_token.py acika 12345 | grep -A1 "Access Token" | tail -1 | xargs)
-curl -H "Authorization: Bearer $TOKEN" http://localhost:8001/authors
+curl -H "Authorization: Bearer $TOKEN" http://localhost:8000/authors
 ```
 
 ## 🔐 Security Improvements

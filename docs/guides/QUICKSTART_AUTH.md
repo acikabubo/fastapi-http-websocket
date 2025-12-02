@@ -10,7 +10,7 @@ python scripts/get_token.py acika 12345
 
 # Use with cURL
 TOKEN=$(python scripts/get_token.py acika 12345 | grep -A1 "Access Token" | tail -1 | xargs)
-curl -H "Authorization: Bearer $TOKEN" http://localhost:8001/authors
+curl -H "Authorization: Bearer $TOKEN" http://localhost:8000/authors
 
 # Enable debug mode (local dev only)
 export DEBUG_AUTH=true
@@ -55,7 +55,7 @@ Tokens expire after 5 minutes. Just run `get_token.py` again.
 ### VS Code REST Client
 ```http
 # api-testing/api.http
-GET http://localhost:8001/authors
+GET http://localhost:8000/authors
 Authorization: Bearer eyJhbGci...
 
 # Get fresh token: python scripts/get_token.py acika 12345
@@ -64,13 +64,13 @@ Authorization: Bearer eyJhbGci...
 ### cURL
 ```bash
 TOKEN=$(python scripts/get_token.py acika 12345 | grep -A1 "Access Token" | tail -1 | xargs)
-curl -H "Authorization: Bearer $TOKEN" http://localhost:8001/authors
+curl -H "Authorization: Bearer $TOKEN" http://localhost:8000/authors
 ```
 
 ### HTTPie
 ```bash
 TOKEN=$(python scripts/get_token.py acika 12345 | grep -A1 "Access Token" | tail -1 | xargs)
-http GET localhost:8001/authors "Authorization: Bearer $TOKEN"
+http GET localhost:8000/authors "Authorization: Bearer $TOKEN"
 ```
 
 ### Postman
@@ -81,7 +81,7 @@ http GET localhost:8001/authors "Authorization: Bearer $TOKEN"
 ### WebSocket (wscat)
 ```bash
 TOKEN=$(python scripts/get_token.py acika 12345 | grep -A1 "Access Token" | tail -1 | xargs)
-wscat -c "ws://localhost:8001/web?Authorization=Bearer $TOKEN"
+wscat -c "ws://localhost:8000/web?Authorization=Bearer $TOKEN"
 ```
 
 ## ⚠️ Common Issues

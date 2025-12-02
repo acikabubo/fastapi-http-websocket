@@ -147,7 +147,7 @@ python scripts/get_token.py acika 12345
 #### Option 3: Direct Token Extraction
 ```bash
 TOKEN=$(python scripts/get_token.py acika 12345 | grep -A1 "Access Token" | tail -1 | xargs)
-curl -H "Authorization: Bearer $TOKEN" http://localhost:8001/authors
+curl -H "Authorization: Bearer $TOKEN" http://localhost:8000/authors
 ```
 
 ### For Testing
@@ -259,17 +259,17 @@ While not required, consider these enhancements:
 # 1. Verify debug mode works
 export DEBUG_AUTH=true
 make serve
-curl http://localhost:8001/authors  # Should work
+curl http://localhost:8000/authors  # Should work
 
 # 2. Verify real token works
 unset DEBUG_AUTH
 make serve
 TOKEN=$(python scripts/get_token.py acika 12345 | grep -A1 "Access Token" | tail -1 | xargs)
-curl -H "Authorization: Bearer $TOKEN" http://localhost:8001/authors  # Should work
+curl -H "Authorization: Bearer $TOKEN" http://localhost:8000/authors  # Should work
 
 # 3. Verify invalid token fails
-curl http://localhost:8001/authors  # Should get 401
-curl -H "Authorization: Bearer invalid" http://localhost:8001/authors  # Should get 401
+curl http://localhost:8000/authors  # Should get 401
+curl -H "Authorization: Bearer invalid" http://localhost:8000/authors  # Should get 401
 ```
 
 ### Automated Verification
