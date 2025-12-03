@@ -8,6 +8,9 @@ from {{cookiecutter.module_name}}.auth import AuthBackend
 from {{cookiecutter.module_name}}.logging import logger
 from {{cookiecutter.module_name}}.managers.rbac_manager import RBACManager
 from {{cookiecutter.module_name}}.middlewares.action import PermAuthHTTPMiddleware
+from {{cookiecutter.module_name}}.middlewares.correlation_id import (
+    CorrelationIDMiddleware,
+)
 from {{cookiecutter.module_name}}.middlewares.prometheus import PrometheusMiddleware
 from {{cookiecutter.module_name}}.middlewares.rate_limit import RateLimitMiddleware
 from {{cookiecutter.module_name}}.routing import collect_subrouters
@@ -85,15 +88,15 @@ def application() -> FastAPI:
     Initializes and configures the FastAPI application.
 
     This function sets up the FastAPI application with the following configurations:
-    - Title: "{{cookiecutter.project_name}}"
-    - Description: "{{cookiecutter.project_description}}"
+    - Title: "HTTP & WebSocket handlers"
+    - Description: "HTTP & WebSocket handlers"
     - Version: "1.0.0"
 
     It also adds the following event handlers:
     - Startup handler: Initializes the database and tables.
     - Shutdown handler: Prints "SHUTDOWN" when the application is shutting down.
 
-    The function then includes the routers collected from the `{{cookiecutter.module_name}}.routing.collect_subrouters()` function, and adds the following middleware:
+    The function then includes the routers collected from the `app.routing.collect_subrouters()` function, and adds the following middleware:
     - `PermAuthHTTPMiddleware`: Middleware for permission-based authentication, using actions defined in the "/project/actions1123.json" file.
     - `AuthenticationMiddleware`: Middleware for authentication, using the `AuthBackend` authentication backend.
 
@@ -101,8 +104,8 @@ def application() -> FastAPI:
     """
     # Initialize application
     app = FastAPI(
-        title="{{cookiecutter.project_name}}",
-        description="{{cookiecutter.project_description}}",
+        title="HTTP & WebSocket handlers",
+        description="HTTP & WebSocket handlers",
         version="1.0.0",
     )
 
@@ -114,11 +117,12 @@ def application() -> FastAPI:
     app.include_router(collect_subrouters())
 
     # Middlewares (execute in REVERSE order of registration)
-    # Execution flow: AuthenticationMiddleware → PermAuthHTTPMiddleware → RateLimitMiddleware → PrometheusMiddleware
+    # Execution flow: CorrelationIDMiddleware → AuthenticationMiddleware → PermAuthHTTPMiddleware → RateLimitMiddleware → PrometheusMiddleware
     app.add_middleware(PrometheusMiddleware)
     app.add_middleware(RateLimitMiddleware)
     app.add_middleware(PermAuthHTTPMiddleware, rbac=RBACManager())
     app.add_middleware(AuthenticationMiddleware, backend=AuthBackend())
+    app.add_middleware(CorrelationIDMiddleware)
 
     return app
 
