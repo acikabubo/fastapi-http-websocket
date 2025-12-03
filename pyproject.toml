@@ -15,7 +15,7 @@ dependencies = [
     "python-keycloak>=5.8.1",
     "redis>=7.1.0",
     "sqlmodel>=0.0.27",
-    "urllib3>=1.26,<2.0",
+    "urllib3>=2.0",
     "uvicorn>=0.38.0",
     "websockets>=15.0.1",
 ]
@@ -42,6 +42,8 @@ dev = [
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]
+norecursedirs = [".worktree", ".git", ".venv", "__pycache__"]
 markers = [
     "integration: marks tests as integration tests (require external services like Keycloak)",
 ]
@@ -117,7 +119,7 @@ exclude = [
 ]
 line-length = 79
 indent-width = 4
-target-version = "py312"
+target-version = "py313"
 
 
 [tool.ruff.lint]
