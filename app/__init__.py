@@ -6,8 +6,6 @@ from starlette.middleware.authentication import AuthenticationMiddleware
 
 from app.auth import AuthBackend
 from app.logging import logger
-from app.managers.rbac_manager import RBACManager
-from app.middlewares.action import PermAuthHTTPMiddleware
 from app.middlewares.correlation_id import CorrelationIDMiddleware
 from app.middlewares.prometheus import PrometheusMiddleware
 from app.middlewares.rate_limit import RateLimitMiddleware
@@ -95,8 +93,12 @@ def application() -> FastAPI:
     - Shutdown handler: Prints "SHUTDOWN" when the application is shutting down.
 
     The function then includes the routers collected from the `app.routing.collect_subrouters()` function, and adds the following middleware:
-    - `PermAuthHTTPMiddleware`: Middleware for permission-based authentication, using actions defined in the "/project/actions1123.json" file.
     - `AuthenticationMiddleware`: Middleware for authentication, using the `AuthBackend` authentication backend.
+    - `RateLimitMiddleware`: Middleware for rate limiting HTTP requests.
+    - `PrometheusMiddleware`: Middleware for collecting Prometheus metrics.
+    - `CorrelationIDMiddleware`: Middleware for request correlation IDs.
+
+    Role-based permissions are now enforced via FastAPI dependencies using `require_roles()`.
 
     Finally, the function returns the configured FastAPI application.
     """
@@ -115,10 +117,10 @@ def application() -> FastAPI:
     app.include_router(collect_subrouters())
 
     # Middlewares (execute in REVERSE order of registration)
-    # Execution flow: CorrelationIDMiddleware → AuthenticationMiddleware → PermAuthHTTPMiddleware → RateLimitMiddleware → PrometheusMiddleware
+    # Execution flow: CorrelationIDMiddleware → AuthenticationMiddleware → RateLimitMiddleware → PrometheusMiddleware
+    # Note: RBAC is now handled via FastAPI dependencies (require_roles) instead of middleware
     app.add_middleware(PrometheusMiddleware)
     app.add_middleware(RateLimitMiddleware)
-    app.add_middleware(PermAuthHTTPMiddleware, rbac=RBACManager())
     app.add_middleware(AuthenticationMiddleware, backend=AuthBackend())
     app.add_middleware(CorrelationIDMiddleware)
 

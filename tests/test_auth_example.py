@@ -248,37 +248,30 @@ class TestAuthenticationMiddleware:
     @pytest.mark.asyncio
     async def test_protected_endpoints_require_auth(self):
         """
-        Test that protected endpoints require authentication.
+        Test that protected endpoints require authentication via dependencies.
 
-        This test verifies the authentication middleware is configured,
-        but doesn't test actual auth since that requires Keycloak.
-        For real auth testing, use integration tests with Keycloak running.
+        With decorator-based RBAC, endpoints now use require_roles() dependencies
+        which check for authentication. This test verifies the endpoints are
+        properly configured with authentication dependencies.
         """
-        from unittest.mock import AsyncMock, patch
         from fastapi import FastAPI
-        from fastapi.testclient import TestClient
         from app.api.http.author import router
 
         # Create a minimal test app with just the author router
         test_app = FastAPI()
         test_app.include_router(router)
 
-        client = TestClient(test_app)
+        # Check that routes have dependencies configured
+        routes = [route for route in test_app.routes if hasattr(route, "path")]
 
-        # Mock the Author.create method to avoid database connection
-        from app.models.author import Author as AuthorModel
+        # Find author routes
+        author_get_route = next((r for r in routes if r.path == "/authors" and "GET" in r.methods), None)
+        author_post_route = next((r for r in routes if r.path == "/authors" and "POST" in r.methods), None)
 
-        with patch(
-            "app.models.author.Author.create", new_callable=AsyncMock
-        ) as mock_create:
-            # Return a mock Author object
-            mock_author = AuthorModel(id=1, name="Test Author")
-            mock_create.return_value = mock_author
+        # Verify routes exist
+        assert author_get_route is not None, "GET /authors route should exist"
+        assert author_post_route is not None, "POST /authors route should exist"
 
-            # Without authentication middleware on test app,
-            # this endpoint should be callable
-            # The test just verifies the endpoint exists and is callable
-            response = client.post("/authors", json={"name": "Test Author"})
-
-            # Endpoint exists (not 404) and is callable
-            assert response.status_code != 404
+        # Verify they have dependencies (from require_roles)
+        assert len(author_get_route.dependant.dependencies) > 0, "GET /authors should have authentication dependencies"
+        assert len(author_post_route.dependant.dependencies) > 0, "POST /authors should have authentication dependencies"

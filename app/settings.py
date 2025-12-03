@@ -8,8 +8,6 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(case_sensitive=True)
 
-    ACTIONS_FILE_PATH: str = "actions.json"
-
     # Keycloak settings
     KEYCLOAK_REALM: str
     KEYCLOAK_CLIENT_ID: str
