@@ -29,4 +29,10 @@
         "pytest",
         "skjold"
     ],
+    "files.exclude": {
+        ".mypy_cache": true,
+        ".ruff_cache": true,
+        ".venv": true,
+        "htmlcov": false,
+    },
 }

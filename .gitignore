@@ -1,6 +1,7 @@
+!logs/.gitkeep
+.coverage
+.env
+.security_reports/*
+.worktree
 *.pyc
 logs/*
-!logs/.gitkeep
-.worktree
-.security_reports/*
-.env
