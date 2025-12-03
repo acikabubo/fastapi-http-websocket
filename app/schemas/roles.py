@@ -5,11 +5,6 @@ ROLE_CONFIG_SCHEMA: JsonSchemaType = {
     "type": "object",
     "properties": {
         "roles": {"type": "array", "items": {"type": "string"}},
-        "ws": {
-            "type": "object",
-            "patternProperties": {"^\\d+$": {"type": "string"}},
-            "additionalProperties": False,
-        },
         "http": {
             "type": "object",
             "patternProperties": {
@@ -27,6 +22,6 @@ ROLE_CONFIG_SCHEMA: JsonSchemaType = {
             "additionalProperties": False,
         },
     },
-    "required": ["roles", "ws", "http"],
+    "required": ["roles", "http"],
     "additionalProperties": False,
 }

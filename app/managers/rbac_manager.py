@@ -13,50 +13,52 @@ class RBACManager(metaclass=SingletonMeta):
     Singleton manager for Role-Based Access Control (RBAC).
 
     Manages permission checking for WebSocket and HTTP endpoints based on
-    user roles defined in the actions configuration file.
+    decorator-based roles (for WS) and actions config file (for HTTP).
     """
 
     def __init__(self):
         """
-        Initializes the RBAC (Role-Based Access Control) manager by reading the role configuration from a JSON file and storing it in the `ws` and `http` attributes.
+        Initializes the RBAC manager.
 
-        The `ws` attribute is a dictionary that maps package IDs to the required role for accessing the corresponding WebSocket endpoint.
-
-        The `http` attribute is a dictionary that maps HTTP request paths and methods to the required role for accessing the corresponding HTTP endpoint.
+        HTTP permissions are loaded from actions.json.
+        WebSocket permissions are retrieved from the pkg_router decorator registry.
         """
-
         __roles = read_json_file(
             app_settings.ACTIONS_FILE_PATH, ROLE_CONFIG_SCHEMA
         )
 
-        self.ws: dict[str, str] = __roles["ws"]
         self.http: dict[str, dict[str, str]] = __roles["http"]
 
     def check_ws_permission(self, pkg_id: int, user: UserModel) -> bool:
         """
-        Checks if the user has the required role to access the requested WebSocket endpoint.
+        Checks if the user has the required roles to access the WebSocket endpoint.
 
-        If no role is configured for the pkg_id, access is granted by default.
+        Uses decorator-based permissions from pkg_router. If no roles are required,
+        endpoint is public and access is granted.
 
         Args:
             pkg_id (int): The ID of the package being accessed.
             user (UserModel): The user making the request.
 
         Returns:
-            bool: True if the user has the required role or no role is required, False otherwise.
+            bool: True if the user has all required roles or no roles required, False otherwise.
         """
-        required_role = self.ws.get(str(pkg_id))
+        # Import here to avoid circular dependency
+        from app.routing import pkg_router
 
-        # If no role is configured for this pkg_id, allow access
-        if required_role is None:
+        required_roles = pkg_router.get_permissions(pkg_id)
+
+        # If no roles are configured for this pkg_id, allow access (public endpoint)
+        if not required_roles:
             return True
 
-        has_permission: bool = required_role in user.roles
+        # User must have ALL required roles
+        has_permission = all(role in user.roles for role in required_roles)
 
-        if has_permission is False:
+        if not has_permission:
             logger.info(
                 f"Permission denied for user {user.username} on pkg_id {pkg_id}. "
-                f"Required role: {required_role}"
+                f"Required roles: {required_roles}, User roles: {user.roles}"
             )
 
         return has_permission

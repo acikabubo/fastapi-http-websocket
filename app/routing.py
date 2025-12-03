@@ -32,11 +32,13 @@ class PackageRouter:
 
         The `handlers_registry` dictionary maps package IDs to their corresponding handler functions (HandlerCallableType).
         The `validators_registry` dictionary maps package IDs to a tuple containing the JSON schema (JsonSchemaType) and a validator callback function (ValidatorType) for that package ID.
+        The `permissions_registry` dictionary maps package IDs to their required roles for access control.
         """
         self.handlers_registry: dict[PkgID, HandlerCallableType] = {}
         self.validators_registry: dict[
             PkgID, tuple[JsonSchemaType, ValidatorType]
         ] = {}
+        self.permissions_registry: dict[PkgID, list[str]] = {}
         self.rbac: RBACManager = RBACManager()
 
     def register(
@@ -44,6 +46,7 @@ class PackageRouter:
         *pkg_ids: PkgID,
         json_schema: JsonSchemaType | None = None,
         validator_callback: ValidatorType | None = None,
+        roles: list[str] | None = None,
     ):
         """
         Decorator function to register a handler and validator for a specific package ID (PkgID).
@@ -54,6 +57,7 @@ class PackageRouter:
             *pkg_ids (PkgID): One or more package IDs to register the handler and validator for.
             json_schema (JsonSchemaType | None): An optional JSON schema to validate the request data against.
             validator_callback (ValidatorType | None): An optional callback function to validate the request data against the provided JSON schema.
+            roles (list[str] | None): Optional list of roles required to access this endpoint. If None, endpoint is public.
 
         Returns:
             A decorator function that can be used to register a handler function.
@@ -72,8 +76,13 @@ class PackageRouter:
                     validator_callback,
                 )
 
+                # Store permissions if roles are specified
+                if roles:
+                    self.permissions_registry[pkg_id] = roles
+
                 logger.info(
                     f"Register {func.__module__}.{func.__name__} for PkgID: {pkg_id}"
+                    + (f" with roles: {roles}" if roles else "")
                 )
 
             return func
@@ -95,6 +104,18 @@ class PackageRouter:
     def _has_handler(self, pkg_id: int) -> bool:
         """Check if a handler is registered for the given package ID."""
         return pkg_id in self.handlers_registry
+
+    def get_permissions(self, pkg_id: int) -> list[str]:
+        """
+        Get required roles for a package ID.
+
+        Args:
+            pkg_id: The package ID to get permissions for.
+
+        Returns:
+            List of role names required for access. Empty list means public access.
+        """
+        return self.permissions_registry.get(pkg_id, [])
 
     def _check_permission(self, pkg_id: int, user: UserModel) -> bool:
         """Check if user has permission for the package ID."""

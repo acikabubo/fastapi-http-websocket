@@ -39,6 +39,7 @@ class GetAuthorsModel(BaseModel):
     PkgID.GET_AUTHORS,
     json_schema=GetAuthorsModel,
     validator_callback=validator,
+    roles=["get-authors"],
 )
 async def get_authors_handler(request: RequestModel) -> ResponseModel[Author]:
     """
