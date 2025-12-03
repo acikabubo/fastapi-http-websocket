@@ -8,6 +8,7 @@ from app.auth import AuthBackend
 from app.logging import logger
 from app.managers.rbac_manager import RBACManager
 from app.middlewares.action import PermAuthHTTPMiddleware
+from app.middlewares.correlation_id import CorrelationIDMiddleware
 from app.middlewares.prometheus import PrometheusMiddleware
 from app.middlewares.rate_limit import RateLimitMiddleware
 from app.routing import collect_subrouters
@@ -114,11 +115,12 @@ def application() -> FastAPI:
     app.include_router(collect_subrouters())
 
     # Middlewares (execute in REVERSE order of registration)
-    # Execution flow: AuthenticationMiddleware → PermAuthHTTPMiddleware → RateLimitMiddleware → PrometheusMiddleware
+    # Execution flow: CorrelationIDMiddleware → AuthenticationMiddleware → PermAuthHTTPMiddleware → RateLimitMiddleware → PrometheusMiddleware
     app.add_middleware(PrometheusMiddleware)
     app.add_middleware(RateLimitMiddleware)
     app.add_middleware(PermAuthHTTPMiddleware, rbac=RBACManager())
     app.add_middleware(AuthenticationMiddleware, backend=AuthBackend())
+    app.add_middleware(CorrelationIDMiddleware)
 
     return app
 

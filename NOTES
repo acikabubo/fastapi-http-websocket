@@ -1,0 +1,9 @@
+AsyncAttrs in SQLAlchemy is a mixin class designed to facilitate asynchronous access to
+related objects (relationships) within SQLAlchemy ORM models when working with an
+asynchronous database driver and an asynchronous engine (e.g., created with
+create_async_engine).
+
+When an ORM model incorporates AsyncAttrs, its relationships become "awaitable." This
+means that when you access a related object that is lazily loaded, you must await the
+access to fetch the data from the database asynchronously. This prevents blocking the
+event loop in an asynchronous application.
