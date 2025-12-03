@@ -1,4 +1,4 @@
-from typing import Any, Generic, Optional
+from typing import Any, Generic
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -24,17 +24,17 @@ class BroadcastDataModel[GenericSQLModelType](BaseModel):
 class ResponseModel[GenericSQLModelType](BaseModel):
     pkg_id: PkgID = Field(frozen=True)
     req_id: UUID = Field(frozen=True)
-    status_code: Optional[RSPCode] = RSPCode.OK
-    meta: Optional[MetadataModel | dict] = None
-    data: Optional[dict[str, Any] | list[GenericSQLModelType]] = None
+    status_code: RSPCode | None = RSPCode.OK
+    meta: MetadataModel | dict | None = None
+    data: dict[str, Any] | list[GenericSQLModelType] | None = None
 
     @classmethod
     def ok_msg(
         cls,
         pkg_id: PkgID,
         req_id: UUID,
-        data: Optional[dict[str, Any]] = None,
-        msg: Optional[str] = None,
+        data: dict[str, Any] | None = None,
+        msg: str | None = None,
     ) -> "ResponseModel":
         if data is None:
             data = {}
@@ -49,9 +49,9 @@ class ResponseModel[GenericSQLModelType](BaseModel):
         cls,
         pkg_id: PkgID,
         req_id: UUID,
-        data: Optional[dict[str, Any]] = None,
-        msg: Optional[str] = None,
-        status_code: Optional[RSPCode] = RSPCode.ERROR,
+        data: dict[str, Any] | None = None,
+        msg: str | None = None,
+        status_code: RSPCode | None = RSPCode.ERROR,
     ) -> "ResponseModel":
         if data is None:
             data = {}

@@ -13,7 +13,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from {{cookiecutter.module_name}}.schemas.request import RequestModel
 
 if TYPE_CHECKING:
-    from app.schemas.response import ResponseModel
+    from {{cookiecutter.module_name}}.schemas.response import ResponseModel
 
 GenericSQLModelType = TypeVar("GenericSQLModelType", bound=SQLModel)
 

@@ -1,5 +1,4 @@
 import asyncio
-from typing import List
 
 from fastapi import WebSocket
 
@@ -21,7 +20,7 @@ class ConnectionManager:
 
         The `active_connections` attribute is a list that stores the active WebSocket connections managed by this instance.
         """
-        self.active_connections: List[WebSocket] = []
+        self.active_connections: list[WebSocket] = []
 
     def connect(self, websocket: WebSocket):
         """

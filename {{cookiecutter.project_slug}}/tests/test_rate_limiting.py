@@ -42,10 +42,10 @@ def rate_limiter_with_mock_redis(mock_redis):
     Yields:
         RateLimiter: Rate limiter with mocked Redis
     """
-    from app.utils.rate_limiter import RateLimiter
+    from {{cookiecutter.module_name}}.utils.rate_limiter import RateLimiter
 
     with patch(
-        "app.utils.rate_limiter.get_redis_connection"
+        "{{cookiecutter.module_name}}.utils.rate_limiter.get_redis_connection"
     ) as mock_get_redis:
         mock_get_redis.return_value = mock_redis
 
@@ -67,10 +67,10 @@ def connection_limiter_with_mock_redis(mock_redis):
     Yields:
         ConnectionLimiter: Connection limiter with mocked Redis
     """
-    from app.utils.rate_limiter import ConnectionLimiter
+    from {{cookiecutter.module_name}}.utils.rate_limiter import ConnectionLimiter
 
     with patch(
-        "app.utils.rate_limiter.get_redis_connection"
+        "{{cookiecutter.module_name}}.utils.rate_limiter.get_redis_connection"
     ) as mock_get_redis:
         mock_get_redis.return_value = mock_redis
 
@@ -264,7 +264,7 @@ class TestHTTPRateLimitMiddleware:
         """Test that RateLimitMiddleware can be initialized."""
         from fastapi import FastAPI
 
-        from app.middlewares.rate_limit import RateLimitMiddleware
+        from {{cookiecutter.module_name}}.middlewares.rate_limit import RateLimitMiddleware
 
         app = FastAPI()
         middleware = RateLimitMiddleware(app)
@@ -280,11 +280,11 @@ class TestHTTPRateLimitMiddleware:
         Args:
             mock_redis: Mocked Redis connection
         """
-        from app.utils.rate_limiter import rate_limiter
+        from {{cookiecutter.module_name}}.utils.rate_limiter import rate_limiter
 
         # Test allowed request
         with patch(
-            "app.utils.rate_limiter.get_redis_connection",
+            "{{cookiecutter.module_name}}.utils.rate_limiter.get_redis_connection",
             AsyncMock(return_value=mock_redis),
         ):
             mock_redis.zcard.return_value = 5
@@ -296,7 +296,7 @@ class TestHTTPRateLimitMiddleware:
 
         # Test denied request
         with patch(
-            "app.utils.rate_limiter.get_redis_connection",
+            "{{cookiecutter.module_name}}.utils.rate_limiter.get_redis_connection",
             AsyncMock(return_value=mock_redis),
         ):
             mock_redis.zcard.return_value = 60
@@ -315,7 +315,7 @@ class TestWebSocketRateLimiting:
         """Test WebSocket connection limit enforcement."""
         # This would require WebSocket testing infrastructure
         # For now, we verify the implementation exists
-        from app.api.ws.websocket import PackageAuthWebSocketEndpoint
+        from {{cookiecutter.module_name}}.api.ws.websocket import PackageAuthWebSocketEndpoint
 
         assert hasattr(PackageAuthWebSocketEndpoint, "on_connect")
         assert hasattr(PackageAuthWebSocketEndpoint, "on_disconnect")
@@ -325,6 +325,6 @@ class TestWebSocketRateLimiting:
         """Test WebSocket message rate limit enforcement."""
         # This would require WebSocket testing infrastructure
         # For now, we verify the implementation exists
-        from app.api.ws.consumers.web import Web
+        from {{cookiecutter.module_name}}.api.ws.consumers.web import Web
 
         assert hasattr(Web, "on_receive")

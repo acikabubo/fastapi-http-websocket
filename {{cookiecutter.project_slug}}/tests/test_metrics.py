@@ -42,7 +42,7 @@ class TestPrometheusMetrics:
         Args:
             mock_keycloak_manager: Mocked Keycloak manager
         """
-        from app import application
+        from {{cookiecutter.module_name}} import application
 
         app = application()
         client = TestClient(app)
@@ -58,7 +58,7 @@ class TestPrometheusMetrics:
         Args:
             mock_keycloak_manager: Mocked Keycloak manager
         """
-        from app import application
+        from {{cookiecutter.module_name}} import application
 
         app = application()
         client = TestClient(app)
@@ -83,7 +83,7 @@ class TestPrometheusMetrics:
         Args:
             mock_keycloak_manager: Mocked Keycloak manager
         """
-        from app import application
+        from {{cookiecutter.module_name}} import application
 
         app = application()
         client = TestClient(app)
@@ -106,7 +106,7 @@ class TestPrometheusMetrics:
         Args:
             mock_keycloak_manager: Mocked Keycloak manager
         """
-        from app import application
+        from {{cookiecutter.module_name}} import application
 
         app = application()
         client = TestClient(app)
@@ -128,7 +128,7 @@ class TestPrometheusMetrics:
 
         from prometheus_client import generate_latest
 
-        from app.utils.metrics import app_info
+        from {{cookiecutter.module_name}}.utils.metrics import app_info
 
         # Set the app_info metric
         app_info.labels(
@@ -151,7 +151,7 @@ class TestWebSocketMetrics:
 
     def test_websocket_metrics_defined(self):
         """Test that WebSocket metrics are properly defined."""
-        from app.utils.metrics import (
+        from {{cookiecutter.module_name}}.utils.metrics import (
             ws_connections_active,
             ws_connections_total,
             ws_message_processing_duration_seconds,
@@ -171,7 +171,7 @@ class TestMetricsDefinitions:
 
     def test_all_metrics_imported(self):
         """Test that all expected metrics are defined."""
-        from app.utils.metrics import (
+        from {{cookiecutter.module_name}}.utils.metrics import (
             app_errors_total,
             app_info,
             auth_attempts_total,
@@ -216,7 +216,7 @@ class TestMetricsDefinitions:
         """Test that metrics are of the correct Prometheus types."""
         from prometheus_client import Counter, Gauge, Histogram
 
-        from app.utils.metrics import (
+        from {{cookiecutter.module_name}}.utils.metrics import (
             http_request_duration_seconds,
             http_requests_in_progress,
             http_requests_total,

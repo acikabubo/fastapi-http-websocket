@@ -6,7 +6,6 @@ connections using Redis as the backend storage.
 """
 
 import time
-from typing import Optional
 
 from {{cookiecutter.module_name}}.logging import logger
 from {{cookiecutter.module_name}}.settings import app_settings
@@ -37,7 +36,7 @@ class RateLimiter:
         key: str,
         limit: int,
         window_seconds: int = 60,
-        burst: Optional[int] = None,
+        burst: int | None = None,
     ) -> tuple[bool, int]:
         """
         Check if a request is within rate limits using sliding window.
