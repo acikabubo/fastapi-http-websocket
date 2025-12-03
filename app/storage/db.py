@@ -1,6 +1,6 @@
 import asyncio
 import math
-from typing import Any, Callable, Dict, Optional, Type
+from typing import Any, Callable, Type
 
 from sqlalchemy import Select
 from sqlalchemy.exc import OperationalError
@@ -81,10 +81,11 @@ async def get_paginated_results(
     page: int = 1,
     per_page: int = 20,
     *,
-    filters: Dict[str, Any] | None = None,
-    apply_filters: Optional[
-        Callable[[Select, Type[GenericSQLModelType], Dict[str, Any]], Select]
-    ] = None,
+    filters: dict[str, Any] | None = None,
+    apply_filters: (
+        Callable[[Select, Type[GenericSQLModelType], dict[str, Any]], Select]
+        | None
+    ) = None,
     skip_count: bool = False,
 ) -> tuple[list[GenericSQLModelType], MetadataModel]:
     """
@@ -96,8 +97,8 @@ async def get_paginated_results(
         model (Type[GenericSQLModelType]): The SQLModel class to query.
         page (int, optional): The page number to retrieve. Defaults to 1.
         per_page (int, optional): The number of results to return per page. Defaults to 20.
-        filters (Dict[str, Any] | None, optional): A dictionary of filters to apply to the query.
-        apply_filters (Optional[Callable[[Select, Type[GenericSQLModelType], Dict[str, Any]], Select]], optional): A custom function to apply filters to the query. If not provided, the `default_apply_filters` function will be used.
+        filters (dict[str, Any] | None, optional): A dictionary of filters to apply to the query.
+        apply_filters (Callable[[Select, Type[GenericSQLModelType], dict[str, Any]], Select] | None, optional): A custom function to apply filters to the query. If not provided, the `default_apply_filters` function will be used.
         skip_count (bool, optional): Skip the count query for performance. When True, total will be -1. Defaults to False.
 
     Returns:
@@ -142,7 +143,7 @@ async def get_paginated_results(
 
 
 def default_apply_filters(
-    query: Select, model: Type[GenericSQLModelType], filters: Dict[str, Any]
+    query: Select, model: Type[GenericSQLModelType], filters: dict[str, Any]
 ) -> Select:
     """
     Apply default filters to a SQLModel query.
@@ -153,7 +154,7 @@ def default_apply_filters(
     Args:
         query (Select): The SQLModel query to apply filters to.
         model (Type[GenericSQLModelType]): The SQLModel class being queried.
-        filters (Dict[str, Any]): A dictionary of filters to apply to the query.
+        filters (dict[str, Any]): A dictionary of filters to apply to the query.
 
     Returns:
         Select: The updated query with the filters applied.

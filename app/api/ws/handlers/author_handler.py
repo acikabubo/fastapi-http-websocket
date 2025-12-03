@@ -1,5 +1,3 @@
-from typing import Optional
-
 from pydantic import BaseModel, ValidationError
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -33,8 +31,8 @@ get_authors_schema: JsonSchemaType = {
 class GetAuthorsModel(BaseModel):
     """Schema for filtering authors in get_authors requests."""
 
-    id: Optional[int] = None
-    name: Optional[str] = None
+    id: int | None = None
+    name: str | None = None
 
 
 @pkg_router.register(

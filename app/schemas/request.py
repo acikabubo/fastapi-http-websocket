@@ -1,4 +1,4 @@
-from typing import Any, Optional
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -20,8 +20,8 @@ class RequestModel(BaseModel):
 
     pkg_id: PkgID = Field(frozen=True)
     req_id: UUID = Field(frozen=True)
-    method: Optional[str] = ""
-    data: Optional[dict[str, Any]] = {}
+    method: str | None = ""
+    data: dict[str, Any] | None = {}
 
 
 class PaginatedRequestModel(BaseModel):
