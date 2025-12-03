@@ -9,7 +9,6 @@ dependencies = [
     "asyncpg>=0.30.0",
     "fastapi>=0.121.3",
     "greenlet>=3.2.4",
-    "icecream>=2.1.8",
     "jsonschema>=4.25.1",
     "prometheus-client>=0.21.1",
     "pydantic-settings>=2.12.0",

@@ -1,6 +1,8 @@
 import logging
 import sys
 
+from app.settings import app_settings
+
 INFO_FMT = "%(asctime)s - %(levelname)s: %(message)s"
 ERROR_FMT = "%(asctime)s - %(levelname)s: %(module)s.%(funcName)s:%(lineno)d - %(message)s"
 
@@ -40,7 +42,7 @@ stream_handler = logging.StreamHandler()
 stream_handler.setFormatter(formatter)
 stream_handler.setLevel(logging.DEBUG)
 
-file_handler = logging.FileHandler("logs/logging_errors.log")
+file_handler = logging.FileHandler(app_settings.LOG_FILE_PATH)
 file_handler.setFormatter(formatter)
 file_handler.setLevel(logging.ERROR)
 

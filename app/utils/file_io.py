@@ -1,7 +1,6 @@
 from json import loads
 from typing import Any
 
-from icecream import ic
 from jsonschema import ValidationError, validate
 
 from app.logging import logger
@@ -34,6 +33,5 @@ def read_json_file(file_path: str, schema: JsonSchemaType) -> dict[str, Any]:
         logger.error(f"Invalid data for {file_path}")
         raise ex
     except Exception as ex:
-        ic(f"Failed to open {file_path}: {ex}")
-        logger.debug(f"Failed to open {file_path}: {ex}")
+        logger.error(f"Failed to open {file_path}: {ex}")
         return {}
