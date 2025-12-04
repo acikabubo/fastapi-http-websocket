@@ -2,7 +2,7 @@
 Tests for HTTP decorator-based RBAC permissions.
 
 This module tests the FastAPI dependency-based approach for HTTP permissions,
-where roles are defined using the require_roles() dependency.
+where roles are defined using the rbac.require_roles() dependency.
 """
 
 from unittest.mock import MagicMock
@@ -11,8 +11,11 @@ import pytest
 from fastapi import Depends, FastAPI, Request
 from starlette.authentication import UnauthenticatedUser
 
-from {{cookiecutter.module_name}}.dependencies.permissions import require_roles
+from {{cookiecutter.module_name}}.managers.rbac_manager import RBACManager
 from {{cookiecutter.module_name}}.schemas.user import UserModel
+
+
+rbac = RBACManager()
 
 
 def create_test_user(username="test_user", roles=None):
@@ -39,7 +42,7 @@ class TestRequireRolesDependency:
     async def test_require_roles_allows_user_with_role(self):
         """Test that require_roles allows users with the required role."""
         # Create dependency
-        check_roles = require_roles("get-authors")
+        check_roles = rbac.require_roles("get-authors")
 
         # Create mock request with authenticated user
         mock_request = MagicMock(spec=Request)
@@ -54,7 +57,7 @@ class TestRequireRolesDependency:
         from fastapi import HTTPException
 
         # Create dependency
-        check_roles = require_roles("get-authors")
+        check_roles = rbac.require_roles("get-authors")
 
         # Create mock request with user lacking role
         mock_request = MagicMock(spec=Request)
@@ -73,7 +76,7 @@ class TestRequireRolesDependency:
         from fastapi import HTTPException
 
         # Create dependency
-        check_roles = require_roles("get-authors")
+        check_roles = rbac.require_roles("get-authors")
 
         # Create mock request with unauthenticated user
         mock_request = MagicMock(spec=Request)
@@ -90,7 +93,7 @@ class TestRequireRolesDependency:
     async def test_require_multiple_roles_success(self):
         """Test that user must have ALL required roles."""
         # Create dependency requiring multiple roles
-        check_roles = require_roles("get-authors", "admin")
+        check_roles = rbac.require_roles("get-authors", "admin")
 
         # Create mock request with user having both roles
         mock_request = MagicMock(spec=Request)
@@ -107,7 +110,7 @@ class TestRequireRolesDependency:
         from fastapi import HTTPException
 
         # Create dependency requiring multiple roles
-        check_roles = require_roles("get-authors", "admin")
+        check_roles = rbac.require_roles("get-authors", "admin")
 
         # Create mock request with user having only one role
         mock_request = MagicMock(spec=Request)
@@ -124,7 +127,7 @@ class TestRequireRolesDependency:
     async def test_require_roles_with_extra_roles(self):
         """Test that users with extra roles are still allowed."""
         # Create dependency
-        check_roles = require_roles("get-authors")
+        check_roles = rbac.require_roles("get-authors")
 
         # Create mock request with user having required role plus extras
         mock_request = MagicMock(spec=Request)
@@ -143,7 +146,7 @@ class TestHTTPEndpointIntegration:
         """Test that endpoint can be configured with single role requirement."""
         app = FastAPI()
 
-        @app.get("/authors", dependencies=[Depends(require_roles("get-authors"))])
+        @app.get("/authors", dependencies=[Depends(rbac.require_roles("get-authors"))])
         async def get_authors():
             return {"authors": []}
 
@@ -161,7 +164,7 @@ class TestHTTPEndpointIntegration:
 
         @app.post(
             "/admin/action",
-            dependencies=[Depends(require_roles("admin", "write"))],
+            dependencies=[Depends(rbac.require_roles("admin", "write"))],
         )
         async def admin_action():
             return {"status": "ok"}
@@ -195,11 +198,11 @@ class TestHTTPEndpointIntegration:
         """Test that different HTTP methods on same path can have different role requirements."""
         app = FastAPI()
 
-        @app.get("/authors", dependencies=[Depends(require_roles("get-authors"))])
+        @app.get("/authors", dependencies=[Depends(rbac.require_roles("get-authors"))])
         async def get_authors():
             return {"authors": []}
 
-        @app.post("/authors", dependencies=[Depends(require_roles("create-author"))])
+        @app.post("/authors", dependencies=[Depends(rbac.require_roles("create-author"))])
         async def create_author():
             return {"id": 1}
 
@@ -221,7 +224,7 @@ class TestErrorMessages:
         """Test that error message clearly states missing role."""
         from fastapi import HTTPException
 
-        check_roles = require_roles("admin")
+        check_roles = rbac.require_roles("admin")
 
         mock_request = MagicMock(spec=Request)
         mock_request.user = create_test_user("test_user", roles=["user"])
@@ -237,7 +240,7 @@ class TestErrorMessages:
         """Test that error message lists all missing roles."""
         from fastapi import HTTPException
 
-        check_roles = require_roles("admin", "superuser", "audit")
+        check_roles = rbac.require_roles("admin", "superuser", "audit")
 
         mock_request = MagicMock(spec=Request)
         mock_request.user = create_test_user("test_user", roles=["user"])
@@ -255,7 +258,7 @@ class TestErrorMessages:
         """Test that error message only lists actually missing roles."""
         from fastapi import HTTPException
 
-        check_roles = require_roles("admin", "user", "write")
+        check_roles = rbac.require_roles("admin", "user", "write")
 
         mock_request = MagicMock(spec=Request)
         mock_request.user = create_test_user("test_user", roles=["user"])
