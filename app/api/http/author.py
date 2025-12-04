@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.dependencies.permissions import require_roles
+from app.managers.rbac_manager import RBACManager
 from app.models.author import Author
 from app.schemas.author import AuthorQueryParams
 from app.schemas.response import PaginatedResponseModel
@@ -9,12 +9,13 @@ from app.settings import app_settings
 from app.storage.db import async_session, get_paginated_results
 
 router = APIRouter()
+rbac = RBACManager()
 
 
 @router.post(
     "/authors",
     summary="Create new author",
-    dependencies=[Depends(require_roles("create-author"))],
+    dependencies=[Depends(rbac.require_roles("create-author"))],
 )
 async def create_author_endpoint(author: Author) -> Author:
     """
@@ -35,7 +36,7 @@ async def create_author_endpoint(author: Author) -> Author:
     "/authors",
     response_model=list[Author],
     summary="Get list of authors",
-    dependencies=[Depends(require_roles("get-authors"))],
+    dependencies=[Depends(rbac.require_roles("get-authors"))],
 )
 async def get_authors_endpoint(
     q: AuthorQueryParams = Depends(),
@@ -59,7 +60,7 @@ async def get_authors_endpoint(
     "/authors_paginated",
     response_model=PaginatedResponseModel[Author],
     summary="Get paginated list of authors",
-    dependencies=[Depends(require_roles("get-authors"))],
+    dependencies=[Depends(rbac.require_roles("get-authors"))],
 )
 async def get_paginated_authors_endpoint(
     page: int = 1,
