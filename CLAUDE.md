@@ -45,6 +45,66 @@ When committing changes:
 
 This is a FastAPI application implementing both HTTP and WebSocket handlers with role-based access control (RBAC), Keycloak authentication, and PostgreSQL database integration. The architecture is designed around a package-based routing system where requests are routed through a custom `PackageRouter` that handles validation, permission checking, and handler dispatch.
 
+## Design Patterns and Architecture
+
+This project uses modern design patterns for better maintainability, testability, and code reuse:
+
+### **Repository + Command + Dependency Injection** (Preferred)
+
+**Use these patterns for all new features**. They provide:
+- ✅ **Testability** - Easy to mock dependencies without database
+- ✅ **Reusability** - Same business logic in HTTP and WebSocket handlers
+- ✅ **Maintainability** - Clear separation: Repository (data) → Command (logic) → Handler (protocol)
+- ✅ **Type Safety** - Full type hints with FastAPI's `Depends()`
+
+**Quick Example:**
+```python
+# 1. Repository (data access)
+class AuthorRepository(BaseRepository[Author]):
+    async def get_by_name(self, name: str) -> Author | None:
+        ...
+
+# 2. Command (business logic)
+class CreateAuthorCommand(BaseCommand[CreateAuthorInput, Author]):
+    def __init__(self, repository: AuthorRepository):
+        self.repository = repository
+
+    async def execute(self, input_data: CreateAuthorInput) -> Author:
+        # Check duplicates
+        if await self.repository.exists(name=input_data.name):
+            raise ValueError("Author already exists")
+        return await self.repository.create(Author(**input_data.model_dump()))
+
+# 3. HTTP Handler (uses command)
+@router.post("/authors-v2")
+async def create_author(data: CreateAuthorInput, repo: AuthorRepoDep) -> Author:
+    command = CreateAuthorCommand(repo)
+    return await command.execute(data)
+
+# 4. WebSocket Handler (reuses same command!)
+@pkg_router.register(PkgID.CREATE_AUTHOR_V2)
+async def create_author_ws(request: RequestModel) -> ResponseModel:
+    async with async_session() as session:
+        repo = AuthorRepository(session)
+        command = CreateAuthorCommand(repo)  # Same logic!
+        author = await command.execute(CreateAuthorInput(**request.data))
+        return ResponseModel(..., data=author.model_dump())
+```
+
+**Documentation:**
+- 📖 **Full Guide**: [docs/architecture/DESIGN_PATTERNS_GUIDE.md](docs/architecture/DESIGN_PATTERNS_GUIDE.md)
+- 🚀 **Quick Reference**: [docs/architecture/PATTERNS_QUICK_REFERENCE.md](docs/architecture/PATTERNS_QUICK_REFERENCE.md)
+- 💡 **Example**: [app/api/http/author_refactored.py](app/api/http/author_refactored.py)
+- ✅ **Tests**: [tests/test_author_commands.py](tests/test_author_commands.py)
+
+**When Creating New Features:**
+1. Define repository in `app/repositories/<feature>_repository.py`
+2. Define commands in `app/commands/<feature>_commands.py`
+3. Add repository dependency to `app/dependencies.py`
+4. Create HTTP endpoints using injected repository
+5. Create WebSocket handlers reusing same commands
+6. Write unit tests for repository and commands
+
 ## Development Commands
 
 ### Running the Application
