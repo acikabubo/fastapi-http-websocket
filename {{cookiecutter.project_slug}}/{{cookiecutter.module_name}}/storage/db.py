@@ -35,7 +35,10 @@ async def wait_and_init_db(
     max_retries: int = None,
 ) -> None:
     """
-    Wait until the database is available and initialize tables.
+    Wait until the database is available.
+
+    Note: Database schema is now managed by Alembic migrations.
+    Run 'make migrate' to apply migrations after the database is ready.
 
     Args:
         retry_interval: Time in seconds between retries.
@@ -50,8 +53,9 @@ async def wait_and_init_db(
     for attempt in range(max_retries):
         try:
             # Test a lightweight connection to check if the DB is ready
-            async with engine.begin() as conn:
-                await conn.run_sync(SQLModel.metadata.create_all)
+            async with engine.connect() as conn:
+                # Simple query to verify connection
+                await conn.exec_driver_sql("SELECT 1")
             logger.info("Database is now ready.")
             return  # Database is ready, continue
         except OperationalError:
