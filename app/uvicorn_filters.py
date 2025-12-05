@@ -2,8 +2,6 @@
 
 import logging
 
-from app.settings import app_settings
-
 
 class ExcludeMetricsFilter(logging.Filter):
     """
@@ -13,8 +11,9 @@ class ExcludeMetricsFilter(logging.Filter):
     Prometheus scraping. Requests to paths like /metrics and /health
     will not appear in uvicorn's access logs.
 
-    The excluded paths are configurable via the LOG_EXCLUDED_PATHS
-    setting in app.settings.
+    Note: This class is imported by uvicorn's logging config before the app
+    starts, so it must not depend on app.settings to avoid requiring
+    environment variables at logging initialization time.
     """
 
     def filter(self, record: logging.LogRecord) -> bool:
@@ -25,10 +24,19 @@ class ExcludeMetricsFilter(logging.Filter):
             record: The log record to evaluate.
 
         Returns:
-            False if the request path is in LOG_EXCLUDED_PATHS, True otherwise.
+            False if the request path is in excluded paths, True otherwise.
         """
         message = record.getMessage()
+
+        # Lazy import to avoid circular dependency and env var requirements
+        # Only import when actually filtering, not at class load time
+        try:
+            from app.settings import app_settings
+
+            excluded_paths = app_settings.LOG_EXCLUDED_PATHS
+        except Exception:
+            # Fallback to hardcoded paths if settings can't be loaded
+            excluded_paths = ["/metrics", "/health"]
+
         # Check if any excluded path appears in the log message
-        return not any(
-            path in message for path in app_settings.LOG_EXCLUDED_PATHS
-        )
+        return not any(path in message for path in excluded_paths)
