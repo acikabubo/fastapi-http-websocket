@@ -3,7 +3,7 @@
     "disable_existing_loggers": false,
     "filters": {
         "exclude_metrics": {
-            "()": "app.uvicorn_filters.ExcludeMetricsFilter"
+            "()": "uvicorn_filters.ExcludeMetricsFilter"
         }
     },
     "formatters": {
@@ -21,7 +21,6 @@
         }
     },
     "loggers": {
-
         "uvicorn.access": {
             "level": "INFO",
             "handlers": [
