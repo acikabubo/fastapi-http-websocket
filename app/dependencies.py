@@ -22,7 +22,7 @@ Example:
 """
 
 from functools import lru_cache
-from typing import Annotated
+from typing import TYPE_CHECKING, Annotated, Any
 
 from fastapi import Depends
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -30,6 +30,9 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from app.managers.keycloak_manager import KeycloakManager
 from app.managers.rbac_manager import RBACManager
 from app.storage.db import get_session
+
+if TYPE_CHECKING:
+    from app.repositories.author_repository import AuthorRepository
 
 # ============================================================================
 # Database Session Dependencies
@@ -80,7 +83,7 @@ KeycloakDep = Annotated[KeycloakManager, Depends(get_keycloak_manager)]
 # ============================================================================
 
 
-def get_author_repository(session: SessionDep) -> "AuthorRepository":
+def get_author_repository(session: SessionDep) -> Any:
     """
     Get author repository with injected database session.
 
@@ -95,4 +98,4 @@ def get_author_repository(session: SessionDep) -> "AuthorRepository":
     return AuthorRepository(session)
 
 
-AuthorRepoDep = Annotated["AuthorRepository", Depends(get_author_repository)]
+AuthorRepoDep = Annotated[Any, Depends(get_author_repository)]
