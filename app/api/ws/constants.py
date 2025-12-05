@@ -44,11 +44,16 @@ class PkgID(IntEnum):
     of data package requests in the system.
 
     Attributes:
-        GET_AUTHORS (1): Request to retrieve author list
+        GET_AUTHORS (1): Request to retrieve author list (legacy)
         GET_PAGINATED_AUTHORS (2): Request to retrieve paginated author list
         THIRD (3): Third type of request (purpose undefined)
+        GET_AUTHORS_V2 (100): Request to retrieve authors (Repository + Command pattern)
+        CREATE_AUTHOR_V2 (101): Request to create author (Repository + Command pattern)
     """
 
     GET_AUTHORS = 1
     GET_PAGINATED_AUTHORS = 2
     THIRD = 3
+    # V2 endpoints using modern patterns (Repository + Command)
+    GET_AUTHORS_V2 = 100
+    CREATE_AUTHOR_V2 = 101

@@ -469,7 +469,7 @@ class TestWebSocketEdgeCases:
 
         # Mock the database call at the handler level
         with patch(
-            "app.api.ws.handlers.author_handler.get_paginated_results",
+            "app.api.ws.handlers.author_handlers.get_paginated_results",
             new_callable=AsyncMock,
         ) as mock_paginate:
             from app.schemas.response import MetadataModel
