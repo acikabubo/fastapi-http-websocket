@@ -81,6 +81,8 @@ class Settings(BaseSettings):
 
     # Logging settings
     LOG_FILE_PATH: str = "logs/logging_errors.log"
+    # Paths to exclude from access logs (e.g., /metrics, /health)
+    LOG_EXCLUDED_PATHS: list[str] = ["/metrics", "/health"]
 
 
 app_settings = Settings()
