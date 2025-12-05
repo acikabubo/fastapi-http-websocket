@@ -375,6 +375,47 @@ async def my_handler(request: RequestModel) -> ResponseModel:
         )
 ```
 
+### Database Migrations
+
+This project uses **Alembic** for database schema migrations. The old `SQLModel.metadata.create_all()` approach has been replaced with proper migration management.
+
+**Key commands:**
+```bash
+# Apply all pending migrations
+make migrate
+
+# Generate new migration after model changes
+make migration msg="Add email field to Author"
+
+# Rollback last migration
+make rollback
+
+# View migration history
+make migration-history
+
+# Check current migration version
+make migration-current
+
+# Stamp database at specific revision (for existing DBs)
+make migration-stamp rev="head"
+```
+
+**Important workflow:**
+1. Modify your SQLModel (e.g., add field to `Author`)
+2. Generate migration: `make migration msg="description"`
+3. **ALWAYS review** the generated migration in `app/storage/migrations/versions/`
+4. Apply migration: `make migrate`
+5. If issues occur, rollback: `make rollback`
+
+**Adding new models:**
+When you create a new model, import it in `app/storage/migrations/env.py`:
+```python
+from app.models.author import Author  # noqa: F401
+from app.models.book import Book  # noqa: F401  # ADD NEW IMPORTS
+```
+
+**See:** [docs/DATABASE_MIGRATIONS.md](docs/DATABASE_MIGRATIONS.md) for complete guide.
+
 ### Database Pagination
 
 Use `get_paginated_results()` for all list endpoints:

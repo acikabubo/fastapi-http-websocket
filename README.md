@@ -611,6 +611,7 @@ All project documentation is organized in the [`docs/`](docs/) directory:
 
 #### Getting Started
 - **[Authentication Quick Start](docs/guides/QUICKSTART_AUTH.md)** - Get tokens and start making requests
+- **[Database Migrations](docs/DATABASE_MIGRATIONS.md)** - Complete guide to Alembic migrations
 - **[Testing Guide](docs/guides/TESTING.md)** - How to test the application
 - **[Monitoring Setup](MONITORING.md)** - Prometheus & Grafana monitoring guide
 
