@@ -50,7 +50,7 @@ new-ws-handlers:
 	@uv run python cli.py generate-new-ws-handler
 
 code-docs:
-	@uv run pydoc -n 0.0.0.0 -p 8080
+	@uv run pydoc -n 0.0.0.0 -p 1234
 
 ipython:
 	@uv run ipython
