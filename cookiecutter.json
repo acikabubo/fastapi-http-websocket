@@ -2,5 +2,6 @@
     "project_name": "Project",
     "project_description": "",
     "project_slug": "{{ cookiecutter.project_name.lower().replace(' ', '_') }}",
-    "module_name": "src"
+    "module_name": "src",
+    "enable_audit_logging": ["yes", "no"]
 }

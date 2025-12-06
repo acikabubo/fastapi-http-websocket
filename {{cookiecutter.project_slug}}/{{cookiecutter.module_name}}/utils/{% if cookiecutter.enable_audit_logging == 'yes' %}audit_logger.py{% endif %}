@@ -1,0 +1,186 @@
+"""
+Audit logging utilities for tracking user actions.
+
+This module provides utilities for logging user actions to the database
+for security, compliance, debugging, and analytics purposes.
+"""
+
+import time
+from datetime import UTC, datetime
+from typing import Any
+
+from starlette.requests import Request
+
+from {{cookiecutter.module_name}}.logging import logger
+from {{cookiecutter.module_name}}.models.user_action import UserAction
+from {{cookiecutter.module_name}}.storage.db import async_session
+from {{cookiecutter.module_name}}.utils.metrics import (
+    audit_log_creation_duration_seconds,
+    audit_log_errors_total,
+    audit_logs_total,
+)
+
+# Sensitive field names that should be redacted from logs
+SENSITIVE_FIELDS = {
+    "password",
+    "passwd",
+    "pwd",
+    "token",
+    "access_token",
+    "refresh_token",
+    "secret",
+    "api_key",
+    "private_key",
+    "ssn",
+    "social_security_number",
+    "credit_card",
+    "card_number",
+    "cvv",
+    "authorization",
+}
+
+
+def sanitize_data(data: dict[str, Any] | None) -> dict[str, Any] | None:
+    """
+    Remove sensitive fields from data before logging.
+
+    Args:
+        data: Dictionary potentially containing sensitive information.
+
+    Returns:
+        Sanitized dictionary with sensitive fields redacted, or None if
+        input was None.
+    """
+    if data is None:
+        return None
+
+    sanitized = {}
+    for key, value in data.items():
+        # Check if key matches any sensitive field name (case-insensitive)
+        if key.lower() in SENSITIVE_FIELDS:
+            sanitized[key] = "[REDACTED]"
+        elif isinstance(value, dict):
+            # Recursively sanitize nested dictionaries
+            sanitized[key] = sanitize_data(value)
+        elif isinstance(value, list):
+            # Sanitize list items if they are dictionaries
+            sanitized[key] = [
+                sanitize_data(item) if isinstance(item, dict) else item
+                for item in value
+            ]
+        else:
+            sanitized[key] = value
+
+    return sanitized
+
+
+def extract_ip_address(request: Request) -> str | None:
+    """
+    Extract client IP address from request, handling proxies.
+
+    Args:
+        request: Starlette request object.
+
+    Returns:
+        Client IP address, or None if not available.
+    """
+    # Check X-Forwarded-For header (set by proxies)
+    forwarded_for = request.headers.get("x-forwarded-for")
+    if forwarded_for:
+        # Take the first IP in the chain (original client)
+        return forwarded_for.split(",")[0].strip()
+
+    # Check X-Real-IP header (set by some proxies)
+    real_ip = request.headers.get("x-real-ip")
+    if real_ip:
+        return real_ip.strip()
+
+    # Fall back to direct client IP
+    if request.client:
+        return request.client.host
+
+    return None
+
+
+async def log_user_action(
+    user_id: str,
+    username: str,
+    user_roles: list[str],
+    action_type: str,
+    resource: str,
+    outcome: str,
+    ip_address: str | None = None,
+    user_agent: str | None = None,
+    request_id: str | None = None,
+    request_data: dict[str, Any] | None = None,
+    response_status: int | None = None,
+    error_message: str | None = None,
+    duration_ms: int | None = None,
+) -> UserAction | None:
+    """
+    Log a user action to the database.
+
+    Args:
+        user_id: Keycloak user ID (sub claim).
+        username: Username (preferred_username claim).
+        user_roles: List of user roles at time of action.
+        action_type: Type of action (HTTP method or WebSocket PkgID).
+        resource: Resource accessed (URL path or entity identifier).
+        outcome: Result of the action (success, error, permission_denied).
+        ip_address: Client IP address.
+        user_agent: Browser/client user agent string.
+        request_id: Request UUID for correlation.
+        request_data: Request payload (will be sanitized).
+        response_status: HTTP status code or WebSocket response code.
+        error_message: Error details if action failed.
+        duration_ms: Request processing duration in milliseconds.
+
+    Returns:
+        The created UserAction instance, or None if logging failed.
+    """
+    # Track audit log creation time
+    start_time = time.time()
+
+    try:
+        # Sanitize request data to remove sensitive information
+        sanitized_data = sanitize_data(request_data)
+
+        # Create audit log entry
+        action = UserAction(
+            timestamp=datetime.now(UTC),
+            user_id=user_id,
+            username=username,
+            user_roles=user_roles,
+            action_type=action_type,
+            resource=resource,
+            outcome=outcome,
+            ip_address=ip_address,
+            user_agent=user_agent,
+            request_id=request_id,
+            request_data=sanitized_data,
+            response_status=response_status,
+            error_message=error_message,
+            duration_ms=duration_ms,
+        )
+
+        # Save to database
+        async with async_session() as session:
+            async with session.begin():
+                session.add(action)
+                await session.flush()
+                await session.refresh(action)
+
+        # Record successful audit log creation
+        duration = time.time() - start_time
+        audit_log_creation_duration_seconds.observe(duration)
+        audit_logs_total.labels(outcome=outcome).inc()
+
+        return action
+
+    except Exception as e:
+        # Record audit log error
+        audit_log_errors_total.labels(error_type=type(e).__name__).inc()
+
+        # Log the error but don't fail the request
+        logger.error(f"Failed to log user action: {e}")
+        return None

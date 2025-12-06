@@ -12,6 +12,8 @@ from sqlmodel import SQLModel
 # Import all models to ensure they're registered with SQLModel.metadata
 # Add your model imports here, for example:
 # from {{cookiecutter.module_name}}.models.author import Author  # noqa: F401
+{% if cookiecutter.enable_audit_logging == "yes" %}from {{cookiecutter.module_name}}.models.user_action import UserAction  # noqa: F401
+{% endif %}
 
 # Import settings for database URL
 from {{cookiecutter.module_name}}.settings import app_settings

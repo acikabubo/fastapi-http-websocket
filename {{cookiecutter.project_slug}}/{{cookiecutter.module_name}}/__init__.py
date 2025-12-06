@@ -6,7 +6,8 @@ from starlette.middleware.authentication import AuthenticationMiddleware
 
 from {{cookiecutter.module_name}}.auth import AuthBackend
 from {{cookiecutter.module_name}}.logging import logger
-from {{cookiecutter.module_name}}.middlewares.correlation_id import (
+{% if cookiecutter.enable_audit_logging == "yes" %}from {{cookiecutter.module_name}}.middlewares.audit_middleware import AuditMiddleware
+{% endif %}from {{cookiecutter.module_name}}.middlewares.correlation_id import (
     CorrelationIDMiddleware,
 )
 from {{cookiecutter.module_name}}.middlewares.prometheus import PrometheusMiddleware
@@ -119,10 +120,12 @@ def application() -> FastAPI:
     app.include_router(collect_subrouters())
 
     # Middlewares (execute in REVERSE order of registration)
-    # Execution flow: CorrelationIDMiddleware → AuthenticationMiddleware → RateLimitMiddleware → PrometheusMiddleware
-    # Note: RBAC is now handled via FastAPI dependencies (require_roles) instead of middleware
+{% if cookiecutter.enable_audit_logging == "yes" %}    # Execution flow: CorrelationIDMiddleware → AuthenticationMiddleware → RateLimitMiddleware → AuditMiddleware → PrometheusMiddleware
+{% else %}    # Execution flow: CorrelationIDMiddleware → AuthenticationMiddleware → RateLimitMiddleware → PrometheusMiddleware
+{% endif %}    # Note: RBAC is now handled via FastAPI dependencies (require_roles) instead of middleware
     app.add_middleware(PrometheusMiddleware)
-    app.add_middleware(RateLimitMiddleware)
+{% if cookiecutter.enable_audit_logging == "yes" %}    app.add_middleware(AuditMiddleware)
+{% endif %}    app.add_middleware(RateLimitMiddleware)
     app.add_middleware(AuthenticationMiddleware, backend=AuthBackend())
     app.add_middleware(CorrelationIDMiddleware)
 

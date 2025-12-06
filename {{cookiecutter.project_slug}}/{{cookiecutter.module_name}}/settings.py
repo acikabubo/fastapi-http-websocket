@@ -83,6 +83,12 @@ class Settings(BaseSettings):
 
     # Logging settings
     LOG_FILE_PATH: str = "logs/logging_errors.log"
-
+    # Paths to exclude from access logs (e.g., /metrics, /health)
+    LOG_EXCLUDED_PATHS: list[str] = ["/metrics", "/health"]
+{% if cookiecutter.enable_audit_logging == "yes" %}
+    # Audit logging settings
+    AUDIT_LOG_ENABLED: bool = True
+    AUDIT_LOG_RETENTION_DAYS: int = 365
+{% endif %}
 
 app_settings = Settings()
