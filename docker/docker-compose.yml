@@ -118,8 +118,7 @@ services:
 
     ports:
       - 8000:8000
-      - 56781:5678
-      - 8081:8080
+      - 1234:1234
 
     volumes:
       - ..:/project:delegated
