@@ -70,13 +70,13 @@ class TestDecoratorBasedRBAC:
         """Test that endpoints without roles return empty list."""
         router = PackageRouter()
 
-        @router.register(PkgID.GET_PAGINATED_AUTHORS)  # No roles specified
+        @router.register(PkgID.UNREGISTERED_HANDLER)  # No roles specified
         async def test_handler(request: RequestModel):
             return ResponseModel.success(
                 request.pkg_id, request.req_id, data={}
             )
 
-        permissions = router.get_permissions(PkgID.GET_PAGINATED_AUTHORS)
+        permissions = router.get_permissions(PkgID.UNREGISTERED_HANDLER)
         assert permissions == []
 
     def test_permission_check_with_single_role(self):
@@ -147,7 +147,7 @@ class TestDecoratorBasedRBAC:
         """Test that endpoints without roles allow any user."""
         router = PackageRouter()
 
-        @router.register(PkgID.GET_PAGINATED_AUTHORS)  # Public endpoint
+        @router.register(PkgID.UNREGISTERED_HANDLER)  # Public endpoint
         async def test_handler(request: RequestModel):
             return ResponseModel.success(
                 request.pkg_id, request.req_id, data={}
@@ -157,7 +157,7 @@ class TestDecoratorBasedRBAC:
         user = create_test_user("test_user", roles=[])
 
         has_permission = router._check_permission(
-            PkgID.GET_PAGINATED_AUTHORS, user
+            PkgID.UNREGISTERED_HANDLER, user
         )
         assert has_permission is True
 
@@ -171,7 +171,7 @@ class TestDecoratorBasedRBAC:
                 request.pkg_id, request.req_id, data={}
             )
 
-        @router.register(PkgID.GET_PAGINATED_AUTHORS)  # Public
+        @router.register(PkgID.UNREGISTERED_HANDLER)  # Public
         async def paginated_handler(request: RequestModel):
             return ResponseModel.success(
                 request.pkg_id, request.req_id, data={}
@@ -182,7 +182,7 @@ class TestDecoratorBasedRBAC:
         assert perms1 == ["get-authors"]
 
         # Check second handler is public
-        perms2 = router.get_permissions(PkgID.GET_PAGINATED_AUTHORS)
+        perms2 = router.get_permissions(PkgID.UNREGISTERED_HANDLER)
         assert perms2 == []
 
 
@@ -224,9 +224,11 @@ class TestRBACManagerIntegration:
         # User with no roles
         user = create_test_user("test_user", roles=[])
 
-        # GET_PAGINATED_AUTHORS has no roles requirement (public)
+        # UNREGISTERED_HANDLER has no roles requirement (public, not registered)
+        # For this test, we're checking that RBACManager allows access to
+        # endpoints not configured in actions.json (defaults to allow)
         has_permission = rbac.check_ws_permission(
-            PkgID.GET_PAGINATED_AUTHORS, user
+            PkgID.UNREGISTERED_HANDLER, user
         )
         assert has_permission is True
 
