@@ -235,8 +235,6 @@ ws.send(JSON.stringify({
 | 1 | `ERROR` | General error occurred |
 | 2 | `INVALID_DATA` | Provided data is invalid or malformed |
 | 3 | `PERMISSION_DENIED` | User lacks required permissions for the operation |
-| 4 | `ACTIVE_HEATING_SCHEDULE` | Operation conflicts with active heating schedule |
-| 5 | `ACTIVE_TAG` | Operation conflicts with active tag |
 
 ## Error Handling
 
