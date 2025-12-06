@@ -187,6 +187,11 @@ class PackageRouter:
 pkg_router = PackageRouter()
 
 
+# Track registered modules to prevent duplicate logging
+_registered_http_modules: set[str] = set()
+_registered_ws_modules: set[str] = set()
+
+
 def collect_subrouters() -> APIRouter:
     """
     Collects and registers all API and WebSocket routers for the application.
@@ -212,7 +217,10 @@ def collect_subrouters() -> APIRouter:
         # Add api router to main router
         main_router.include_router(api.router)
 
-        logger.info(f'Register "{module}" api')
+        # Only log on first registration
+        if module not in _registered_http_modules:
+            logger.info(f'Register "{module}" api')
+            _registered_http_modules.add(module)
 
     # Get WS routers
     for _, module, _ in pkgutil.iter_modules([f"{app_dir}/api/ws/consumers"]):
@@ -224,6 +232,9 @@ def collect_subrouters() -> APIRouter:
         # Add ws router to main router
         main_router.include_router(ws_consumer.router)
 
-        logger.info(f'Register "{module}" websocket consumer')
+        # Only log on first registration
+        if module not in _registered_ws_modules:
+            logger.info(f'Register "{module}" websocket consumer')
+            _registered_ws_modules.add(module)
 
     return main_router
