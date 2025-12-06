@@ -27,7 +27,7 @@ class TestMockAuthentication:
             mock_user: Fixture providing UserModel instance
         """
         request = RequestModel(
-            pkg_id=PkgID.GET_AUTHORS,
+            pkg_id=PkgID.GET_AUTHORS_V2,
             req_id=str(uuid.uuid4()),
             data={},
         )
@@ -36,14 +36,15 @@ class TestMockAuthentication:
         from unittest.mock import AsyncMock
 
         with patch(
-            "app.models.author.Author.get_list", new_callable=AsyncMock
-        ) as mock_get_list:
-            mock_get_list.return_value = []
+            "app.repositories.author_repository.AuthorRepository.get_all",
+            new_callable=AsyncMock,
+        ) as mock_get_all:
+            mock_get_all.return_value = []
 
             response = await pkg_router.handle_request(mock_user, request)
 
             assert response.status_code == RSPCode.OK
-            assert response.pkg_id == PkgID.GET_AUTHORS
+            assert response.pkg_id == PkgID.GET_AUTHORS_V2
             assert response.req_id == request.req_id
 
     @pytest.mark.asyncio
@@ -56,7 +57,9 @@ class TestMockAuthentication:
         """
         rbac = RBACManager()
 
-        has_permission = rbac.check_ws_permission(PkgID.GET_AUTHORS, mock_user)
+        has_permission = rbac.check_ws_permission(
+            PkgID.GET_AUTHORS_V2, mock_user
+        )
 
         assert has_permission is True
 
@@ -72,7 +75,7 @@ class TestMockAuthentication:
         rbac = RBACManager()
 
         has_permission = rbac.check_ws_permission(
-            PkgID.GET_AUTHORS, limited_user
+            PkgID.GET_AUTHORS_V2, limited_user
         )
 
         assert has_permission is False
@@ -88,7 +91,7 @@ class TestMockAuthentication:
         limited_user = UserModel(**limited_user_data)
 
         request = RequestModel(
-            pkg_id=PkgID.GET_AUTHORS,
+            pkg_id=PkgID.GET_AUTHORS_V2,
             req_id=str(uuid.uuid4()),
             data={},
         )
@@ -113,7 +116,7 @@ class TestMockAuthentication:
         limited_user = UserModel(**limited_user_data)
 
         request = RequestModel(
-            pkg_id=PkgID.GET_AUTHORS,
+            pkg_id=PkgID.GET_AUTHORS_V2,
             req_id=str(uuid.uuid4()),
             data={},
         )
@@ -121,9 +124,10 @@ class TestMockAuthentication:
         from unittest.mock import AsyncMock
 
         with patch(
-            "app.models.author.Author.get_list", new_callable=AsyncMock
-        ) as mock_get_list:
-            mock_get_list.return_value = []
+            "app.repositories.author_repository.AuthorRepository.get_all",
+            new_callable=AsyncMock,
+        ) as mock_get_all:
+            mock_get_all.return_value = []
 
             # Admin should succeed
             admin_response = await pkg_router.handle_request(
@@ -255,7 +259,7 @@ class TestAuthenticationMiddleware:
         properly configured with authentication dependencies.
         """
         from fastapi import FastAPI
-        from app.api.http.author import router
+        from app.api.http.author_refactored import router
 
         # Create a minimal test app with just the author router
         test_app = FastAPI()
@@ -264,14 +268,26 @@ class TestAuthenticationMiddleware:
         # Check that routes have dependencies configured
         routes = [route for route in test_app.routes if hasattr(route, "path")]
 
-        # Find author routes
-        author_get_route = next((r for r in routes if r.path == "/authors" and "GET" in r.methods), None)
-        author_post_route = next((r for r in routes if r.path == "/authors" and "POST" in r.methods), None)
+        # Find author routes (V2 endpoints)
+        author_get_route = next(
+            (r for r in routes if r.path == "/authors-v2" and "GET" in r.methods),
+            None,
+        )
+        author_post_route = next(
+            (r for r in routes if r.path == "/authors-v2" and "POST" in r.methods),
+            None,
+        )
 
         # Verify routes exist
-        assert author_get_route is not None, "GET /authors route should exist"
-        assert author_post_route is not None, "POST /authors route should exist"
+        assert author_get_route is not None, "GET /authors-v2 route should exist"
+        assert (
+            author_post_route is not None
+        ), "POST /authors-v2 route should exist"
 
-        # Verify they have dependencies (from require_roles)
-        assert len(author_get_route.dependant.dependencies) > 0, "GET /authors should have authentication dependencies"
-        assert len(author_post_route.dependant.dependencies) > 0, "POST /authors should have authentication dependencies"
+        # Verify they have dependencies (from RBACDep)
+        assert (
+            len(author_get_route.dependant.dependencies) > 0
+        ), "GET /authors-v2 should have dependencies"
+        assert (
+            len(author_post_route.dependant.dependencies) > 0
+        ), "POST /authors-v2 should have dependencies"

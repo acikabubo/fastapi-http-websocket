@@ -141,7 +141,7 @@ class TestWebSocketMessageHandling:
             mock_user: Fixture providing UserModel instance
         """
         request_data = {
-            "pkg_id": PkgID.GET_AUTHORS,
+            "pkg_id": PkgID.GET_AUTHORS_V2,
             "req_id": str(uuid.uuid4()),
             "data": {},
         }
@@ -157,7 +157,7 @@ class TestWebSocketMessageHandling:
 
         # Mock the handler to avoid database dependencies
         with patch(
-            "app.models.author.Author.get_list", new_callable=AsyncMock
+            "app.repositories.author_repository.AuthorRepository.get_all", new_callable=AsyncMock
         ) as mock_get_list:
             mock_get_list.return_value = []
 
@@ -171,7 +171,7 @@ class TestWebSocketMessageHandling:
             sent_response = mock_websocket.send_response.call_args[0][0]
 
             assert sent_response.status_code == RSPCode.OK
-            assert sent_response.pkg_id == PkgID.GET_AUTHORS
+            assert sent_response.pkg_id == PkgID.GET_AUTHORS_V2
             assert str(sent_response.req_id) == request_data["req_id"]
 
     @pytest.mark.asyncio
@@ -217,7 +217,7 @@ class TestWebSocketMessageHandling:
         limited_user = UserModel(**limited_user_data)
 
         request_data = {
-            "pkg_id": PkgID.GET_AUTHORS,
+            "pkg_id": PkgID.GET_AUTHORS_V2,
             "req_id": str(uuid.uuid4()),
             "data": {},
         }
@@ -278,14 +278,14 @@ class TestPackageRouter:
         limited_user = UserModel(**limited_user_data)
 
         request = RequestModel(
-            pkg_id=PkgID.GET_AUTHORS,
+            pkg_id=PkgID.GET_AUTHORS_V2,
             req_id=str(uuid.uuid4()),
             data={},
         )
 
         # Mock the handler to avoid database
         with patch(
-            "app.models.author.Author.get_list", new_callable=AsyncMock
+            "app.repositories.author_repository.AuthorRepository.get_all", new_callable=AsyncMock
         ) as mock_get_list:
             mock_get_list.return_value = []
 
@@ -314,7 +314,7 @@ class TestPackageRouter:
         # trigger validation if we had stricter validation
         # For now, test with invalid filter value for JSON schema validation
         request = RequestModel(
-            pkg_id=PkgID.GET_AUTHORS,
+            pkg_id=PkgID.GET_AUTHORS_V2,
             req_id=str(uuid.uuid4()),
             data={
                 "filters": {
@@ -341,21 +341,21 @@ class TestPackageRouter:
             mock_user: Fixture providing UserModel instance
         """
         request = RequestModel(
-            pkg_id=PkgID.GET_AUTHORS,
+            pkg_id=PkgID.GET_AUTHORS_V2,
             req_id=str(uuid.uuid4()),
             data={},
         )
 
         # Mock the database call
         with patch(
-            "app.models.author.Author.get_list", new_callable=AsyncMock
+            "app.repositories.author_repository.AuthorRepository.get_all", new_callable=AsyncMock
         ) as mock_get_list:
             mock_get_list.return_value = []
 
             response = await pkg_router.handle_request(mock_user, request)
 
             assert response.status_code == RSPCode.OK
-            assert response.pkg_id == PkgID.GET_AUTHORS
+            assert response.pkg_id == PkgID.GET_AUTHORS_V2
             assert response.req_id == request.req_id
             assert isinstance(response.data, list)
 
@@ -436,14 +436,14 @@ class TestWebSocketEdgeCases:
         from sqlalchemy.exc import SQLAlchemyError
 
         request = RequestModel(
-            pkg_id=PkgID.GET_AUTHORS,
+            pkg_id=PkgID.GET_AUTHORS_V2,
             req_id=str(uuid.uuid4()),
             data={},
         )
 
         # Mock the database call to raise a SQLAlchemy exception
         with patch(
-            "app.models.author.Author.get_list", new_callable=AsyncMock
+            "app.repositories.author_repository.AuthorRepository.get_all", new_callable=AsyncMock
         ) as mock_get_list:
             mock_get_list.side_effect = SQLAlchemyError("Database error")
 
@@ -454,6 +454,7 @@ class TestWebSocketEdgeCases:
             assert "Database error occurred" in response.data.get("msg", "")
 
     @pytest.mark.asyncio
+    @pytest.mark.skip(reason="GET_PAGINATED_AUTHORS handler was removed in favor of GET_AUTHORS_V2 with filtering")
     async def test_paginated_handler_execution(self, mock_user):
         """
         Test paginated handler with valid pagination parameters.
@@ -469,7 +470,7 @@ class TestWebSocketEdgeCases:
 
         # Mock the database call at the handler level
         with patch(
-            "app.api.ws.handlers.author_handlers.get_paginated_results",
+            "app.storage.db.get_paginated_results",
             new_callable=AsyncMock,
         ) as mock_paginate:
             from app.schemas.response import MetadataModel

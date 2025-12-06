@@ -40,14 +40,14 @@ class TestDecoratorBasedRBAC:
         """Test that roles are stored in permissions_registry."""
         router = PackageRouter()
 
-        @router.register(PkgID.GET_AUTHORS, roles=["get-authors"])
+        @router.register(PkgID.GET_AUTHORS_V2, roles=["get-authors"])
         async def test_handler(request: RequestModel):
             return ResponseModel.success(
                 request.pkg_id, request.req_id, data={}
             )
 
-        assert PkgID.GET_AUTHORS in router.permissions_registry
-        assert router.permissions_registry[PkgID.GET_AUTHORS] == [
+        assert PkgID.GET_AUTHORS_V2 in router.permissions_registry
+        assert router.permissions_registry[PkgID.GET_AUTHORS_V2] == [
             "get-authors"
         ]
 
@@ -56,14 +56,14 @@ class TestDecoratorBasedRBAC:
         router = PackageRouter()
 
         @router.register(
-            PkgID.GET_AUTHORS, roles=["get-authors", "admin"]
+            PkgID.GET_AUTHORS_V2, roles=["get-authors", "admin"]
         )
         async def test_handler(request: RequestModel):
             return ResponseModel.success(
                 request.pkg_id, request.req_id, data={}
             )
 
-        permissions = router.get_permissions(PkgID.GET_AUTHORS)
+        permissions = router.get_permissions(PkgID.GET_AUTHORS_V2)
         assert permissions == ["get-authors", "admin"]
 
     def test_get_permissions_returns_empty_for_public_endpoint(self):
@@ -83,7 +83,7 @@ class TestDecoratorBasedRBAC:
         """Test permission check when user has required role."""
         router = PackageRouter()
 
-        @router.register(PkgID.GET_AUTHORS, roles=["get-authors"])
+        @router.register(PkgID.GET_AUTHORS_V2, roles=["get-authors"])
         async def test_handler(request: RequestModel):
             return ResponseModel.success(
                 request.pkg_id, request.req_id, data={}
@@ -92,14 +92,14 @@ class TestDecoratorBasedRBAC:
         # User with correct role
         user = create_test_user("test_user", roles=["get-authors"])
 
-        has_permission = router._check_permission(PkgID.GET_AUTHORS, user)
+        has_permission = router._check_permission(PkgID.GET_AUTHORS_V2, user)
         assert has_permission is True
 
     def test_permission_check_fails_without_role(self):
         """Test permission check fails when user lacks required role."""
         router = PackageRouter()
 
-        @router.register(PkgID.GET_AUTHORS, roles=["get-authors"])
+        @router.register(PkgID.GET_AUTHORS_V2, roles=["get-authors"])
         async def test_handler(request: RequestModel):
             return ResponseModel.success(
                 request.pkg_id, request.req_id, data={}
@@ -108,7 +108,7 @@ class TestDecoratorBasedRBAC:
         # User without required role
         user = create_test_user("test_user", roles=["other-role"])
 
-        has_permission = router._check_permission(PkgID.GET_AUTHORS, user)
+        has_permission = router._check_permission(PkgID.GET_AUTHORS_V2, user)
         assert has_permission is False
 
     def test_permission_check_requires_all_roles(self):
@@ -116,7 +116,7 @@ class TestDecoratorBasedRBAC:
         router = PackageRouter()
 
         @router.register(
-            PkgID.GET_AUTHORS, roles=["get-authors", "admin"]
+            PkgID.GET_AUTHORS_V2, roles=["get-authors", "admin"]
         )
         async def test_handler(request: RequestModel):
             return ResponseModel.success(
@@ -124,7 +124,7 @@ class TestDecoratorBasedRBAC:
             )
 
         # Verify roles are stored correctly
-        permissions = router.get_permissions(PkgID.GET_AUTHORS)
+        permissions = router.get_permissions(PkgID.GET_AUTHORS_V2)
         assert permissions == ["get-authors", "admin"]
 
         # Test directly with the roles check logic (without RBAC manager)
@@ -165,7 +165,7 @@ class TestDecoratorBasedRBAC:
         """Test that different handlers can have different role requirements."""
         router = PackageRouter()
 
-        @router.register(PkgID.GET_AUTHORS, roles=["get-authors"])
+        @router.register(PkgID.GET_AUTHORS_V2, roles=["get-authors"])
         async def get_handler(request: RequestModel):
             return ResponseModel.success(
                 request.pkg_id, request.req_id, data={}
@@ -178,7 +178,7 @@ class TestDecoratorBasedRBAC:
             )
 
         # Check first handler requires role
-        perms1 = router.get_permissions(PkgID.GET_AUTHORS)
+        perms1 = router.get_permissions(PkgID.GET_AUTHORS_V2)
         assert perms1 == ["get-authors"]
 
         # Check second handler is public
@@ -199,8 +199,8 @@ class TestRBACManagerIntegration:
         # User with get-authors role
         user = create_test_user("test_user", roles=["get-authors"])
 
-        # PkgID.GET_AUTHORS has roles=["get-authors"] in the decorator
-        has_permission = rbac.check_ws_permission(PkgID.GET_AUTHORS, user)
+        # PkgID.GET_AUTHORS_V2 has roles=["get-authors"] in the decorator
+        has_permission = rbac.check_ws_permission(PkgID.GET_AUTHORS_V2, user)
         assert has_permission is True
 
     def test_rbac_manager_denies_without_role(self):
@@ -212,7 +212,7 @@ class TestRBACManagerIntegration:
         # User without get-authors role
         user = create_test_user("test_user", roles=["other-role"])
 
-        has_permission = rbac.check_ws_permission(PkgID.GET_AUTHORS, user)
+        has_permission = rbac.check_ws_permission(PkgID.GET_AUTHORS_V2, user)
         assert has_permission is False
 
     def test_rbac_manager_allows_public_endpoint(self):
@@ -241,7 +241,7 @@ class TestRolesLogging:
 
         router = PackageRouter()
 
-        @router.register(PkgID.GET_AUTHORS, roles=["get-authors", "admin"])
+        @router.register(PkgID.GET_AUTHORS_V2, roles=["get-authors", "admin"])
         async def test_handler(request: RequestModel):
             return ResponseModel.success(
                 request.pkg_id, request.req_id, data={}
