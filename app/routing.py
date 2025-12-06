@@ -65,10 +65,14 @@ class PackageRouter:
 
         def decorator(func: HandlerCallableType):
             for pkg_id in pkg_ids:
+                # Check if handler is already registered (idempotent for reload)
                 if pkg_id in self.handlers_registry:
-                    raise ValueError(
-                        f"Handler already registered for pkg_id {pkg_id}"
-                    )
+                    # Skip if same handler, raise if different
+                    if self.handlers_registry[pkg_id] != func:
+                        raise ValueError(
+                            f"Different handler already registered for pkg_id {pkg_id}"
+                        )
+                    continue
 
                 self.handlers_registry[pkg_id] = func
                 self.validators_registry[pkg_id] = (
