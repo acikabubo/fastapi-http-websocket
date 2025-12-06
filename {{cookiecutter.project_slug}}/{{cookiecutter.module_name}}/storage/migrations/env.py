@@ -1,7 +1,10 @@
 """Alembic environment configuration for async SQLModel migrations."""
 
 import asyncio
+import importlib
+import pkgutil
 from logging.config import fileConfig
+from pathlib import Path
 
 from alembic import context
 from sqlalchemy import pool
@@ -9,14 +12,37 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 from sqlmodel import SQLModel
 
-# Import all models to ensure they're registered with SQLModel.metadata
-# Add your model imports here, for example:
-# from {{cookiecutter.module_name}}.models.author import Author  # noqa: F401
-{% if cookiecutter.enable_audit_logging == "yes" %}from {{cookiecutter.module_name}}.models.user_action import UserAction  # noqa: F401
-{% endif %}
-
 # Import settings for database URL
 from {{cookiecutter.module_name}}.settings import app_settings
+
+
+def import_all_models() -> None:
+    """
+    Dynamically import all models from the models package.
+
+    This function automatically discovers and imports all Python modules
+    in the models directory, ensuring they are registered with
+    SQLModel.metadata for Alembic autogenerate support.
+    """
+    models_path = Path(__file__).parent.parent.parent / "models"
+    models_package = "{{cookiecutter.module_name}}.models"
+
+    # Check if models directory exists
+    if not models_path.exists():
+        return
+
+    # Import all Python files in the models directory
+    for _, modname, ispkg in pkgutil.iter_modules([str(models_path)]):
+        if not ispkg and not modname.startswith("_"):
+            try:
+                importlib.import_module(f"{models_package}.{modname}")
+            except ImportError as e:
+                # Log warning but don't fail - allows partial imports
+                print(f"Warning: Could not import model {modname}: {e}")
+
+
+# Import all models before accessing metadata
+import_all_models()
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
