@@ -76,7 +76,12 @@ async def get_session() -> AsyncSession:
         AsyncSession: An asynchronous SQLAlchemy session.
     """
     async with async_session() as session:
-        yield session
+        try:
+            yield session
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            raise
 
 
 async def get_paginated_results(
