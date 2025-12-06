@@ -156,7 +156,7 @@ async def log_user_action(
             outcome=outcome,
             ip_address=ip_address,
             user_agent=user_agent,
-            request_id=request_id,
+            request_id=str(request_id) if request_id else None,
             request_data=sanitized_data,
             response_status=response_status,
             error_message=error_message,
