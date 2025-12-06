@@ -11,6 +11,7 @@ from sqlmodel import SQLModel
 
 # Import all models to ensure they're registered with SQLModel.metadata
 from app.models.author import Author  # noqa: F401
+from app.models.user_action import UserAction  # noqa: F401
 
 # Import settings for database URL
 from app.settings import app_settings

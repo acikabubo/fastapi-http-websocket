@@ -84,5 +84,9 @@ class Settings(BaseSettings):
     # Paths to exclude from access logs (e.g., /metrics, /health)
     LOG_EXCLUDED_PATHS: list[str] = ["/metrics", "/health"]
 
+    # Audit logging settings
+    AUDIT_LOG_ENABLED: bool = True
+    AUDIT_LOG_RETENTION_DAYS: int = 365
+
 
 app_settings = Settings()

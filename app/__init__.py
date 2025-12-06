@@ -6,6 +6,7 @@ from starlette.middleware.authentication import AuthenticationMiddleware
 
 from app.auth import AuthBackend
 from app.logging import logger
+from app.middlewares.audit_middleware import AuditMiddleware
 from app.middlewares.correlation_id import CorrelationIDMiddleware
 from app.middlewares.prometheus import PrometheusMiddleware
 from app.middlewares.rate_limit import RateLimitMiddleware
@@ -117,9 +118,10 @@ def application() -> FastAPI:
     app.include_router(collect_subrouters())
 
     # Middlewares (execute in REVERSE order of registration)
-    # Execution flow: CorrelationIDMiddleware → AuthenticationMiddleware → RateLimitMiddleware → PrometheusMiddleware
+    # Execution flow: CorrelationIDMiddleware → AuthenticationMiddleware → RateLimitMiddleware → AuditMiddleware → PrometheusMiddleware
     # Note: RBAC is now handled via FastAPI dependencies (require_roles) instead of middleware
     app.add_middleware(PrometheusMiddleware)
+    app.add_middleware(AuditMiddleware)
     app.add_middleware(RateLimitMiddleware)
     app.add_middleware(AuthenticationMiddleware, backend=AuthBackend())
     app.add_middleware(CorrelationIDMiddleware)

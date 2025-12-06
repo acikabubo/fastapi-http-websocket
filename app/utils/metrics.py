@@ -133,3 +133,22 @@ app_info = Gauge(
     "Application information",
     ["version", "python_version", "environment"],
 )
+
+# Audit Logging Metrics
+audit_logs_total = Counter(
+    "audit_logs_total",
+    "Total audit log entries created",
+    ["outcome"],  # success, error, permission_denied
+)
+
+audit_log_creation_duration_seconds = Histogram(
+    "audit_log_creation_duration_seconds",
+    "Audit log creation duration in seconds",
+    buckets=(0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5),
+)
+
+audit_log_errors_total = Counter(
+    "audit_log_errors_total",
+    "Total audit log creation errors",
+    ["error_type"],
+)
