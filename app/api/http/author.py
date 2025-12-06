@@ -1,21 +1,12 @@
 """
-Modern author endpoints using Repository + Command + Dependency Injection.
+Author endpoints using Repository + Command + Dependency Injection.
 
-This file demonstrates the new design patterns and can be compared with
-app/api/http/author.py to see the differences. These endpoints use:
+These endpoints use:
 - Dependency Injection for testability
 - Repository pattern for data access
 - Command pattern for business logic
 
-Compare with app/api/http/author.py to see how the same functionality
-is implemented with modern patterns vs. the old Active Record pattern.
-
 Example:
-    # Old pattern (author.py)
-    async with async_session() as session:
-        return await Author.get_list(session, **filters)
-
-    # New pattern (author_refactored.py)
     command = GetAuthorsCommand(repo)
     return await command.execute(input_data)
 """
@@ -37,16 +28,16 @@ from app.schemas.response import PaginatedResponseModel
 from app.settings import app_settings
 from app.storage.db import get_paginated_results
 
-router = APIRouter(prefix="/authors-v2", tags=["authors-v2"])
+router = APIRouter(prefix="/authors", tags=["authors"])
 
 
 @router.get(
     "",
     response_model=list[Author],
-    summary="Get all authors (V2)",
+    summary="Get all authors",
     description="Get authors using Repository + Command pattern",
 )
-async def get_authors_v2(
+async def get_authors(
     repo: AuthorRepoDep,
     rbac: RBACDep,
     id: int | None = None,
@@ -71,9 +62,9 @@ async def get_authors_v2(
         List of authors matching filters.
 
     Example:
-        GET /authors-v2?search=John
-        GET /authors-v2?id=1
-        GET /authors-v2?name=John%20Doe
+        GET /authors?search=John
+        GET /authors?id=1
+        GET /authors?name=John%20Doe
     """
     command = GetAuthorsCommand(repo)
     input_data = GetAuthorsInput(id=id, name=name, search_term=search)
@@ -84,10 +75,10 @@ async def get_authors_v2(
     "",
     response_model=Author,
     status_code=status.HTTP_201_CREATED,
-    summary="Create a new author (V2)",
+    summary="Create a new author",
     description="Create author using Repository + Command pattern",
 )
-async def create_author_v2(
+async def create_author(
     author_data: CreateAuthorInput,
     repo: AuthorRepoDep,
     rbac: RBACDep,
@@ -110,7 +101,7 @@ async def create_author_v2(
         HTTPException: 400 if author with same name exists.
 
     Example:
-        POST /authors-v2
+        POST /authors
         {
             "name": "John Doe"
         }
@@ -128,10 +119,10 @@ async def create_author_v2(
 @router.put(
     "/{author_id}",
     response_model=Author,
-    summary="Update an author (V2)",
+    summary="Update an author",
     description="Update author using Repository + Command pattern",
 )
-async def update_author_v2(
+async def update_author(
     author_id: int,
     author_data: CreateAuthorInput,
     repo: AuthorRepoDep,
@@ -153,7 +144,7 @@ async def update_author_v2(
         HTTPException: 404 if author not found, 400 if name conflicts.
 
     Example:
-        PUT /authors-v2/1
+        PUT /authors/1
         {
             "name": "Jane Doe"
         }
@@ -178,10 +169,10 @@ async def update_author_v2(
 @router.delete(
     "/{author_id}",
     status_code=status.HTTP_204_NO_CONTENT,
-    summary="Delete an author (V2)",
+    summary="Delete an author",
     description="Delete author using Repository + Command pattern",
 )
-async def delete_author_v2(
+async def delete_author(
     author_id: int,
     repo: AuthorRepoDep,
     rbac: RBACDep,
@@ -198,7 +189,7 @@ async def delete_author_v2(
         HTTPException: 404 if author not found.
 
     Example:
-        DELETE /authors-v2/1
+        DELETE /authors/1
     """
     try:
         command = DeleteAuthorCommand(repo)
@@ -213,10 +204,10 @@ async def delete_author_v2(
 @router.get(
     "/paginated",
     response_model=PaginatedResponseModel[Author],
-    summary="Get paginated list of authors (V2)",
+    summary="Get paginated list of authors",
     description="Get paginated authors using helper function",
 )
-async def get_paginated_authors_v2(
+async def get_paginated_authors(
     repo: AuthorRepoDep,
     rbac: RBACDep,
     page: int = 1,
@@ -227,7 +218,7 @@ async def get_paginated_authors_v2(
     """
     Get paginated list of authors.
 
-    This endpoint shows how pagination works with the new pattern.
+    This endpoint shows how pagination works with the pattern.
     For now, it still uses get_paginated_results() helper, but data
     access could be moved to repository if needed.
 
@@ -243,7 +234,7 @@ async def get_paginated_authors_v2(
         Paginated response with items and metadata.
 
     Example:
-        GET /authors-v2/paginated?page=1&per_page=10
+        GET /authors/paginated?page=1&per_page=10
     """
     filters = {}
     if id is not None:

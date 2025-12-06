@@ -1,10 +1,10 @@
 """
-Modern WebSocket handlers using Repository + Command pattern.
+WebSocket handlers using Repository + Command pattern.
 
 This file demonstrates how to use the same Command classes in WebSocket
-handlers that are used in HTTP handlers (author_refactored.py).
+handlers that are used in HTTP handlers (author.py).
 
-Compare with app/api/http/author_refactored.py to see how the same
+Compare with app/api/http/author.py to see how the same
 business logic is shared between HTTP and WebSocket.
 
 Key Benefits:
@@ -34,10 +34,10 @@ from app.schemas.response import ResponseModel
 from app.storage.db import async_session
 
 # ============================================================================
-# GET AUTHORS (V2 - Using Repository + Command Pattern)
+# GET AUTHORS (Using Repository + Command Pattern)
 # ============================================================================
 
-get_authors_v2_schema: JsonSchemaType = {
+get_authors_schema: JsonSchemaType = {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "type": "object",
     "properties": {
@@ -50,17 +50,17 @@ get_authors_v2_schema: JsonSchemaType = {
 
 
 @pkg_router.register(
-    PkgID.GET_AUTHORS_V2,
-    json_schema=get_authors_v2_schema,
+    PkgID.GET_AUTHORS,
+    json_schema=get_authors_schema,
     validator_callback=validator,
     roles=["get-authors"],
 )
-async def get_authors_v2_handler(request: RequestModel) -> ResponseModel[Author]:
+async def get_authors_handler(request: RequestModel) -> ResponseModel[Author]:
     """
     WebSocket handler to get authors using Repository + Command pattern.
 
     This handler uses the SAME GetAuthorsCommand that is used in the HTTP
-    handler (author_refactored.py). This demonstrates how business logic
+    handler (author.py). This demonstrates how business logic
     can be reused across different protocols.
 
     Request Data:
@@ -74,7 +74,7 @@ async def get_authors_v2_handler(request: RequestModel) -> ResponseModel[Author]
 
     Example:
         {
-            "pkg_id": 100,
+            "pkg_id": 1,
             "req_id": "uuid-here",
             "data": {
                 "id": 1,
@@ -104,7 +104,7 @@ async def get_authors_v2_handler(request: RequestModel) -> ResponseModel[Author]
             )
     except ValueError as e:
         # Business logic validation errors
-        logger.error(f"Validation error in get_authors_v2: {e}")
+        logger.error(f"Validation error in get_authors: {e}")
         return ResponseModel.err_msg(
             request.pkg_id,
             request.req_id,
@@ -113,7 +113,7 @@ async def get_authors_v2_handler(request: RequestModel) -> ResponseModel[Author]
         )
     except SQLAlchemyError as e:
         # Database errors
-        logger.error(f"Database error in get_authors_v2: {e}")
+        logger.error(f"Database error in get_authors: {e}")
         return ResponseModel.err_msg(
             request.pkg_id,
             request.req_id,
@@ -122,7 +122,7 @@ async def get_authors_v2_handler(request: RequestModel) -> ResponseModel[Author]
         )
     except (ValidationError, AttributeError) as e:
         # Pydantic validation errors
-        logger.error(f"Invalid request data in get_authors_v2: {e}")
+        logger.error(f"Invalid request data in get_authors: {e}")
         return ResponseModel.err_msg(
             request.pkg_id,
             request.req_id,
@@ -132,10 +132,10 @@ async def get_authors_v2_handler(request: RequestModel) -> ResponseModel[Author]
 
 
 # ============================================================================
-# CREATE AUTHOR (V2 - Using Repository + Command Pattern)
+# CREATE AUTHOR (Using Repository + Command Pattern)
 # ============================================================================
 
-create_author_v2_schema: JsonSchemaType = {
+create_author_schema: JsonSchemaType = {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "type": "object",
     "properties": {
@@ -147,12 +147,12 @@ create_author_v2_schema: JsonSchemaType = {
 
 
 @pkg_router.register(
-    PkgID.CREATE_AUTHOR_V2,
-    json_schema=create_author_v2_schema,
+    PkgID.CREATE_AUTHOR,
+    json_schema=create_author_schema,
     validator_callback=validator,
     roles=["create-author"],
 )
-async def create_author_v2_handler(
+async def create_author_handler(
     request: RequestModel,
 ) -> ResponseModel[Author]:
     """
@@ -190,7 +190,7 @@ async def create_author_v2_handler(
                 )
     except ValueError as e:
         # Business logic validation (e.g., duplicate name)
-        logger.error(f"Validation error in create_author_v2: {e}")
+        logger.error(f"Validation error in create_author: {e}")
         return ResponseModel.err_msg(
             request.pkg_id,
             request.req_id,
@@ -199,7 +199,7 @@ async def create_author_v2_handler(
         )
     except SQLAlchemyError as e:
         # Database errors
-        logger.error(f"Database error in create_author_v2: {e}")
+        logger.error(f"Database error in create_author: {e}")
         return ResponseModel.err_msg(
             request.pkg_id,
             request.req_id,
@@ -208,7 +208,7 @@ async def create_author_v2_handler(
         )
     except (ValidationError, AttributeError) as e:
         # Pydantic validation errors
-        logger.error(f"Invalid request data in create_author_v2: {e}")
+        logger.error(f"Invalid request data in create_author: {e}")
         return ResponseModel.err_msg(
             request.pkg_id,
             request.req_id,

@@ -379,8 +379,8 @@ class CreateAuthorCommand(BaseCommand[CreateAuthorInput, Author]):
 
 **HTTP Handler:**
 ```python
-@router.get("/authors-v2")
-async def get_authors_v2(
+@router.get("/authors")
+async def get_authors(
     repo: AuthorRepoDep,
     search: str | None = None,
 ) -> list[Author]:
@@ -391,7 +391,7 @@ async def get_authors_v2(
 
 **WebSocket Handler:**
 ```python
-@pkg_router.register(PkgID.GET_AUTHORS_V2)
+@pkg_router.register(PkgID.GET_AUTHORS)
 async def get_authors_ws(request: RequestModel) -> ResponseModel:
     async with async_session() as session:
         repo = AuthorRepository(session)
@@ -502,8 +502,8 @@ AuthorRepoDep = Annotated[AuthorRepository, Depends(get_author_repository)]
 #### 5. Create HTTP Endpoint
 
 ```python
-# app/api/http/author_refactored.py
-@router.post("/authors-v2", status_code=201)
+# app/api/http/author.py
+@router.post("/authors", status_code=201)
 async def create_author(
     data: CreateAuthorInput,
     repo: AuthorRepoDep,
@@ -516,7 +516,7 @@ async def create_author(
 
 ```python
 # app/api/ws/handlers/author_handlers.py
-@pkg_router.register(PkgID.CREATE_AUTHOR_V2)
+@pkg_router.register(PkgID.CREATE_AUTHOR)
 async def create_author_ws(request: RequestModel) -> ResponseModel:
     async with async_session() as session:
         repo = AuthorRepository(session)
@@ -576,7 +576,7 @@ def test_http_endpoint(client):
     # Override dependency
     app.dependency_overrides[get_author_repository] = lambda: MockRepo()
 
-    response = client.post("/authors-v2", json={"name": "Test"})
+    response = client.post("/authors", json={"name": "Test"})
     assert response.status_code == 201
 ```
 
@@ -599,23 +599,23 @@ Gradual migration approach:
 
 1. **Create repository** for data access
 2. **Create commands** for business logic
-3. **Create V2 endpoints** using new patterns
+3. **Create new endpoints** using new patterns
 4. **Keep old endpoints** for backward compatibility
-5. **Migrate clients** to use V2 endpoints
+5. **Migrate clients** to use new endpoints
 6. **Remove old endpoints** once migration complete
 
 ### Example Migration
 
 ```python
 # BEFORE (old pattern)
-@router.get("/books")
-async def get_books():
+@router.get("/books-old")
+async def get_books_old():
     async with async_session() as session:
         return await Book.get_list(session)
 
 # AFTER (new pattern - runs alongside)
-@router.get("/books-v2")
-async def get_books_v2(repo: BookRepoDep):
+@router.get("/books")
+async def get_books(repo: BookRepoDep):
     command = GetBooksCommand(repo)
     return await command.execute(GetBooksInput())
 ```

@@ -13,8 +13,6 @@ class RSPCode(IntEnum):
         ERROR (1): General error occurred
         INVALID_DATA (2): Provided data is invalid or malformed
         PERMISSION_DENIED (3): User lacks required permissions for the operation
-        ACTIVE_HEATING_SCHEDULE (4): Operation conflicts with active heating schedule
-        ACTIVE_TAG (5): Operation conflicts with active tag
 
     Example:
         >>> status = RSPCode.OK
@@ -26,8 +24,6 @@ class RSPCode(IntEnum):
     ERROR = 1
     INVALID_DATA = 2
     PERMISSION_DENIED = 3
-    ACTIVE_HEATING_SCHEDULE = 4
-    ACTIVE_TAG = 5
 
     def __str__(self):
         """
@@ -44,16 +40,13 @@ class PkgID(IntEnum):
     of data package requests in the system.
 
     Attributes:
-        GET_AUTHORS (1): Request to retrieve author list (legacy)
+        GET_AUTHORS (1): Request to retrieve authors (Repository + Command pattern)
         GET_PAGINATED_AUTHORS (2): Request to retrieve paginated author list
-        THIRD (3): Third type of request (purpose undefined)
-        GET_AUTHORS_V2 (100): Request to retrieve authors (Repository + Command pattern)
-        CREATE_AUTHOR_V2 (101): Request to create author (Repository + Command pattern)
+        CREATE_AUTHOR (3): Request to create author (Repository + Command pattern)
+        UNREGISTERED_HANDLER (999): Test-only PkgID with no registered handler
     """
 
     GET_AUTHORS = 1
     GET_PAGINATED_AUTHORS = 2
-    THIRD = 3
-    # V2 endpoints using modern patterns (Repository + Command)
-    GET_AUTHORS_V2 = 100
-    CREATE_AUTHOR_V2 = 101
+    CREATE_AUTHOR = 3
+    UNREGISTERED_HANDLER = 999  # For testing handler not found scenarios

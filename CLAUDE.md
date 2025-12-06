@@ -76,13 +76,13 @@ class CreateAuthorCommand(BaseCommand[CreateAuthorInput, Author]):
         return await self.repository.create(Author(**input_data.model_dump()))
 
 # 3. HTTP Handler (uses command)
-@router.post("/authors-v2")
+@router.post("/authors")
 async def create_author(data: CreateAuthorInput, repo: AuthorRepoDep) -> Author:
     command = CreateAuthorCommand(repo)
     return await command.execute(data)
 
 # 4. WebSocket Handler (reuses same command!)
-@pkg_router.register(PkgID.CREATE_AUTHOR_V2)
+@pkg_router.register(PkgID.CREATE_AUTHOR)
 async def create_author_ws(request: RequestModel) -> ResponseModel:
     async with async_session() as session:
         repo = AuthorRepository(session)
@@ -94,7 +94,7 @@ async def create_author_ws(request: RequestModel) -> ResponseModel:
 **Documentation:**
 - 📖 **Full Guide**: [docs/architecture/DESIGN_PATTERNS_GUIDE.md](docs/architecture/DESIGN_PATTERNS_GUIDE.md)
 - 🚀 **Quick Reference**: [docs/architecture/PATTERNS_QUICK_REFERENCE.md](docs/architecture/PATTERNS_QUICK_REFERENCE.md)
-- 💡 **Example**: [app/api/http/author_refactored.py](app/api/http/author_refactored.py)
+- 💡 **Example**: [app/api/http/author.py](app/api/http/author.py)
 - ✅ **Tests**: [tests/test_author_commands.py](tests/test_author_commands.py)
 
 **When Creating New Features:**

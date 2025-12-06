@@ -394,8 +394,6 @@ Available `PkgID` values defined in [app/api/ws/constants.py](app/api/ws/constan
 | `ERROR` | 1 | General error occurred |
 | `INVALID_DATA` | 2 | Provided data is invalid or malformed |
 | `PERMISSION_DENIED` | 3 | User lacks required permissions |
-| `ACTIVE_HEATING_SCHEDULE` | 4 | Operation conflicts with active heating schedule |
-| `ACTIVE_TAG` | 5 | Operation conflicts with active tag |
 
 ### Creating New WebSocket Handlers
 
