@@ -16,7 +16,7 @@ from {{cookiecutter.module_name}}.schemas.user import UserModel
 from {{cookiecutter.module_name}}.settings import app_settings
 from {{cookiecutter.module_name}}.storage.redis import get_auth_redis_connection
 from {{cookiecutter.module_name}}.utils.metrics import ws_connections_active, ws_connections_total
-from {{cookiecutter.module_name}}.utils.rate_limiter import connection_limiter, rate_limiter
+from {{cookiecutter.module_name}}.utils.rate_limiter import connection_limiter
 
 
 class UUIDEncoder(json.JSONEncoder):
