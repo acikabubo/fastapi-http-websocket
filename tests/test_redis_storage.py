@@ -280,7 +280,6 @@ class TestRedisHandler:
     @pytest.mark.asyncio
     async def test_subscribe_existing_channel(self):
         """Test subscribing to an existing channel."""
-        mock_redis = AsyncMock()
 
         async def test_callback(ch, data):
             pass

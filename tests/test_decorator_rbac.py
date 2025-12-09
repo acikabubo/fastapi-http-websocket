@@ -5,9 +5,7 @@ This module tests the new decorator-based approach for WebSocket permissions,
 where roles are defined directly in the @pkg_router.register() decorator.
 """
 
-from unittest.mock import MagicMock
 
-import pytest
 
 from app.api.ws.constants import PkgID
 from app.routing import PackageRouter

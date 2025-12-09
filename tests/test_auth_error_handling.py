@@ -6,7 +6,7 @@ with the AuthBackend authentication flow.
 """
 
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 from jwcrypto.jwt import JWTExpired
 from keycloak.exceptions import KeycloakAuthenticationError
 

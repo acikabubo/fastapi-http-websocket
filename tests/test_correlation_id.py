@@ -5,7 +5,7 @@ This module tests the CorrelationIDMiddleware functionality including
 correlation ID generation, header handling, and context variable access.
 """
 
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import MagicMock
 
 import pytest
 from starlette.requests import Request

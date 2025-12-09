@@ -22,7 +22,7 @@ Example:
 """
 
 from functools import lru_cache
-from typing import TYPE_CHECKING, Annotated, Any
+from typing import Annotated, Any
 
 from fastapi import Depends
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -30,9 +30,6 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from app.managers.keycloak_manager import KeycloakManager
 from app.managers.rbac_manager import RBACManager
 from app.storage.db import get_session
-
-if TYPE_CHECKING:
-    from app.repositories.author_repository import AuthorRepository
 
 # ============================================================================
 # Database Session Dependencies

@@ -9,7 +9,7 @@ import pytest
 from sqlalchemy import Select
 from sqlmodel import Field, SQLModel
 
-from app.storage.db import default_apply_filters, get_paginated_results
+from app.storage.db import default_apply_filters
 
 
 class PaginationTestModel(SQLModel, table=True):

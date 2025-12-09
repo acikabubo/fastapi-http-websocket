@@ -16,7 +16,7 @@ from app.schemas.user import UserModel
 from app.settings import app_settings
 from app.storage.redis import get_auth_redis_connection
 from app.utils.metrics import ws_connections_active, ws_connections_total
-from app.utils.rate_limiter import connection_limiter, rate_limiter
+from app.utils.rate_limiter import connection_limiter
 
 
 class UUIDEncoder(json.JSONEncoder):

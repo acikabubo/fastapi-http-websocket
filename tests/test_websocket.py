@@ -9,9 +9,6 @@ import uuid
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from fastapi import FastAPI
-from fastapi.testclient import TestClient
-from pydantic import ValidationError
 from starlette.authentication import UnauthenticatedUser
 
 from app.api.ws.constants import PkgID, RSPCode
@@ -19,7 +16,6 @@ from app.api.ws.consumers.web import Web
 from app.api.ws.websocket import PackageAuthWebSocketEndpoint
 from app.routing import pkg_router
 from app.schemas.request import RequestModel
-from app.schemas.response import ResponseModel
 from app.schemas.user import UserModel
 
 

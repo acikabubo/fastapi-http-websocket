@@ -5,10 +5,9 @@ This module tests the rate limiting middleware for HTTP endpoints and
 WebSocket message/connection rate limiting.
 """
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
-from fastapi.testclient import TestClient
 
 
 @pytest.fixture

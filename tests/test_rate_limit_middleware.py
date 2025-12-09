@@ -9,7 +9,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi import FastAPI, Request, Response
-from starlette.datastructures import Headers
 
 from app.middlewares.rate_limit import RateLimitMiddleware
 from app.schemas.user import UserModel
