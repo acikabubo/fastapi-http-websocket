@@ -56,8 +56,13 @@ class RedisPool:
 async def get_redis_connection(db=app_settings.MAIN_REDIS_DB):
     try:
         return await RedisPool.get_instance(db)
+    except (ConnectionError, TimeoutError, OSError) as ex:
+        logger.error(f"Redis connection/network error: {ex}")
+        return None
     except Exception as ex:
-        logger.error(f"Error getting Redis connection: {ex}")
+        # Catch-all for graceful degradation
+        logger.error(f"Unexpected Redis error: {ex}")
+        return None
 
 
 async def get_auth_redis_connection():

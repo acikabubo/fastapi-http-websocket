@@ -2,7 +2,10 @@
 
 from fastapi import APIRouter, Response, status
 from pydantic import BaseModel
+from redis.asyncio import RedisError as AsyncRedisError
+from redis.exceptions import RedisError as SyncRedisError
 from sqlalchemy import text
+from sqlalchemy.exc import OperationalError, SQLAlchemyError
 
 from app.logging import logger
 from app.settings import app_settings
@@ -49,16 +52,24 @@ async def health_check(response: Response) -> HealthResponse:
     try:
         async with engine.connect() as conn:
             await conn.execute(text("SELECT 1"))
-    except Exception as e:
+    except (OperationalError, SQLAlchemyError, TimeoutError) as e:
         logger.error(f"Database health check failed: {e}")
+        db_status = "unhealthy"
+    except Exception as e:
+        # Catch-all for health checks to prevent endpoint failure
+        logger.error(f"Unexpected database health check error: {e}")
         db_status = "unhealthy"
 
     # Check Redis connection
     try:
         r = await get_redis_connection(db=app_settings.MAIN_REDIS_DB)
         await r.ping()
-    except Exception as e:
+    except (AsyncRedisError, SyncRedisError, ConnectionError, TimeoutError) as e:
         logger.error(f"Redis health check failed: {e}")
+        redis_status = "unhealthy"
+    except Exception as e:
+        # Catch-all for health checks to prevent endpoint failure
+        logger.error(f"Unexpected Redis health check error: {e}")
         redis_status = "unhealthy"
 
     overall_status = (
