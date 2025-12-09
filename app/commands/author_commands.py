@@ -35,6 +35,7 @@ Example:
 from pydantic import BaseModel, Field
 
 from app.commands.base import BaseCommand
+from app.exceptions import ConflictError, NotFoundError
 from app.models.author import Author
 from app.repositories.author_repository import AuthorRepository
 
@@ -159,7 +160,7 @@ class CreateAuthorCommand(BaseCommand[CreateAuthorInput, Author]):
             Created author with generated ID.
 
         Raises:
-            ValueError: If author with same name already exists.
+            ConflictError: If author with same name already exists.
 
         Example:
             ```python
@@ -171,7 +172,7 @@ class CreateAuthorCommand(BaseCommand[CreateAuthorInput, Author]):
         # Business logic: Check if author with same name exists
         existing = await self.repository.get_by_name(input_data.name)
         if existing:
-            raise ValueError(
+            raise ConflictError(
                 f"Author with name '{input_data.name}' already exists"
             )
 
@@ -207,7 +208,8 @@ class UpdateAuthorCommand(BaseCommand[UpdateAuthorInput, Author]):
             Updated author.
 
         Raises:
-            ValueError: If author not found or name conflicts with another.
+            NotFoundError: If author not found.
+            ConflictError: If name conflicts with another author.
 
         Example:
             ```python
@@ -218,12 +220,12 @@ class UpdateAuthorCommand(BaseCommand[UpdateAuthorInput, Author]):
         # Check if author exists
         author = await self.repository.get_by_id(input_data.id)
         if not author:
-            raise ValueError(f"Author with ID {input_data.id} not found")
+            raise NotFoundError(f"Author with ID {input_data.id} not found")
 
         # Check if new name conflicts with another author
         existing = await self.repository.get_by_name(input_data.name)
         if existing and existing.id != input_data.id:
-            raise ValueError(
+            raise ConflictError(
                 f"Author with name '{input_data.name}' already exists"
             )
 
@@ -256,7 +258,7 @@ class DeleteAuthorCommand(BaseCommand[int, None]):
             author_id: ID of author to delete.
 
         Raises:
-            ValueError: If author not found.
+            NotFoundError: If author not found.
 
         Example:
             ```python
@@ -265,6 +267,6 @@ class DeleteAuthorCommand(BaseCommand[int, None]):
         """
         author = await self.repository.get_by_id(author_id)
         if not author:
-            raise ValueError(f"Author with ID {author_id} not found")
+            raise NotFoundError(f"Author with ID {author_id} not found")
 
         await self.repository.delete(author)

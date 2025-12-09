@@ -6,13 +6,14 @@ These endpoints use:
 - Repository pattern for data access
 - Command pattern for business logic
 - Decorator-based RBAC for permissions
+- Unified error handling across protocols
 
 Example:
     command = GetAuthorsCommand(repo)
     return await command.execute(input_data)
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, status
 
 from app.commands.author_commands import (
     CreateAuthorCommand,
@@ -29,6 +30,7 @@ from app.models.author import Author
 from app.schemas.response import PaginatedResponseModel
 from app.settings import app_settings
 from app.storage.db import get_paginated_results
+from app.utils.error_handler import handle_http_errors
 
 router = APIRouter(prefix="/authors", tags=["authors"])
 
@@ -40,6 +42,7 @@ router = APIRouter(prefix="/authors", tags=["authors"])
     description="Get authors using Repository + Command pattern",
     dependencies=[Depends(require_roles("get-authors"))],
 )
+@handle_http_errors
 async def get_authors(
     repo: AuthorRepoDep,
     id: int | None = None,
@@ -82,6 +85,7 @@ async def get_authors(
     description="Create author using Repository + Command pattern",
     dependencies=[Depends(require_roles("create-author"))],
 )
+@handle_http_errors
 async def create_author(
     author_data: CreateAuthorInput,
     repo: AuthorRepoDep,
@@ -102,7 +106,7 @@ async def create_author(
         Created author with generated ID.
 
     Raises:
-        HTTPException: 400 if author with same name exists.
+        HTTPException: 409 if author with same name exists.
 
     Example:
         POST /authors
@@ -110,14 +114,8 @@ async def create_author(
             "name": "John Doe"
         }
     """
-    try:
-        command = CreateAuthorCommand(repo)
-        return await command.execute(author_data)
-    except ValueError as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e),
-        )
+    command = CreateAuthorCommand(repo)
+    return await command.execute(author_data)
 
 
 @router.put(
@@ -127,6 +125,7 @@ async def create_author(
     description="Update author using Repository + Command pattern",
     dependencies=[Depends(require_roles("update-author"))],
 )
+@handle_http_errors
 async def update_author(
     author_id: int,
     author_data: CreateAuthorInput,
@@ -146,7 +145,7 @@ async def update_author(
         Updated author.
 
     Raises:
-        HTTPException: 404 if author not found, 400 if name conflicts.
+        HTTPException: 404 if author not found, 409 if name conflicts.
 
     Example:
         PUT /authors/1
@@ -154,21 +153,9 @@ async def update_author(
             "name": "Jane Doe"
         }
     """
-    try:
-        command = UpdateAuthorCommand(repo)
-        input_data = UpdateAuthorInput(id=author_id, name=author_data.name)
-        return await command.execute(input_data)
-    except ValueError as e:
-        error_msg = str(e)
-        if "not found" in error_msg:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=error_msg,
-            )
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=error_msg,
-        )
+    command = UpdateAuthorCommand(repo)
+    input_data = UpdateAuthorInput(id=author_id, name=author_data.name)
+    return await command.execute(input_data)
 
 
 @router.delete(
@@ -178,6 +165,7 @@ async def update_author(
     description="Delete author using Repository + Command pattern",
     dependencies=[Depends(require_roles("delete-author"))],
 )
+@handle_http_errors
 async def delete_author(
     author_id: int,
     repo: AuthorRepoDep,
@@ -197,14 +185,8 @@ async def delete_author(
     Example:
         DELETE /authors/1
     """
-    try:
-        command = DeleteAuthorCommand(repo)
-        await command.execute(author_id)
-    except ValueError as e:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(e),
-        )
+    command = DeleteAuthorCommand(repo)
+    await command.execute(author_id)
 
 
 @router.get(
@@ -214,6 +196,7 @@ async def delete_author(
     description="Get paginated authors using helper function",
     dependencies=[Depends(require_roles("get-authors"))],
 )
+@handle_http_errors
 async def get_paginated_authors(
     repo: AuthorRepoDep,
     page: int = 1,

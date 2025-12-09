@@ -17,6 +17,7 @@ from app.commands.author_commands import (
     UpdateAuthorCommand,
     UpdateAuthorInput,
 )
+from app.exceptions import ConflictError, NotFoundError
 from app.models.author import Author
 
 
@@ -123,7 +124,7 @@ class TestCreateAuthorCommand:
         command = CreateAuthorCommand(mock_repo)
         input_data = CreateAuthorInput(name="Existing")
 
-        with pytest.raises(ValueError, match="already exists"):
+        with pytest.raises(ConflictError, match="already exists"):
             await command.execute(input_data)
 
         mock_repo.get_by_name.assert_called_once_with("Existing")
@@ -163,7 +164,7 @@ class TestUpdateAuthorCommand:
         command = UpdateAuthorCommand(mock_repo)
         input_data = UpdateAuthorInput(id=999, name="New Name")
 
-        with pytest.raises(ValueError, match="not found"):
+        with pytest.raises(NotFoundError, match="not found"):
             await command.execute(input_data)
 
         mock_repo.get_by_id.assert_called_once_with(999)
@@ -181,7 +182,7 @@ class TestUpdateAuthorCommand:
         command = UpdateAuthorCommand(mock_repo)
         input_data = UpdateAuthorInput(id=1, name="Conflict")
 
-        with pytest.raises(ValueError, match="already exists"):
+        with pytest.raises(ConflictError, match="already exists"):
             await command.execute(input_data)
 
         mock_repo.update.assert_not_called()
@@ -229,7 +230,7 @@ class TestDeleteAuthorCommand:
 
         command = DeleteAuthorCommand(mock_repo)
 
-        with pytest.raises(ValueError, match="not found"):
+        with pytest.raises(NotFoundError, match="not found"):
             await command.execute(999)
 
         mock_repo.get_by_id.assert_called_once_with(999)

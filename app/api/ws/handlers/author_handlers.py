@@ -13,10 +13,8 @@ Key Benefits:
 - Consistent behavior across protocols
 """
 
-from pydantic import ValidationError
-from sqlalchemy.exc import SQLAlchemyError
 
-from app.api.ws.constants import PkgID, RSPCode
+from app.api.ws.constants import PkgID
 from app.api.ws.validation import validator
 from app.commands.author_commands import (
     CreateAuthorCommand,
@@ -24,7 +22,6 @@ from app.commands.author_commands import (
     GetAuthorsCommand,
     GetAuthorsInput,
 )
-from app.logging import logger
 from app.models.author import Author
 from app.repositories.author_repository import AuthorRepository
 from app.routing import pkg_router
@@ -32,6 +29,7 @@ from app.schemas.generic_typing import JsonSchemaType
 from app.schemas.request import RequestModel
 from app.schemas.response import ResponseModel
 from app.storage.db import async_session, get_paginated_results
+from app.utils.error_handler import handle_ws_errors
 
 # ============================================================================
 # GET AUTHORS (Using Repository + Command Pattern)
@@ -55,6 +53,7 @@ get_authors_schema: JsonSchemaType = {
     validator_callback=validator,
     roles=["get-authors"],
 )
+@handle_ws_errors
 async def get_authors_handler(request: RequestModel) -> ResponseModel[Author]:
     """
     WebSocket handler to get authors using Repository + Command pattern.
@@ -83,51 +82,23 @@ async def get_authors_handler(request: RequestModel) -> ResponseModel[Author]:
             }
         }
     """
-    try:
-        async with async_session() as session:
-            # Create repository with session
-            repo = AuthorRepository(session)
+    async with async_session() as session:
+        # Create repository with session
+        repo = AuthorRepository(session)
 
-            # Create command with repository
-            command = GetAuthorsCommand(repo)
+        # Create command with repository
+        command = GetAuthorsCommand(repo)
 
-            # Parse input from request data
-            input_data = GetAuthorsInput(**request.data)
+        # Parse input from request data
+        input_data = GetAuthorsInput(**request.data)
 
-            # Execute command (same business logic as HTTP handler!)
-            authors = await command.execute(input_data)
+        # Execute command (same business logic as HTTP handler!)
+        authors = await command.execute(input_data)
 
-            return ResponseModel(
-                pkg_id=request.pkg_id,
-                req_id=request.req_id,
-                data=[author.model_dump() for author in authors],
-            )
-    except ValueError as e:
-        # Business logic validation errors
-        logger.error(f"Validation error in get_authors: {e}")
-        return ResponseModel.err_msg(
-            request.pkg_id,
-            request.req_id,
-            msg=str(e),
-            status_code=RSPCode.INVALID_DATA,
-        )
-    except SQLAlchemyError as e:
-        # Database errors
-        logger.error(f"Database error in get_authors: {e}")
-        return ResponseModel.err_msg(
-            request.pkg_id,
-            request.req_id,
-            msg="Database error occurred",
-            status_code=RSPCode.ERROR,
-        )
-    except (ValidationError, AttributeError) as e:
-        # Pydantic validation errors
-        logger.error(f"Invalid request data in get_authors: {e}")
-        return ResponseModel.err_msg(
-            request.pkg_id,
-            request.req_id,
-            msg="Invalid filter parameters",
-            status_code=RSPCode.INVALID_DATA,
+        return ResponseModel(
+            pkg_id=request.pkg_id,
+            req_id=request.req_id,
+            data=[author.model_dump() for author in authors],
         )
 
 
@@ -160,6 +131,7 @@ get_paginated_authors_schema: JsonSchemaType = {
     validator_callback=validator,
     roles=["get-authors"],
 )
+@handle_ws_errors
 async def get_paginated_authors_handler(
     request: RequestModel,
 ) -> ResponseModel[Author]:
@@ -188,31 +160,14 @@ async def get_paginated_authors_handler(
             }
         }
     """
-    try:
-        authors, meta = await get_paginated_results(Author, **request.data)
+    authors, meta = await get_paginated_results(Author, **request.data)
 
-        return ResponseModel(
-            pkg_id=request.pkg_id,
-            req_id=request.req_id,
-            data=[author.model_dump() for author in authors],
-            meta=meta,
-        )
-    except SQLAlchemyError as ex:
-        logger.error(f"Database error retrieving paginated authors: {ex}")
-        return ResponseModel.err_msg(
-            request.pkg_id,
-            request.req_id,
-            msg="Database error occurred",
-            status_code=RSPCode.ERROR,
-        )
-    except (ValidationError, AttributeError) as ex:
-        logger.error(f"Validation error: {ex}")
-        return ResponseModel.err_msg(
-            request.pkg_id,
-            request.req_id,
-            msg="Invalid pagination parameters",
-            status_code=RSPCode.INVALID_DATA,
-        )
+    return ResponseModel(
+        pkg_id=request.pkg_id,
+        req_id=request.req_id,
+        data=[author.model_dump() for author in authors],
+        meta=meta,
+    )
 
 
 # ============================================================================
@@ -236,6 +191,7 @@ create_author_schema: JsonSchemaType = {
     validator_callback=validator,
     roles=["create-author"],
 )
+@handle_ws_errors
 async def create_author_handler(
     request: RequestModel,
 ) -> ResponseModel[Author]:
@@ -252,52 +208,24 @@ async def create_author_handler(
 
     Response Data: Created author object.
     """
-    try:
-        async with async_session() as session:
-            async with session.begin():
-                # Create repository with session
-                repo = AuthorRepository(session)
+    async with async_session() as session:
+        async with session.begin():
+            # Create repository with session
+            repo = AuthorRepository(session)
 
-                # Create command with repository
-                command = CreateAuthorCommand(repo)
+            # Create command with repository
+            command = CreateAuthorCommand(repo)
 
-                # Parse input from request data
-                input_data = CreateAuthorInput(**request.data)
+            # Parse input from request data
+            input_data = CreateAuthorInput(**request.data)
 
-                # Execute command
-                author = await command.execute(input_data)
+            # Execute command
+            author = await command.execute(input_data)
 
-                return ResponseModel(
-                    pkg_id=request.pkg_id,
-                    req_id=request.req_id,
-                    data=author.model_dump(),
-                )
-    except ValueError as e:
-        # Business logic validation (e.g., duplicate name)
-        logger.error(f"Validation error in create_author: {e}")
-        return ResponseModel.err_msg(
-            request.pkg_id,
-            request.req_id,
-            msg=str(e),
-            status_code=RSPCode.INVALID_DATA,
-        )
-    except SQLAlchemyError as e:
-        # Database errors
-        logger.error(f"Database error in create_author: {e}")
-        return ResponseModel.err_msg(
-            request.pkg_id,
-            request.req_id,
-            msg="Database error occurred",
-            status_code=RSPCode.ERROR,
-        )
-    except (ValidationError, AttributeError) as e:
-        # Pydantic validation errors
-        logger.error(f"Invalid request data in create_author: {e}")
-        return ResponseModel.err_msg(
-            request.pkg_id,
-            request.req_id,
-            msg="Invalid author data",
-            status_code=RSPCode.INVALID_DATA,
-        )
+            return ResponseModel(
+                pkg_id=request.pkg_id,
+                req_id=request.req_id,
+                data=author.model_dump(),
+            )
 
 
