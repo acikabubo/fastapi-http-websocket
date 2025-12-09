@@ -5,13 +5,14 @@ These endpoints use:
 - Dependency Injection for testability
 - Repository pattern for data access
 - Command pattern for business logic
+- Decorator-based RBAC for permissions
 
 Example:
     command = GetAuthorsCommand(repo)
     return await command.execute(input_data)
 """
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.commands.author_commands import (
     CreateAuthorCommand,
@@ -22,7 +23,8 @@ from app.commands.author_commands import (
     UpdateAuthorCommand,
     UpdateAuthorInput,
 )
-from app.dependencies import AuthorRepoDep, RBACDep
+from app.dependencies import AuthorRepoDep
+from app.dependencies.permissions import require_roles
 from app.models.author import Author
 from app.schemas.response import PaginatedResponseModel
 from app.settings import app_settings
@@ -36,10 +38,10 @@ router = APIRouter(prefix="/authors", tags=["authors"])
     response_model=list[Author],
     summary="Get all authors",
     description="Get authors using Repository + Command pattern",
+    dependencies=[Depends(require_roles("get-authors"))],
 )
 async def get_authors(
     repo: AuthorRepoDep,
-    rbac: RBACDep,
     id: int | None = None,
     name: str | None = None,
     search: str | None = None,
@@ -51,9 +53,10 @@ async def get_authors(
     Business logic is encapsulated in GetAuthorsCommand, making it
     reusable in WebSocket handlers.
 
+    Requires role: get-authors
+
     Args:
         repo: Author repository (injected via dependency).
-        rbac: RBAC manager (injected via dependency).
         id: Optional author ID filter.
         name: Optional exact name filter.
         search: Optional name search term (case-insensitive).
@@ -77,11 +80,11 @@ async def get_authors(
     status_code=status.HTTP_201_CREATED,
     summary="Create a new author",
     description="Create author using Repository + Command pattern",
+    dependencies=[Depends(require_roles("create-author"))],
 )
 async def create_author(
     author_data: CreateAuthorInput,
     repo: AuthorRepoDep,
-    rbac: RBACDep,
 ) -> Author:
     """
     Create a new author.
@@ -89,10 +92,11 @@ async def create_author(
     This endpoint demonstrates the Repository + Command pattern.
     Business logic (checking for duplicate names) is in CreateAuthorCommand.
 
+    Requires role: create-author
+
     Args:
         author_data: Author data to create.
         repo: Author repository (injected via dependency).
-        rbac: RBAC manager (injected via dependency).
 
     Returns:
         Created author with generated ID.
@@ -121,21 +125,22 @@ async def create_author(
     response_model=Author,
     summary="Update an author",
     description="Update author using Repository + Command pattern",
+    dependencies=[Depends(require_roles("update-author"))],
 )
 async def update_author(
     author_id: int,
     author_data: CreateAuthorInput,
     repo: AuthorRepoDep,
-    rbac: RBACDep,
 ) -> Author:
     """
     Update an existing author.
+
+    Requires role: update-author
 
     Args:
         author_id: ID of author to update.
         author_data: New author data.
         repo: Author repository (injected via dependency).
-        rbac: RBAC manager (injected via dependency).
 
     Returns:
         Updated author.
@@ -171,19 +176,20 @@ async def update_author(
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Delete an author",
     description="Delete author using Repository + Command pattern",
+    dependencies=[Depends(require_roles("delete-author"))],
 )
 async def delete_author(
     author_id: int,
     repo: AuthorRepoDep,
-    rbac: RBACDep,
 ) -> None:
     """
     Delete an author.
 
+    Requires role: delete-author
+
     Args:
         author_id: ID of author to delete.
         repo: Author repository (injected via dependency).
-        rbac: RBAC manager (injected via dependency).
 
     Raises:
         HTTPException: 404 if author not found.
@@ -206,10 +212,10 @@ async def delete_author(
     response_model=PaginatedResponseModel[Author],
     summary="Get paginated list of authors",
     description="Get paginated authors using helper function",
+    dependencies=[Depends(require_roles("get-authors"))],
 )
 async def get_paginated_authors(
     repo: AuthorRepoDep,
-    rbac: RBACDep,
     page: int = 1,
     per_page: int = app_settings.DEFAULT_PAGE_SIZE,
     id: int | None = None,
@@ -222,9 +228,10 @@ async def get_paginated_authors(
     For now, it still uses get_paginated_results() helper, but data
     access could be moved to repository if needed.
 
+    Requires role: get-authors
+
     Args:
         repo: Author repository (injected via dependency).
-        rbac: RBAC manager (injected via dependency).
         page: Page number (starts at 1).
         per_page: Items per page.
         id: Optional author ID filter.

@@ -5,21 +5,20 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, Query
 from sqlmodel import select
 
-from app.managers.rbac_manager import RBACManager
+from app.dependencies.permissions import require_roles
 from app.models.user_action import UserAction
 from app.schemas.response import PaginatedResponseModel
 from app.settings import app_settings
 from app.storage.db import async_session, get_paginated_results
 
 router = APIRouter()
-rbac = RBACManager()
 
 
 @router.get(
     "/audit-logs",
     response_model=PaginatedResponseModel[UserAction],
     summary="Get paginated audit logs",
-    dependencies=[Depends(rbac.require_roles("admin"))],
+    dependencies=[Depends(require_roles("admin"))],
 )
 async def get_audit_logs_endpoint(
     page: int = Query(1, ge=1, description="Page number"),
@@ -105,7 +104,7 @@ async def get_audit_logs_endpoint(
     "/audit-logs/{log_id}",
     response_model=UserAction,
     summary="Get specific audit log entry",
-    dependencies=[Depends(rbac.require_roles("admin"))],
+    dependencies=[Depends(require_roles("admin"))],
 )
 async def get_audit_log_by_id_endpoint(log_id: int) -> UserAction | None:
     """
@@ -127,7 +126,7 @@ async def get_audit_log_by_id_endpoint(log_id: int) -> UserAction | None:
     "/audit-logs/user/{user_id}",
     response_model=PaginatedResponseModel[UserAction],
     summary="Get audit logs for a specific user",
-    dependencies=[Depends(rbac.require_roles("admin"))],
+    dependencies=[Depends(require_roles("admin"))],
 )
 async def get_user_audit_logs_endpoint(
     user_id: str,
