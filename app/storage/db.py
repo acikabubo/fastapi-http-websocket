@@ -3,7 +3,7 @@ import math
 from typing import Any, Callable, Type
 
 from sqlalchemy import Select
-from sqlalchemy.exc import OperationalError
+from sqlalchemy.exc import IntegrityError, OperationalError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     create_async_engine,
@@ -79,8 +79,13 @@ async def get_session() -> AsyncSession:
         try:
             yield session
             await session.commit()
-        except Exception:
+        except IntegrityError as ex:
             await session.rollback()
+            logger.error(f"Database integrity error: {ex}")
+            raise
+        except SQLAlchemyError as ex:
+            await session.rollback()
+            logger.error(f"Database error: {ex}")
             raise
 
 

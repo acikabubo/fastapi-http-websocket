@@ -7,6 +7,9 @@ connections using Redis as the backend storage.
 
 import time
 
+from redis.asyncio import RedisError as AsyncRedisError
+from redis.exceptions import RedisError as SyncRedisError
+
 from app.logging import logger
 from app.settings import app_settings
 from app.storage.redis import get_redis_connection
@@ -84,10 +87,15 @@ class RateLimiter:
             remaining = effective_limit - request_count - 1
             return True, remaining
 
-        except Exception as ex:
-            logger.error(f"Rate limiter error for key {key}: {ex}")
-            # On Redis failure, allow the request (fail open)
+        except (AsyncRedisError, SyncRedisError) as ex:
+            logger.error(f"Redis error for rate limit key {key}: {ex}")
+            # On Redis failure, allow the request (fail open for HTTP)
+            # NOTE: This is acceptable for rate limiting to prevent service disruption
             return True, limit
+        except (ValueError, TypeError) as ex:
+            logger.error(f"Invalid parameters for rate limit key {key}: {ex}")
+            # Programming error - fail closed
+            return False, 0
 
     async def reset_limit(self, key: str) -> None:
         """
@@ -100,8 +108,8 @@ class RateLimiter:
             redis = await self._get_redis()
             redis_key = f"rate_limit:{key}"
             await redis.delete(redis_key)
-        except Exception as ex:
-            logger.error(f"Failed to reset rate limit for key {key}: {ex}")
+        except (AsyncRedisError, SyncRedisError) as ex:
+            logger.error(f"Redis error resetting rate limit for key {key}: {ex}")
 
 
 class ConnectionLimiter:
@@ -159,12 +167,18 @@ class ConnectionLimiter:
             )
             return True
 
-        except Exception as ex:
+        except (AsyncRedisError, SyncRedisError) as ex:
             logger.error(
-                f"Failed to add connection for user {user_id}: {ex}"
+                f"Redis error adding connection for user {user_id}: {ex}"
             )
-            # On failure, allow the connection (fail open)
-            return True
+            # SECURITY: Fail closed - deny connection on Redis errors
+            return False
+        except (ValueError, TypeError) as ex:
+            logger.error(
+                f"Invalid parameters for user {user_id}: {ex}"
+            )
+            # Programming error - deny connection and investigate
+            return False
 
     async def remove_connection(
         self, user_id: str, connection_id: str
@@ -183,9 +197,9 @@ class ConnectionLimiter:
             logger.info(
                 f"Removed connection {connection_id} for user {user_id}"
             )
-        except Exception as ex:
+        except (AsyncRedisError, SyncRedisError) as ex:
             logger.error(
-                f"Failed to remove connection for user {user_id}: {ex}"
+                f"Redis error removing connection for user {user_id}: {ex}"
             )
 
     async def get_connection_count(self, user_id: str) -> int:
@@ -202,9 +216,9 @@ class ConnectionLimiter:
             redis = await self._get_redis()
             redis_key = f"ws_connections:{user_id}"
             return await redis.scard(redis_key)
-        except Exception as ex:
+        except (AsyncRedisError, SyncRedisError) as ex:
             logger.error(
-                f"Failed to get connection count for user {user_id}: {ex}"
+                f"Redis error getting connection count for user {user_id}: {ex}"
             )
             return 0
 
