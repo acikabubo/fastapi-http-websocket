@@ -52,8 +52,8 @@ class AuditMiddleware(BaseHTTPMiddleware):
         if app_settings.EXCLUDED_PATHS.match(request.url.path):
             return await call_next(request)
 
-        # Get user from request state (set by AuthBackend)
-        user: UserModel | None = getattr(request.state, "user", None)
+        # Get user from request (set by AuthBackend)
+        user: UserModel | None = getattr(request, "user", None)
 
         # Only log authenticated requests
         if user is None:
@@ -65,6 +65,7 @@ class AuditMiddleware(BaseHTTPMiddleware):
         # Get request context
         ip_address = extract_ip_address(request)
         user_agent = request.headers.get("user-agent")
+        # Get correlation ID set by CorrelationIDMiddleware
         request_id = getattr(request.state, "request_id", None)
 
         try:

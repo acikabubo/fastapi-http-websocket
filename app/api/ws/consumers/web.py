@@ -108,7 +108,7 @@ class Web(PackageAuthWebSocketEndpoint):
                 resource=f"WebSocket:{request.pkg_id.name}",
                 outcome="success" if response.status_code == 0 else "error",
                 ip_address=websocket.client.host if websocket.client else None,
-                request_id=request.req_id,
+                request_id=self.correlation_id,
                 request_data=request.data,
                 response_status=response.status_code,
                 duration_ms=duration_ms,
@@ -128,6 +128,7 @@ class Web(PackageAuthWebSocketEndpoint):
                 resource="WebSocket",
                 outcome="error",
                 ip_address=websocket.client.host if websocket.client else None,
+                request_id=self.correlation_id,
                 error_message=f"Validation error: {str(e)}",
             )
 

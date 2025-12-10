@@ -138,7 +138,7 @@ class TestRateLimitMiddlewareDispatch:
             mock_request: Mock HTTP request
             mock_call_next: Mock call_next function
         """
-        mock_request.state.user = None
+        mock_request.user = None
 
         with patch("app.middlewares.rate_limit.app_settings") as mock_settings:
             mock_settings.RATE_LIMIT_ENABLED = True
@@ -178,7 +178,7 @@ class TestRateLimitMiddlewareDispatch:
             mock_request: Mock HTTP request
             mock_call_next: Mock call_next function
         """
-        mock_request.state.user = None
+        mock_request.user = None
 
         with patch("app.middlewares.rate_limit.app_settings") as mock_settings:
             mock_settings.RATE_LIMIT_ENABLED = True
@@ -223,7 +223,7 @@ class TestGetRateLimitKey:
             azp="test-client",
             resource_access={"test-client": {"roles": ["user"]}},
         )
-        mock_request.state.user = user
+        mock_request.user = user
 
         middleware = RateLimitMiddleware(mock_app)
         key = middleware._get_rate_limit_key(mock_request)
@@ -238,7 +238,7 @@ class TestGetRateLimitKey:
             mock_app: Mock FastAPI application
             mock_request: Mock HTTP request
         """
-        mock_request.state.user = None
+        mock_request.user = None
         mock_request.client.host = "192.168.1.100"
 
         middleware = RateLimitMiddleware(mock_app)
@@ -254,7 +254,7 @@ class TestGetRateLimitKey:
             mock_app: Mock FastAPI application
             mock_request: Mock HTTP request
         """
-        mock_request.state.user = None
+        mock_request.user = None
         mock_request.client = None
 
         middleware = RateLimitMiddleware(mock_app)
@@ -274,7 +274,7 @@ class TestGetRateLimitKey:
         """
         user = MagicMock(spec=UserModel)
         user.username = None
-        mock_request.state.user = user
+        mock_request.user = user
         mock_request.client.host = "10.0.0.1"
 
         middleware = RateLimitMiddleware(mock_app)

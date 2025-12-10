@@ -145,11 +145,14 @@ class TestWebSocketMessageHandling:
         # Mock the websocket
         mock_websocket = MagicMock()
         mock_websocket.send_response = AsyncMock()
+        mock_websocket.client = MagicMock()
+        mock_websocket.client.host = "127.0.0.1"
 
         # Create Web endpoint instance
         scope = {"type": "websocket", "user": mock_user}
         web = Web(scope=scope, receive=None, send=None)  # type: ignore
         web.user = mock_user
+        web.correlation_id = "test-1234"  # Mock correlation_id
 
         # Mock the handler to avoid database dependencies
         with patch(
@@ -188,17 +191,24 @@ class TestWebSocketMessageHandling:
         # Mock the websocket
         mock_websocket = MagicMock()
         mock_websocket.close = AsyncMock()
+        mock_websocket.client = MagicMock()
+        mock_websocket.client.host = "127.0.0.1"
 
         # Create Web endpoint instance
         scope = {"type": "websocket", "user": mock_user}
         web = Web(scope=scope, receive=None, send=None)  # type: ignore
         web.user = mock_user
+        web.correlation_id = "test-1234"  # Mock correlation_id
 
-        # Call on_receive with invalid data
-        await web.on_receive(mock_websocket, invalid_data)
+        # Mock rate limiter to avoid Redis connection issues
+        with patch("app.api.ws.consumers.web.rate_limiter") as mock_rate_limiter:
+            mock_rate_limiter.check_rate_limit = AsyncMock(return_value=(True, 100))
 
-        # Verify connection was closed due to validation error
-        mock_websocket.close.assert_called_once()
+            # Call on_receive with invalid data
+            await web.on_receive(mock_websocket, invalid_data)
+
+            # Verify connection was closed due to validation error
+            mock_websocket.close.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_websocket_message_permission_denied(
@@ -221,23 +231,30 @@ class TestWebSocketMessageHandling:
         # Mock the websocket
         mock_websocket = MagicMock()
         mock_websocket.send_response = AsyncMock()
+        mock_websocket.client = MagicMock()
+        mock_websocket.client.host = "127.0.0.1"
 
         # Create Web endpoint instance
         scope = {"type": "websocket", "user": limited_user}
         web = Web(scope=scope, receive=None, send=None)  # type: ignore
         web.user = limited_user
+        web.correlation_id = "test-1234"  # Mock correlation_id
 
-        # Call on_receive
-        await web.on_receive(mock_websocket, request_data)
+        # Mock rate limiter to avoid Redis connection issues
+        with patch("app.api.ws.consumers.web.rate_limiter") as mock_rate_limiter:
+            mock_rate_limiter.check_rate_limit = AsyncMock(return_value=(True, 100))
 
-        # Verify response was sent
-        mock_websocket.send_response.assert_called_once()
+            # Call on_receive
+            await web.on_receive(mock_websocket, request_data)
 
-        # Get the response that was sent
-        sent_response = mock_websocket.send_response.call_args[0][0]
+            # Verify response was sent
+            mock_websocket.send_response.assert_called_once()
 
-        assert sent_response.status_code == RSPCode.PERMISSION_DENIED
-        assert "No permission" in sent_response.data.get("msg", "")
+            # Get the response that was sent
+            sent_response = mock_websocket.send_response.call_args[0][0]
+
+            assert sent_response.status_code == RSPCode.PERMISSION_DENIED
+            assert "No permission" in sent_response.data.get("msg", "")
 
 
 class TestPackageRouter:
