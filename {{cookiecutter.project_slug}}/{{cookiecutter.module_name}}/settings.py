@@ -27,6 +27,13 @@ class Settings(BaseSettings):
     MAIN_REDIS_DB: int = 1
     AUTH_REDIS_DB: int = 10
 
+    # Redis connection pool settings
+    REDIS_MAX_CONNECTIONS: int = 50
+    REDIS_SOCKET_TIMEOUT: int = 5
+    REDIS_CONNECT_TIMEOUT: int = 5
+    REDIS_HEALTH_CHECK_INTERVAL: int = 30
+    REDIS_RETRY_ON_TIMEOUT: bool = True
+
     # Database settings (credentials MUST be provided via environment)
     DB_USER: str
     DB_PASSWORD: SecretStr
