@@ -664,3 +664,5 @@ http_requests_total.labels(
 from app.utils.metrics import db_query_duration_seconds
 db_query_duration_seconds.labels(operation="select").observe(0.045)
 ```
+
+**IMPORTANT**: When adding new Prometheus metrics to `app/utils/metrics.py`, you must also update the Grafana dashboard at `docker/grafana/provisioning/dashboards/fastapi-metrics.json` to visualize the new metrics. This ensures monitoring dashboards stay in sync with available metrics.
