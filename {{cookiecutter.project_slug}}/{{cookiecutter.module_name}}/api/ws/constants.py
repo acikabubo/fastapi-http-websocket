@@ -47,6 +47,7 @@ class PkgID(IntEnum):
         ...     UPDATE_USER = 3
     """
 
-    # Test-only package ID used by the test suite
-    # You can remove this and add your own package IDs
+    # Test-only package IDs used by the test suite
+    # You can remove these and add your own package IDs
     TEST_HANDLER = 999
+    UNREGISTERED_HANDLER = 998  # Used to test handler-not-found scenario

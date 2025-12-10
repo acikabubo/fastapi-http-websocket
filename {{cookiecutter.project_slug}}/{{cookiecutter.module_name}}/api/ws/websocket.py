@@ -149,6 +149,9 @@ class PackageAuthWebSocketEndpoint(WebSocketEndpoint):
         # Generate unique connection ID
         self.connection_id = str(uuid.uuid4())
 
+        # TODO: Try to get original correlation id from header???
+        self.correlation_id = self.connection_id[:8]
+
         # Check connection limit
         connection_allowed = await connection_limiter.add_connection(
             user_id=self.user.username, connection_id=self.connection_id

@@ -11,8 +11,8 @@ from {{cookiecutter.module_name}}.logging import logger
 from {{cookiecutter.module_name}}.routing import pkg_router
 from {{cookiecutter.module_name}}.schemas.request import RequestModel
 from {{cookiecutter.module_name}}.settings import app_settings
-{% if cookiecutter.enable_audit_logging == "yes" %}from {{cookiecutter.module_name}}.utils.audit_logger import log_user_action
-{% endif %}from {{cookiecutter.module_name}}.utils.metrics import (
+from {{cookiecutter.module_name}}.utils.audit_logger import log_user_action
+from {{cookiecutter.module_name}}.utils.metrics import (
     ws_message_processing_duration_seconds,
     ws_messages_received_total,
     ws_messages_sent_total,
@@ -88,8 +88,8 @@ class Web(PackageAuthWebSocketEndpoint):
                 self.scope["user"], request
             )
             duration = time.time() - start_time
-{% if cookiecutter.enable_audit_logging == "yes" %}            duration_ms = int(duration * 1000)
-{% endif %}
+            duration_ms = int(duration * 1000)
+
             # Record processing duration
             ws_message_processing_duration_seconds.labels(
                 pkg_id=str(request.pkg_id)
@@ -98,7 +98,7 @@ class Web(PackageAuthWebSocketEndpoint):
             await websocket.send_response(response)
             ws_messages_sent_total.inc()
             logger.debug(f"Successfully sent response for {request.pkg_id}")
-{% if cookiecutter.enable_audit_logging == "yes" %}
+
             # Log successful WebSocket action
             await log_user_action(
                 user_id=self.user.id,
@@ -108,17 +108,17 @@ class Web(PackageAuthWebSocketEndpoint):
                 resource=f"WebSocket:{request.pkg_id.name}",
                 outcome="success" if response.status_code == 0 else "error",
                 ip_address=websocket.client.host if websocket.client else None,
-                request_id=request.req_id,
+                request_id=self.correlation_id,
                 request_data=request.data,
                 response_status=response.status_code,
                 duration_ms=duration_ms,
             )
-{% endif %}
+
         except ValidationError as e:
             logger.debug(
                 f"Received invalid data: {data} from user {self.user.username}"
             )
-{% if cookiecutter.enable_audit_logging == "yes" %}
+
             # Log validation error
             await log_user_action(
                 user_id=self.user.id,
@@ -128,7 +128,8 @@ class Web(PackageAuthWebSocketEndpoint):
                 resource="WebSocket",
                 outcome="error",
                 ip_address=websocket.client.host if websocket.client else None,
+                request_id=self.correlation_id,
                 error_message=f"Validation error: {str(e)}",
             )
-{% endif %}
+
             await websocket.close()

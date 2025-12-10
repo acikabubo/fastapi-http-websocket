@@ -29,6 +29,7 @@ class TestCorrelationIDMiddleware:
         # Create mock request without X-Correlation-ID header
         mock_request = MagicMock(spec=Request)
         mock_request.headers = {}
+        mock_request.state = MagicMock()
 
         # Create mock response
         mock_response = Response(content="test", status_code=200)
@@ -42,21 +43,21 @@ class TestCorrelationIDMiddleware:
 
         # Check that correlation ID was added to response headers
         assert "X-Correlation-ID" in response.headers
-        # Check that it's a valid UUID (36 characters with dashes)
+        # Check that it's limited to 8 characters
         cid = response.headers["X-Correlation-ID"]
-        assert len(cid) == 36
-        assert cid.count("-") == 4
+        assert len(cid) == 8
 
     @pytest.mark.asyncio
     async def test_middleware_uses_provided_correlation_id(self):
         """Test that middleware uses correlation ID from request header."""
         middleware = CorrelationIDMiddleware(app=MagicMock())
 
-        provided_cid = "test-correlation-id-12345"
+        provided_cid = "test-cor"  # 8 characters
 
         # Create mock request with X-Correlation-ID header
         mock_request = MagicMock(spec=Request)
         mock_request.headers = {"X-Correlation-ID": provided_cid}
+        mock_request.state = MagicMock()
 
         # Create mock response
         mock_response = Response(content="test", status_code=200)
@@ -76,11 +77,12 @@ class TestCorrelationIDMiddleware:
         """Test that middleware sets correlation ID in context variable."""
         middleware = CorrelationIDMiddleware(app=MagicMock())
 
-        provided_cid = "context-test-id"
+        provided_cid = "ctx-test"  # 8 characters
 
         # Create mock request
         mock_request = MagicMock(spec=Request)
         mock_request.headers = {"X-Correlation-ID": provided_cid}
+        mock_request.state = MagicMock()
 
         # Create mock response
         mock_response = Response(content="test", status_code=200)
@@ -96,8 +98,37 @@ class TestCorrelationIDMiddleware:
         # Call middleware
         await middleware.dispatch(mock_request, mock_call_next)
 
-        # Check that correlation ID was accessible in handler (shortened to 8 chars)
-        assert cid_in_handler == provided_cid[:8]
+        # Check that correlation ID was accessible in handler (8 chars)
+        assert cid_in_handler == provided_cid
+
+    @pytest.mark.asyncio
+    async def test_middleware_stores_in_request_state(self):
+        """Test that middleware stores correlation ID in request.state."""
+        middleware = CorrelationIDMiddleware(app=MagicMock())
+
+        provided_cid = "state-te"  # 8 characters
+
+        # Create mock request with state
+        mock_request = MagicMock(spec=Request)
+        mock_request.headers = {"X-Correlation-ID": provided_cid}
+        mock_request.state = MagicMock()
+
+        # Create mock response
+        mock_response = Response(content="test", status_code=200)
+
+        # Track request_id from state
+        request_id_in_state = None
+
+        async def mock_call_next(request):
+            nonlocal request_id_in_state
+            request_id_in_state = getattr(request.state, "request_id", None)
+            return mock_response
+
+        # Call middleware
+        await middleware.dispatch(mock_request, mock_call_next)
+
+        # Check that correlation ID was stored in request.state.request_id (8 chars)
+        assert request_id_in_state == provided_cid
 
 
 class TestGetCorrelationID:
@@ -135,11 +166,12 @@ class TestCorrelationIDInLogs:
         """Test that correlation ID is available throughout request context."""
         middleware = CorrelationIDMiddleware(app=MagicMock())
 
-        test_cid = "logging-test-id"
+        test_cid = "log-test"  # 8 characters
 
         # Create mock request
         mock_request = MagicMock(spec=Request)
         mock_request.headers = {"X-Correlation-ID": test_cid}
+        mock_request.state = MagicMock()
 
         # Create mock response
         mock_response = Response(content="test", status_code=200)
@@ -157,8 +189,8 @@ class TestCorrelationIDInLogs:
         # Call middleware
         await middleware.dispatch(mock_request, mock_call_next)
 
-        # Check that correlation ID was consistent throughout request (shortened to 8 chars)
-        assert all(cid == test_cid[:8] for cid in cids_during_request)
+        # Check that correlation ID was consistent throughout request (8 chars)
+        assert all(cid == test_cid for cid in cids_during_request)
         assert len(cids_during_request) == 2
 
 
@@ -170,16 +202,17 @@ class TestMiddlewareIntegration:
         """Test that correlation ID is preserved even when error occurs."""
         middleware = CorrelationIDMiddleware(app=MagicMock())
 
-        test_cid = "error-test-id"
+        test_cid = "err-test"  # 8 characters
 
         # Create mock request
         mock_request = MagicMock(spec=Request)
         mock_request.headers = {"X-Correlation-ID": test_cid}
+        mock_request.state = MagicMock()
 
         # Mock call_next that raises exception
         async def mock_call_next_error(request):
-            # Correlation ID should be available even before error (shortened to 8 chars)
-            assert get_correlation_id() == test_cid[:8]
+            # Correlation ID should be available even before error (8 chars)
+            assert get_correlation_id() == test_cid
             raise ValueError("Test error")
 
         # Call middleware and expect exception
@@ -194,10 +227,11 @@ class TestMiddlewareIntegration:
         """Test that correlation ID header is case-insensitive."""
         middleware = CorrelationIDMiddleware(app=MagicMock())
 
-        test_cid = "case-test-id"
+        test_cid = "case-tst"  # 8 characters
 
         # Create mock request with different case header
         mock_request = MagicMock(spec=Request)
+        mock_request.state = MagicMock()
         # Simulate case-insensitive header access
         mock_request.headers = MagicMock()
         mock_request.headers.get = MagicMock(return_value=test_cid)
@@ -213,3 +247,28 @@ class TestMiddlewareIntegration:
 
         # Check that correlation ID was used
         assert response.headers["X-Correlation-ID"] == test_cid
+
+    @pytest.mark.asyncio
+    async def test_correlation_id_truncates_long_ids(self):
+        """Test that long correlation IDs are truncated to 8 characters."""
+        middleware = CorrelationIDMiddleware(app=MagicMock())
+
+        long_cid = "this-is-a-very-long-correlation-id-123456"
+
+        # Create mock request with long correlation ID
+        mock_request = MagicMock(spec=Request)
+        mock_request.headers = {"X-Correlation-ID": long_cid}
+        mock_request.state = MagicMock()
+
+        # Create mock response
+        mock_response = Response(content="test", status_code=200)
+
+        async def mock_call_next(request):
+            return mock_response
+
+        # Call middleware
+        response = await middleware.dispatch(mock_request, mock_call_next)
+
+        # Check that correlation ID was truncated to 8 characters
+        assert response.headers["X-Correlation-ID"] == long_cid[:8]
+        assert len(response.headers["X-Correlation-ID"]) == 8
