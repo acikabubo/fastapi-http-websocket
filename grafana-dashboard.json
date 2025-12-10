@@ -104,6 +104,73 @@
             "instant": true
           }
         ]
+      },
+      {
+        "id": 9,
+        "title": "Redis Connection Pool - Max Connections",
+        "type": "graph",
+        "gridPos": {"x": 0, "y": 32, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "redis_pool_max_connections",
+            "legendFormat": "DB {{db}} - Max Connections"
+          }
+        ],
+        "yaxes": [
+          {
+            "format": "short",
+            "label": "Connections"
+          }
+        ]
+      },
+      {
+        "id": 10,
+        "title": "Redis Pool Configuration",
+        "type": "table",
+        "gridPos": {"x": 12, "y": 32, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "redis_pool_info",
+            "format": "table",
+            "instant": true
+          }
+        ],
+        "transformations": [
+          {
+            "id": "labelsToFields",
+            "options": {}
+          }
+        ]
+      },
+      {
+        "id": 11,
+        "title": "Redis Operation Rate",
+        "type": "graph",
+        "gridPos": {"x": 0, "y": 40, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "rate(redis_operations_total[5m])",
+            "legendFormat": "{{operation}} - {{status}}"
+          }
+        ]
+      },
+      {
+        "id": 12,
+        "title": "Redis Operation Duration (95th percentile)",
+        "type": "graph",
+        "gridPos": {"x": 12, "y": 40, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(redis_operation_duration_seconds_bucket[5m]))",
+            "legendFormat": "{{operation}} - p95"
+          }
+        ],
+        "yaxes": [
+          {
+            "format": "s",
+            "label": "Duration"
+          }
+        ]
       }
     ],
     "refresh": "10s",
