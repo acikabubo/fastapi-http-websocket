@@ -164,4 +164,28 @@ audit_log_errors_total = Counter(
     "Total audit log creation errors",
     ["error_type"],
 )
+
+audit_queue_size = Gauge(
+    "audit_queue_size",
+    "Number of audit logs waiting to be written to database",
+    [],
+)
+
+audit_logs_written_total = Counter(
+    "audit_logs_written_total",
+    "Total number of audit logs written to database",
+    [],
+)
+
+audit_logs_dropped_total = Counter(
+    "audit_logs_dropped_total",
+    "Total number of audit logs dropped due to queue full",
+    [],
+)
+
+audit_batch_size = Histogram(
+    "audit_batch_size",
+    "Size of audit log batches written to database",
+    buckets=(1, 10, 25, 50, 100, 250, 500),
+)
 {% endif %}

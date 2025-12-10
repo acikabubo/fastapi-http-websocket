@@ -96,6 +96,9 @@ class Settings(BaseSettings):
     # Audit logging settings
     AUDIT_LOG_ENABLED: bool = True
     AUDIT_LOG_RETENTION_DAYS: int = 365
+    AUDIT_QUEUE_MAX_SIZE: int = 10000
+    AUDIT_BATCH_SIZE: int = 100
+    AUDIT_BATCH_TIMEOUT: float = 1.0
 {% endif %}
 
 app_settings = Settings()

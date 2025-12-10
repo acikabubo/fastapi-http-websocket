@@ -41,7 +41,13 @@ def startup():
         logger.info("Application startup initiated")
         tasks.append(create_task(kc_user_session_task()))
         logger.info("Created task for user session")
+{% if cookiecutter.enable_audit_logging == "yes" %}
+        # Start audit log background worker
+        from {{cookiecutter.module_name}}.utils.audit_logger import audit_log_worker
 
+        tasks.append(create_task(audit_log_worker()))
+        logger.info("Started audit log background worker")
+{% endif %}
         # Initialize app info metric
         import sys
 
@@ -67,14 +73,25 @@ def shutdown():
         Asynchronous shutdown wrapper that performs graceful cleanup.
 
         Cleanup order:
-        1. Close Redis connection pools
-        2. Cancel and wait for background tasks
+        1. Flush remaining audit logs
+        2. Close Redis connection pools
+        3. Cancel and wait for background tasks
 
         Uses gather() with return_exceptions=True to handle CancelledError
         exceptions gracefully during the cancellation process.
         """
         logger.info("Application shutdown initiated")
+{% if cookiecutter.enable_audit_logging == "yes" %}
+        # Flush remaining audit logs
+        try:
+            from {{cookiecutter.module_name}}.utils.audit_logger import flush_audit_queue
 
+            flushed_count = await flush_audit_queue()
+            if flushed_count > 0:
+                logger.info(f"Flushed {flushed_count} audit logs during shutdown")
+        except Exception as ex:
+            logger.error(f"Error flushing audit logs: {ex}")
+{% endif %}
         # Close Redis connection pools
         try:
             from {{cookiecutter.module_name}}.storage.redis import RedisPool
