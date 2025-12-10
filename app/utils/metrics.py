@@ -142,6 +142,18 @@ redis_operation_duration_seconds = _get_or_create_histogram(
     buckets=(0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5),
 )
 
+redis_pool_max_connections = _get_or_create_gauge(
+    "redis_pool_max_connections",
+    "Maximum number of connections allowed in Redis pool",
+    ["db"],
+)
+
+redis_pool_info = _get_or_create_gauge(
+    "redis_pool_info",
+    "Redis connection pool configuration info",
+    ["db", "host", "port", "socket_timeout", "connect_timeout", "health_check_interval"],
+)
+
 # Rate Limiting Metrics
 rate_limit_hits_total = _get_or_create_counter(
     "rate_limit_hits_total",

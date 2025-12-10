@@ -62,13 +62,26 @@ def shutdown():
 
     async def wrapper():
         """
-        Asynchronous shutdown wrapper that cancels and waits for background tasks.
+        Asynchronous shutdown wrapper that performs graceful cleanup.
 
-        Cancels all running background tasks and waits for them to complete their
-        cleanup. Uses gather() with return_exceptions=True to handle CancelledError
+        Cleanup order:
+        1. Close Redis connection pools
+        2. Cancel and wait for background tasks
+
+        Uses gather() with return_exceptions=True to handle CancelledError
         exceptions gracefully during the cancellation process.
         """
         logger.info("Application shutdown initiated")
+
+        # Close Redis connection pools
+        try:
+            from app.storage.redis import RedisPool
+
+            await RedisPool.close_all()
+        except Exception as ex:
+            logger.error(f"Error closing Redis connection pools: {ex}")
+
+        # Cancel background tasks
         if tasks:
             logger.info(f"Cancelling {len(tasks)} background tasks")
             for task in tasks:
@@ -76,6 +89,8 @@ def shutdown():
             logger.info("Waiting for background tasks to complete cleanup")
             await gather(*tasks, return_exceptions=True)
             logger.info("All background tasks completed")
+
+        logger.info("Application shutdown complete")
 
     return wrapper
 
