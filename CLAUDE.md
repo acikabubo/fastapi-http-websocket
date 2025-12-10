@@ -8,6 +8,33 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 When working on GitHub issues, follow this workflow:
 
+#### Step 0: Review Issue Context (REQUIRED BEFORE STARTING)
+
+**CRITICAL**: Before making any changes, you MUST review the issue against the current codebase:
+
+1. **Read the issue carefully** - Understand what's being requested
+2. **Search/explore affected files** - Use Glob/Grep/Read to understand current implementation
+3. **Check for recent changes** - Review git history to see if issue was already addressed:
+   ```bash
+   git log --oneline --all --grep="<issue_keyword>" -10
+   git log --oneline -- path/to/relevant/file.py -5
+   ```
+4. **Verify current architecture** - Patterns may have evolved since issue was created:
+   - Check if RBAC uses `actions.json` or decorator-based `roles` parameter
+   - Verify error handling approach (unified vs individual)
+   - Check middleware stack and configuration
+   - Look for refactored or renamed components
+5. **Identify dependencies** - Find related functionality that might be affected
+6. **Ask clarifying questions** - If issue is outdated or conflicts with current code
+
+**Why this matters:**
+- Prevents working on already-fixed issues
+- Avoids using outdated patterns or assumptions
+- Ensures compatibility with recent architectural changes
+- Saves time by understanding context first
+
+#### Steps 1-7: Implementation and Deployment
+
 1. **Fix the issue** - Make the necessary code changes
 2. **Sync to worktree** - If changes affect `app/` or `tests/`, replicate to `.worktree/` template
 3. **Commit to develop** - Commit changes to the `develop` branch with descriptive message including "Fixes #<issue_number>"
@@ -27,6 +54,60 @@ When working on GitHub issues, follow this workflow:
 - **Exception**: Do NOT sync `CLAUDE.md` between main project and worktree (they have different purposes)
 
 This ensures new projects generated from the cookiecutter template include all bug fixes and improvements.
+
+#### Cookiecutter Placeholder Requirements
+
+**CRITICAL**: When syncing files to `.worktree/`, you MUST replace project-specific references with cookiecutter placeholders:
+
+1. **Import statements** - Replace `app.` with `{{cookiecutter.module_name}}.`:
+   ```python
+   # Main project
+   from app.api.ws.websocket import PackageAuthWebSocketEndpoint
+
+   # Worktree template
+   from {{cookiecutter.module_name}}.api.ws.websocket import PackageAuthWebSocketEndpoint
+   ```
+
+2. **Test patch paths** - Use cookiecutter placeholders in mock paths:
+   ```python
+   # Main project
+   with patch("app.api.ws.consumers.web.rate_limiter") as mock:
+
+   # Worktree template
+   with patch("{{cookiecutter.module_name}}.api.ws.consumers.web.rate_limiter") as mock:
+   ```
+
+3. **Project-specific code** - Replace with generic template equivalents:
+   ```python
+   # Main project uses Author model
+   PkgID.GET_AUTHORS
+   from app.repositories.author_repository import AuthorRepository
+
+   # Worktree template uses generic test handler
+   PkgID.TEST_HANDLER
+   # No project-specific repository imports
+   ```
+
+4. **API method calls** - Template may use different method names:
+   ```python
+   # Main project (current)
+   ResponseModel.success(pkg_id, req_id, data={})
+
+   # Worktree template (if different)
+   ResponseModel.ok_msg(pkg_id, req_id, data={})
+   ```
+
+5. **Configuration patterns** - Template may have evolved (check before syncing):
+   - RBAC: `actions.json` → `roles` parameter in decorator
+   - Error handling: Check for unified patterns
+   - Middleware: Verify middleware stack matches template
+
+**Verification Steps:**
+- Use `sed` or similar to replace all `"app\.` with `"{{cookiecutter.module_name}}.`
+- Search for hardcoded project names (e.g., "Author", "Book")
+- Verify enum values match template (e.g., `PkgID.TEST_HANDLER`)
+- Check that method signatures match template's current implementation
+- Test generated project after syncing to ensure it works
 
 ### Git Commit Guidelines
 
