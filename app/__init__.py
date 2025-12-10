@@ -40,6 +40,12 @@ def startup():
         tasks.append(create_task(kc_user_session_task()))
         logger.info("Created task for user session")
 
+        # Start audit log background worker
+        from app.utils.audit_logger import audit_log_worker
+
+        tasks.append(create_task(audit_log_worker()))
+        logger.info("Started audit log background worker")
+
         # Initialize app info metric
         import sys
 
@@ -65,13 +71,24 @@ def shutdown():
         Asynchronous shutdown wrapper that performs graceful cleanup.
 
         Cleanup order:
-        1. Close Redis connection pools
-        2. Cancel and wait for background tasks
+        1. Flush remaining audit logs
+        2. Close Redis connection pools
+        3. Cancel and wait for background tasks
 
         Uses gather() with return_exceptions=True to handle CancelledError
         exceptions gracefully during the cancellation process.
         """
         logger.info("Application shutdown initiated")
+
+        # Flush remaining audit logs
+        try:
+            from app.utils.audit_logger import flush_audit_queue
+
+            flushed_count = await flush_audit_queue()
+            if flushed_count > 0:
+                logger.info(f"Flushed {flushed_count} audit logs during shutdown")
+        except Exception as ex:
+            logger.error(f"Error flushing audit logs: {ex}")
 
         # Close Redis connection pools
         try:
