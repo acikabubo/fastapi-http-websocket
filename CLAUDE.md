@@ -417,11 +417,36 @@ Helper methods:
 
 ### Configuration
 
-Environment variables in `app/settings.py` (loaded via pydantic-settings):
+**Constants Module (`app/constants.py`)**
+
+Application-wide constants are defined in `app/constants.py` to eliminate magic numbers and improve code clarity. Constants are organized by category:
+
+- **Audit Logging**: `AUDIT_QUEUE_MAX_SIZE`, `AUDIT_BATCH_SIZE`, `AUDIT_BATCH_TIMEOUT_SECONDS`
+- **Database**: `DB_MAX_RETRIES`, `DB_RETRY_DELAY_SECONDS`, `DEFAULT_PAGE_SIZE`, `MAX_PAGE_SIZE`
+- **Redis**: `REDIS_DEFAULT_PORT`, `REDIS_SOCKET_TIMEOUT_SECONDS`, `REDIS_CONNECT_TIMEOUT_SECONDS`, `REDIS_HEALTH_CHECK_INTERVAL_SECONDS`, `REDIS_MAX_CONNECTIONS`, `REDIS_MESSAGE_TIMEOUT_SECONDS`
+- **Background Tasks**: `TASK_SLEEP_INTERVAL_SECONDS`, `TASK_ERROR_BACKOFF_SECONDS`
+- **Rate Limiting**: `DEFAULT_RATE_LIMIT_PER_MINUTE`, `DEFAULT_RATE_LIMIT_BURST`, `DEFAULT_WS_MAX_CONNECTIONS_PER_USER`, `DEFAULT_WS_MESSAGE_RATE_LIMIT`
+- **WebSocket**: `WS_POLICY_VIOLATION_CODE`, `WS_CLOSE_TIMEOUT_SECONDS`
+- **Keycloak/Auth**: `KC_SESSION_EXPIRY_BUFFER_SECONDS`
+
+**Settings (`app/settings.py`)**
+
+Environment variables in `app/settings.py` (loaded via pydantic-settings) use constants as defaults:
 - `KEYCLOAK_REALM`, `KEYCLOAK_CLIENT_ID`, `KEYCLOAK_BASE_URL`
 - `KEYCLOAK_ADMIN_USERNAME`, `KEYCLOAK_ADMIN_PASSWORD`
-- `REDIS_IP`, `MAIN_REDIS_DB`, `AUTH_REDIS_DB`
+- `REDIS_IP`, `REDIS_PORT` (default: `REDIS_DEFAULT_PORT`)
+- `REDIS_MAX_CONNECTIONS` (default: `REDIS_MAX_CONNECTIONS`)
+- `MAIN_REDIS_DB`, `AUTH_REDIS_DB`
+- `RATE_LIMIT_PER_MINUTE` (default: `DEFAULT_RATE_LIMIT_PER_MINUTE`)
+- `WS_MAX_CONNECTIONS_PER_USER` (default: `DEFAULT_WS_MAX_CONNECTIONS_PER_USER`)
+- `AUDIT_QUEUE_MAX_SIZE` (default: `AUDIT_QUEUE_MAX_SIZE`)
 - `ACTIONS_FILE_PATH` (default: `actions.json`)
+
+**Adding New Constants:**
+1. Add to appropriate category in `app/constants.py`
+2. Use descriptive name indicating purpose and units (e.g., `_SECONDS`, `_SIZE`)
+3. Add docstring comment explaining the constant's purpose
+4. If configurable, add to Settings with constant as default value
 
 ### Pre-commit Hooks
 
