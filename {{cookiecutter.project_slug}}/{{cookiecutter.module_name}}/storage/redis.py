@@ -5,6 +5,7 @@ from json import loads
 
 from redis.asyncio import ConnectionPool, Redis
 
+from {{cookiecutter.module_name}}.constants import KC_SESSION_EXPIRY_BUFFER_SECONDS
 from {{cookiecutter.module_name}}.logging import logger
 from {{cookiecutter.module_name}}.schemas.user import UserModel
 from {{cookiecutter.module_name}}.settings import app_settings
@@ -149,7 +150,10 @@ class RedisPool:
             app_settings.USER_SESSION_REDIS_KEY_PREFIX + user.username
         )
         await r.set(user_session_key, 1)
-        await r.pexpire(user_session_key, (user.expired_seconds + 10) * 1000)
+        await r.pexpire(
+            user_session_key,
+            (user.expired_seconds + KC_SESSION_EXPIRY_BUFFER_SECONDS) * 1000,
+        )
         logger.debug(f"Added user session in redis for: {user.username}")
 
 

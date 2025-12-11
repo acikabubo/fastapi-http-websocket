@@ -12,6 +12,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlmodel import func, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from {{cookiecutter.module_name}}.constants import DB_MAX_RETRIES, DB_RETRY_DELAY_SECONDS, DEFAULT_PAGE_SIZE
 from {{cookiecutter.module_name}}.logging import logger
 from {{cookiecutter.module_name}}.schemas.generic_typing import GenericSQLModelType
 from {{cookiecutter.module_name}}.schemas.response import MetadataModel
@@ -82,7 +83,7 @@ async def get_session() -> AsyncSession:
 async def get_paginated_results(
     model: Type[GenericSQLModelType],
     page: int = 1,
-    per_page: int = 20,
+    per_page: int = DEFAULT_PAGE_SIZE,
     *,
     filters: dict[str, Any] | None = None,
     apply_filters: (

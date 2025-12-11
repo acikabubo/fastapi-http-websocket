@@ -4,6 +4,24 @@ import re
 from pydantic import SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from {{cookiecutter.module_name}}.constants import (
+{% if cookiecutter.enable_audit_logging == "yes" %}    AUDIT_BATCH_SIZE,
+    AUDIT_BATCH_TIMEOUT_SECONDS,
+    AUDIT_QUEUE_MAX_SIZE,
+{% endif %}    DB_MAX_RETRIES,
+    DB_RETRY_DELAY_SECONDS,
+    DEFAULT_PAGE_SIZE,
+    DEFAULT_RATE_LIMIT_BURST,
+    DEFAULT_RATE_LIMIT_PER_MINUTE,
+    DEFAULT_WS_MAX_CONNECTIONS_PER_USER,
+    DEFAULT_WS_MESSAGE_RATE_LIMIT,
+    REDIS_CONNECT_TIMEOUT_SECONDS,
+    REDIS_DEFAULT_PORT,
+    REDIS_HEALTH_CHECK_INTERVAL_SECONDS,
+    REDIS_MAX_CONNECTIONS,
+    REDIS_SOCKET_TIMEOUT_SECONDS,
+)
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(case_sensitive=True)
@@ -21,17 +39,17 @@ class Settings(BaseSettings):
 
     # Redis settings
     REDIS_IP: str = "localhost"
-    REDIS_PORT: int = 6379
+    REDIS_PORT: int = REDIS_DEFAULT_PORT
 
     USER_SESSION_REDIS_KEY_PREFIX: str = "session:"
     MAIN_REDIS_DB: int = 1
     AUTH_REDIS_DB: int = 10
 
     # Redis connection pool settings
-    REDIS_MAX_CONNECTIONS: int = 50
-    REDIS_SOCKET_TIMEOUT: int = 5
-    REDIS_CONNECT_TIMEOUT: int = 5
-    REDIS_HEALTH_CHECK_INTERVAL: int = 30
+    REDIS_MAX_CONNECTIONS: int = REDIS_MAX_CONNECTIONS
+    REDIS_SOCKET_TIMEOUT: int = REDIS_SOCKET_TIMEOUT_SECONDS
+    REDIS_CONNECT_TIMEOUT: int = REDIS_CONNECT_TIMEOUT_SECONDS
+    REDIS_HEALTH_CHECK_INTERVAL: int = REDIS_HEALTH_CHECK_INTERVAL_SECONDS
     REDIS_RETRY_ON_TIMEOUT: bool = True
 
     # Database settings (credentials MUST be provided via environment)
@@ -73,20 +91,20 @@ class Settings(BaseSettings):
         return v
 
     # Database initialization settings
-    DB_INIT_RETRY_INTERVAL: int = 2
-    DB_INIT_MAX_RETRIES: int = 10
+    DB_INIT_RETRY_INTERVAL: int = DB_RETRY_DELAY_SECONDS
+    DB_INIT_MAX_RETRIES: int = DB_MAX_RETRIES
 
     # Pagination defaults
-    DEFAULT_PAGE_SIZE: int = 20
+    DEFAULT_PAGE_SIZE: int = DEFAULT_PAGE_SIZE
 
     # Rate limiting settings
     RATE_LIMIT_ENABLED: bool = True
-    RATE_LIMIT_PER_MINUTE: int = 60
-    RATE_LIMIT_BURST: int = 10
+    RATE_LIMIT_PER_MINUTE: int = DEFAULT_RATE_LIMIT_PER_MINUTE
+    RATE_LIMIT_BURST: int = DEFAULT_RATE_LIMIT_BURST
 
     # WebSocket rate limiting settings
-    WS_MAX_CONNECTIONS_PER_USER: int = 5
-    WS_MESSAGE_RATE_LIMIT: int = 100  # messages per minute
+    WS_MAX_CONNECTIONS_PER_USER: int = DEFAULT_WS_MAX_CONNECTIONS_PER_USER
+    WS_MESSAGE_RATE_LIMIT: int = DEFAULT_WS_MESSAGE_RATE_LIMIT  # messages per minute
 
     # Logging settings
     LOG_FILE_PATH: str = "logs/logging_errors.log"
@@ -96,9 +114,9 @@ class Settings(BaseSettings):
     # Audit logging settings
     AUDIT_LOG_ENABLED: bool = True
     AUDIT_LOG_RETENTION_DAYS: int = 365
-    AUDIT_QUEUE_MAX_SIZE: int = 10000
-    AUDIT_BATCH_SIZE: int = 100
-    AUDIT_BATCH_TIMEOUT: float = 1.0
+    AUDIT_QUEUE_MAX_SIZE: int = AUDIT_QUEUE_MAX_SIZE
+    AUDIT_BATCH_SIZE: int = AUDIT_BATCH_SIZE
+    AUDIT_BATCH_TIMEOUT: float = AUDIT_BATCH_TIMEOUT_SECONDS
 {% endif %}
 
 app_settings = Settings()

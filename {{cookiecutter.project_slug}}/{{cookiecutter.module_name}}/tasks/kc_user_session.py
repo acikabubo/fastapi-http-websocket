@@ -1,6 +1,7 @@
 from asyncio import CancelledError, TimeoutError, sleep
 
 from {{cookiecutter.module_name}}.connection_registry import ws_clients
+from {{cookiecutter.module_name}}.constants import REDIS_MESSAGE_TIMEOUT_SECONDS, TASK_SLEEP_INTERVAL_SECONDS
 from {{cookiecutter.module_name}}.logging import logger
 from {{cookiecutter.module_name}}.settings import app_settings
 from {{cookiecutter.module_name}}.storage.redis import get_auth_redis_connection
@@ -27,11 +28,12 @@ async def kc_user_session_task():
                 await rch.psubscribe("__keyevent@*__:expired")
 
             event = await rch.get_message(
-                ignore_subscribe_messages=True, timeout=1
+                ignore_subscribe_messages=True,
+                timeout=REDIS_MESSAGE_TIMEOUT_SECONDS,
             )
 
             if not event:
-                await sleep(0.5)
+                await sleep(TASK_SLEEP_INTERVAL_SECONDS)
                 continue
 
             evt_key = event["data"]
@@ -39,7 +41,7 @@ async def kc_user_session_task():
             if not evt_key.startswith(
                 app_settings.USER_SESSION_REDIS_KEY_PREFIX
             ):
-                await sleep(1)
+                await sleep(TASK_SLEEP_INTERVAL_SECONDS)
                 continue
 
             # Close websocket connection and delete user
@@ -50,18 +52,18 @@ async def kc_user_session_task():
 
             logger.info(f'Session for user "{evt_key}" has been expired')
 
-            await sleep(1)
+            await sleep(TASK_SLEEP_INTERVAL_SECONDS)
 
         except CancelledError:
             logger.info("Task for keycloak user session cancelled!")
             break
 
         except TimeoutError:
-            await sleep(0.1)
+            await sleep(TASK_SLEEP_INTERVAL_SECONDS)
 
         except Exception as ex:
             logger.error(
                 f"Keycloak user session task error occurred with: {ex}"
             )
             rch = None
-            await sleep(0.5)
+            await sleep(TASK_SLEEP_INTERVAL_SECONDS)
