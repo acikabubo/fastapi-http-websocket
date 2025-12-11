@@ -466,6 +466,91 @@ All commits must pass:
 - **Formatting**: Double quotes, 4-space indentation
 - **Unused code**: Will be caught by vulture (see `pyproject.toml` for ignored names)
 
+### Type Safety
+
+This project uses advanced typing features for improved type safety and IDE support:
+
+#### Protocol Classes (`app/protocols.py`)
+
+Protocols define interfaces without requiring inheritance:
+
+```python
+from app.protocols import Repository
+from app.models.author import Author
+
+def process_data(repo: Repository[Author]) -> None:
+    # Works with any repository implementation
+    author = await repo.get_by_id(1)
+```
+
+#### Domain-Specific Types (`app/types.py`)
+
+NewType prevents mixing different ID types:
+
+```python
+from app.types import UserId, Username, RequestId
+
+def get_user(user_id: UserId) -> User:  # Type-safe IDs
+    ...
+
+def log_action(username: Username, request_id: RequestId):
+    ...  # Can't accidentally swap these
+```
+
+Literal types for string constants:
+
+```python
+from app.types import AuditOutcome, ActionType
+
+def log_audit(outcome: AuditOutcome):  # Only "success", "error", "permission_denied"
+    ...
+```
+
+#### TypedDict for Structured Dicts (`app/schemas/types.py`)
+
+Use TypedDict instead of bare `dict`:
+
+```python
+from app.schemas.types import PaginationParams, FilterDict
+
+def get_paginated(params: PaginationParams) -> list[Model]:
+    page = params["page"]  # Type-safe dictionary access
+    filters = params.get("filters", {})
+    ...
+```
+
+#### Type Annotation Best Practices
+
+**Required:**
+- ✅ All functions must have return type annotations
+- ✅ Use `dict[str, Any]` instead of bare `dict`
+- ✅ Use `list[Model]` instead of bare `list`
+- ✅ Middleware `dispatch` methods must type `call_next: ASGIApp`
+- ✅ Redis connection functions return `Redis | None`
+
+**Examples:**
+```python
+# Good
+async def get_connection(db: int = 1) -> Redis | None:
+    ...
+
+def process_data(filters: dict[str, Any]) -> list[Author]:
+    ...
+
+async def dispatch(self, request: Request, call_next: ASGIApp) -> Response:
+    ...
+
+# Bad
+async def get_connection(db=1):  # ❌ No return type
+    ...
+
+def process_data(filters: dict):  # ❌ Generic dict
+    ...
+
+async def dispatch(self, request: Request, call_next):  # ❌ Missing type
+    ...
+```
+
 ### Database Session Management
 
 **IMPORTANT**: Model methods should accept database sessions as parameters rather than creating their own sessions. This enables:

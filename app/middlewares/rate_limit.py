@@ -35,7 +35,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         self.burst_limit = app_settings.RATE_LIMIT_BURST
 
     async def dispatch(
-        self, request: Request, call_next
+        self, request: Request, call_next: ASGIApp
     ) -> Response:
         """
         Process the request and enforce rate limits.
