@@ -34,7 +34,7 @@ class AuditMiddleware(BaseHTTPMiddleware):
         super().__init__(app)
         self.enabled = app_settings.AUDIT_LOG_ENABLED
 
-    async def dispatch(self, request: Request, call_next) -> Response:
+    async def dispatch(self, request: Request, call_next: ASGIApp) -> Response:
         """
         Process the request and log it to the audit log.
 

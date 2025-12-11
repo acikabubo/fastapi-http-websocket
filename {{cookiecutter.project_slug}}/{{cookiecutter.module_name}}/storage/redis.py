@@ -2,11 +2,13 @@ import asyncio
 import logging
 from functools import partial
 from json import loads
+from typing import Any, Callable
 
 from redis.asyncio import ConnectionPool, Redis
 
 from {{cookiecutter.module_name}}.constants import KC_SESSION_EXPIRY_BUFFER_SECONDS
 from {{cookiecutter.module_name}}.logging import logger
+from {{cookiecutter.module_name}}.schemas.types import RedisPoolStats
 from {{cookiecutter.module_name}}.schemas.user import UserModel
 from {{cookiecutter.module_name}}.settings import app_settings
 from {{cookiecutter.module_name}}.utils.singleton import SingletonMeta
@@ -20,11 +22,11 @@ class RedisPool:
     Each database gets its own connection pool with configurable settings.
     """
 
-    __instances = {}
-    __pools = {}  # Store pools for metrics and shutdown
+    __instances: dict[int, Redis] = {}
+    __pools: dict[int, ConnectionPool] = {}  # Store pools for metrics and shutdown
 
     @classmethod
-    async def get_instance(cls, db=1):
+    async def get_instance(cls, db: int = 1) -> Redis:
         """
         Get or create a Redis instance for the specified database.
 
@@ -39,7 +41,7 @@ class RedisPool:
         return cls.__instances[db]
 
     @classmethod
-    async def _create_instance(cls, db):
+    async def _create_instance(cls, db: int) -> Redis:
         """
         Create a new Redis instance with connection pool.
 
@@ -87,7 +89,7 @@ class RedisPool:
         return redis_instance
 
     @classmethod
-    async def close_all(cls):
+    async def close_all(cls) -> None:
         """
         Close all Redis connection pools gracefully.
 
@@ -107,7 +109,7 @@ class RedisPool:
         logger.info("All Redis connection pools closed")
 
     @classmethod
-    def get_pool_stats(cls, db: int | None = None) -> dict:
+    def get_pool_stats(cls, db: int | None = None) -> dict[str, Any]:
         """
         Get connection pool statistics for monitoring.
 
@@ -145,7 +147,7 @@ class RedisPool:
         }
 
     @staticmethod
-    async def add_kc_user_session(r: Redis, user: UserModel):
+    async def add_kc_user_session(r: Redis, user: UserModel) -> None:
         user_session_key = (
             app_settings.USER_SESSION_REDIS_KEY_PREFIX + user.username
         )
@@ -157,14 +159,14 @@ class RedisPool:
         logger.debug(f"Added user session in redis for: {user.username}")
 
 
-async def get_redis_connection(db=app_settings.MAIN_REDIS_DB):
+async def get_redis_connection(db: int = app_settings.MAIN_REDIS_DB) -> Redis | None:
     try:
         return await RedisPool.get_instance(db)
     except Exception as ex:
         logger.error(f"Error getting Redis connection: {ex}")
 
 
-async def get_auth_redis_connection():
+async def get_auth_redis_connection() -> Redis | None:
     return await get_redis_connection(db=app_settings.AUTH_REDIS_DB)
 
 
@@ -176,20 +178,20 @@ class REventHandler:
     """
 
     @staticmethod
-    def get_logger():
+    def get_logger() -> logging.Logger:
         return logging.getLogger(REventHandler.__name__)
 
-    def __init__(self, redis, channel):
+    def __init__(self, redis: Redis, channel: str) -> None:
         self.channel = channel
         self.redis = redis
-        self.rch = None
-        self.callbacks = []
+        self.rch: Any = None
+        self.callbacks: list[tuple[Callable, dict[str, Any]]] = []
 
-    def add_callback(self, callback):
+    def add_callback(self, callback: tuple[Callable, dict[str, Any]]) -> None:
         if callback not in self.callbacks:
             self.callbacks.append(callback)
 
-    async def handle(self, ch_name, data):
+    async def handle(self, ch_name: str, data: str) -> None:
         for callback, kw in self.callbacks:
             try:
                 await callback(ch_name, loads(data), **kw)
@@ -197,7 +199,7 @@ class REventHandler:
                 self.get_logger().error(f"Callback {callback} failed: {ex}")
                 break
 
-    async def loop(self):
+    async def loop(self) -> None:
         self.get_logger().info(f"Started REventHandler for {self.channel}")
         while True:
             try:
@@ -230,15 +232,17 @@ class RedisHandler(object):
     subscribing to and processing messages from Redis channels.
     """
 
-    event_handlers = {}
-    tasks = []
+    event_handlers: dict[str, REventHandler] = {}
+    tasks: list[asyncio.Task[None]] = []
 
-    async def subscribe(self, channel, callback, **kwargs):
+    async def subscribe(self, channel: str, callback: Callable, **kwargs: Any) -> None:
         if not asyncio.iscoroutinefunction(callback):
             raise ValueError("Callback argument must be a coroutine")
 
         if channel not in self.event_handlers:
             redis = await get_redis_connection()
+            if redis is None:
+                raise RuntimeError("Failed to get Redis connection")
             handler = REventHandler(redis, channel)
 
             self.event_handlers[channel] = handler

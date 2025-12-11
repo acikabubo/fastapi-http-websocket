@@ -11,6 +11,7 @@ from contextvars import ContextVar
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
+from starlette.types import ASGIApp
 
 # Context variable for storing correlation ID per request
 correlation_id: ContextVar[str] = ContextVar("correlation_id", default="")
@@ -32,7 +33,7 @@ class CorrelationIDMiddleware(BaseHTTPMiddleware):
         cid = get_correlation_id()
     """
 
-    async def dispatch(self, request: Request, call_next) -> Response:
+    async def dispatch(self, request: Request, call_next: ASGIApp) -> Response:
         """
         Process request and add correlation ID.
 
