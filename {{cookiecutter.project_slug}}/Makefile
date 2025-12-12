@@ -1,5 +1,5 @@
 SHELL := /bin/bash
-.PHONY: build start stop shell serve test ws-handlers new-ws-handlers code-docs ipython ruff-check bandit-scan skjold-scan dead-code-scan outdated-pkgs-scan
+.PHONY: build start stop shell serve test ws-handlers new-ws-handlers code-docs ipython ruff-check bandit-scan skjold-scan dead-code-scan outdated-pkgs-scan migrate migration rollback migration-history migration-current migration-stamp test-migrations
 
 ifeq ($(shell uname), Darwin)
 export UID=1000
@@ -66,3 +66,34 @@ dead-code-scan:
 outdated-pkgs-scan:
 	@echo "Scanning for outdated python packages!"
 	@python /{{cookiecutter.project_slug}}/scripts/scan_for_outdated_pkgs.py
+
+# Database migration commands
+migrate:
+	@echo "Applying database migrations..."
+	@uv run alembic upgrade head
+
+migration:
+	@test -n "$(msg)" || (echo "Usage: make migration msg='description'"; exit 1)
+	@echo "Generating new migration: $(msg)"
+	@uv run alembic revision --autogenerate -m "$(msg)"
+
+rollback:
+	@echo "Rolling back last migration..."
+	@uv run alembic downgrade -1
+
+migration-history:
+	@echo "Migration history:"
+	@uv run alembic history --verbose
+
+migration-current:
+	@echo "Current migration version:"
+	@uv run alembic current
+
+migration-stamp:
+	@test -n "$(rev)" || (echo "Usage: make migration-stamp rev='revision_id'"; exit 1)
+	@echo "Stamping database at revision: $(rev)"
+	@uv run alembic stamp $(rev)
+
+test-migrations:
+	@echo "Testing database migrations (upgrade/downgrade)..."
+	@uv run python scripts/test_migrations.py
