@@ -69,6 +69,10 @@ class TestMigrationStructure:
         """Test there are no conflicting migration branches."""
         heads = alembic_script.get_heads()
 
+        # Skip test if no migrations exist yet (fresh template)
+        if not heads:
+            pytest.skip("No migrations found - skipping for fresh template")
+
         assert len(heads) == 1, (
             f"Multiple migration heads found: {heads}. "
             "Merge migrations to create single head."
