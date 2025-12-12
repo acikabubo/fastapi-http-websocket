@@ -626,6 +626,96 @@ async def my_handler(request: RequestModel) -> ResponseModel:
         )
 ```
 
+### Async Relationships with AsyncAttrs
+
+When SQLModel models have relationships (foreign keys, one-to-many, many-to-many), use the `BaseModel` class which includes SQLAlchemy's `AsyncAttrs` mixin for proper async relationship handling.
+
+**Base Model Pattern:**
+
+All table models that may have relationships should inherit from `BaseModel`:
+
+```python
+# app/models/base.py
+from sqlalchemy.ext.asyncio import AsyncAttrs
+from sqlmodel import SQLModel
+
+class BaseModel(SQLModel, AsyncAttrs):
+    """Base model with async relationship support."""
+    pass
+```
+
+**Model Definition:**
+
+```python
+# app/models/author.py
+from sqlmodel import Field, Relationship
+from app.models.base import BaseModel
+
+class Author(BaseModel, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+    name: str
+    books: list["Book"] = Relationship(back_populates="author")
+
+class Book(BaseModel, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+    title: str
+    author_id: int = Field(foreign_key="author.id")
+    author: Author = Relationship(back_populates="books")
+```
+
+**Accessing Relationships:**
+
+1. **Preferred: Eager Loading (Better Performance)**
+   ```python
+   from sqlalchemy.orm import selectinload
+
+   async with async_session() as session:
+       # Load author with all books in optimized queries
+       stmt = select(Author).options(selectinload(Author.books))
+       result = await session.execute(stmt)
+       author = result.scalar_one()
+
+       # Relationship already loaded, no await needed
+       books = author.books  # ✅ Already loaded!
+       for book in books:
+           print(book.title)
+   ```
+
+2. **Alternative: Lazy Loading with awaitable_attrs**
+   ```python
+   async with async_session() as session:
+       author = await session.get(Author, 1)
+
+       # Access lazy-loaded relationship asynchronously
+       books = await author.awaitable_attrs.books  # ✅ Awaitable
+       for book in books:
+           print(book.title)
+   ```
+
+3. **Single Query with JOIN (joinedload)**
+   ```python
+   from sqlalchemy.orm import joinedload
+
+   async with async_session() as session:
+       stmt = select(Author).options(joinedload(Author.books))
+       result = await session.execute(stmt)
+       author = result.scalar_one()
+
+       # Single query with JOIN, already loaded
+       books = author.books  # ✅ Already loaded!
+   ```
+
+**Rule of Thumb:**
+- ✅ **Use eager loading** (`selectinload`, `joinedload`) for better performance
+- ✅ Use `selectinload` for one-to-many and many-to-many relationships
+- ✅ Use `joinedload` for many-to-one relationships
+- ⚠️ Use `awaitable_attrs` only for dynamic relationship access or when eager loading would load unnecessary data
+
+**Important Notes:**
+- Models without relationships (e.g., `UserAction` audit logs) don't need to inherit from `BaseModel` and can use `SQLModel` directly
+- `AsyncAttrs` has no performance penalty if relationships are not used
+- Avoid accessing relationships directly without eager loading or `awaitable_attrs` - it will raise `MissingGreenlet` errors in async contexts
+
 ### Database Migrations
 
 This project uses **Alembic** for database schema migrations. The old `SQLModel.metadata.create_all()` approach has been replaced with proper migration management.
