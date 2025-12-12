@@ -12,7 +12,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlmodel import func, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.constants import DB_MAX_RETRIES, DB_RETRY_DELAY_SECONDS, DEFAULT_PAGE_SIZE
+from app.constants import MAX_PAGE_SIZE
 from app.logging import logger
 from app.schemas.generic_typing import GenericSQLModelType
 from app.schemas.response import MetadataModel
@@ -93,7 +93,7 @@ async def get_session() -> AsyncSession:
 async def get_paginated_results(
     model: Type[GenericSQLModelType],
     page: int = 1,
-    per_page: int = DEFAULT_PAGE_SIZE,
+    per_page: int | None = None,
     *,
     filters: dict[str, Any] | None = None,
     apply_filters: (
@@ -109,8 +109,8 @@ async def get_paginated_results(
 
     Args:
         model (Type[GenericSQLModelType]): The SQLModel class to query.
-        page (int, optional): The page number to retrieve. Defaults to DEFAULT_PAGE_SIZE.
-        per_page (int, optional): The number of results to return per page. Defaults to DEFAULT_PAGE_SIZE.
+        page (int, optional): The page number to retrieve. Defaults to 1.
+        per_page (int | None, optional): The number of results to return per page. Defaults to app_settings.DEFAULT_PAGE_SIZE. Capped at MAX_PAGE_SIZE.
         filters (dict[str, Any] | None, optional): A dictionary of filters to apply to the query.
         apply_filters (Callable[[Select, Type[GenericSQLModelType], dict[str, Any]], Select] | None, optional): A custom function to apply filters to the query. If not provided, the `default_apply_filters` function will be used.
         skip_count (bool, optional): Skip the count query for performance. When True, total will be -1. Defaults to False.
@@ -118,6 +118,11 @@ async def get_paginated_results(
     Returns:
         tuple[list[GenericSQLModelType], MetadataModel]: A tuple containing the list of results and a `MetadataModel` instance with pagination metadata. When skip_count is True, total will be -1 and pages will be 0.
     """
+    # Use settings default if not specified, cap at MAX_PAGE_SIZE
+    if per_page is None:
+        per_page = app_settings.DEFAULT_PAGE_SIZE
+    per_page = min(per_page, MAX_PAGE_SIZE)
+
     query = select(model)
 
     if filters:
