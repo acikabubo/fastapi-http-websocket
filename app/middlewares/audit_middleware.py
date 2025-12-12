@@ -75,14 +75,18 @@ class AuditMiddleware(BaseHTTPMiddleware):
             # Calculate duration
             duration_ms = int((time.time() - start_time) * 1000)
 
-            # Log successful request
+            # Determine outcome based on status code
+            # 2xx and 3xx are success, 4xx and 5xx are errors
+            outcome = "success" if response.status_code < 400 else "error"
+
+            # Log request with appropriate outcome
             await log_user_action(
                 user_id=user.id,
                 username=user.username,
                 user_roles=user.roles,
                 action_type=request.method,
                 resource=request.url.path,
-                outcome="success",
+                outcome=outcome,
                 ip_address=ip_address,
                 user_agent=user_agent,
                 request_id=request_id,
