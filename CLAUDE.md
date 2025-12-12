@@ -236,6 +236,67 @@ return ResponseModel.ok_msg(
 )
 ```
 
+## Async Relationships with AsyncAttrs
+
+**All database models should inherit from `BaseModel`** to enable proper async relationship handling.
+
+### BaseModel Pattern
+
+```python
+from {{cookiecutter.module_name}}.models.base import BaseModel
+from sqlmodel import Field, Relationship
+
+class Author(BaseModel, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+    name: str
+    books: list["Book"] = Relationship(back_populates="author")
+
+class Book(BaseModel, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+    title: str
+    author_id: int = Field(foreign_key="author.id")
+    author: Author = Relationship(back_populates="books")
+```
+
+### Eager Loading (Preferred)
+
+**Best practice for better performance** - Load relationships upfront:
+
+```python
+from sqlalchemy.orm import selectinload, joinedload
+
+# One-to-many (use selectinload)
+async with async_session() as session:
+    stmt = select(Author).options(selectinload(Author.books))
+    result = await session.execute(stmt)
+    author = result.scalar_one()
+    books = author.books  # Already loaded, no await needed!
+
+# Many-to-one (use joinedload)
+async with async_session() as session:
+    stmt = select(Book).options(joinedload(Book.author))
+    result = await session.execute(stmt)
+    book = result.scalar_one()
+    author = book.author  # Already loaded
+```
+
+### Lazy Loading (When Needed)
+
+Use `awaitable_attrs` for dynamic relationship access:
+
+```python
+async with async_session() as session:
+    author = await session.get(Author, 1)
+    # Access lazy-loaded relationship asynchronously
+    books = await author.awaitable_attrs.books
+```
+
+**Important notes:**
+- ✅ **Prefer eager loading** (selectinload/joinedload) for better performance
+- ✅ Use `awaitable_attrs` only when you can't predict which relationships you'll need
+- ✅ `BaseModel` adds no overhead if relationships aren't used
+- ❌ **Never access relationships directly without eager loading** - causes MissingGreenlet errors
+
 ## Configuration
 
 Environment variables in [settings.py]({{cookiecutter.project_slug}}/{{cookiecutter.module_name}}/settings.py):
