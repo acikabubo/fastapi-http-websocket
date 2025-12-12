@@ -2,8 +2,11 @@
 Error handler decorators for unified exception handling across protocols.
 
 This module provides decorators that automatically convert AppException instances
-into appropriate HTTP or WebSocket responses, eliminating duplicate try/except
-blocks in handlers.
+into appropriate HTTP or WebSocket responses with standardized error envelopes,
+eliminating duplicate try/except blocks in handlers.
+
+The decorators use unified error envelopes that provide consistent error formatting
+across both HTTP and WebSocket protocols.
 """
 
 import inspect
@@ -11,21 +14,29 @@ from functools import wraps
 from typing import Any, Callable
 
 from fastapi import HTTPException
+from fastapi.responses import JSONResponse
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.api.ws.constants import RSPCode
 from app.exceptions import AppException
 from app.logging import logger
+from app.schemas.errors import ErrorCode
 from app.schemas.request import RequestModel
 from app.schemas.response import ResponseModel
+from app.utils.error_formatter import (
+    http_error_from_exception,
+    http_error_response,
+    ws_error_from_exception,
+    ws_error_response,
+)
 
 
 def handle_http_errors(func: Callable) -> Callable:
     """
-    Decorator for HTTP endpoints to convert AppException to HTTPException.
+    Decorator for HTTP endpoints to convert AppException to unified error envelope.
 
     Automatically catches AppException instances and converts them to
-    FastAPI HTTPException with appropriate status codes.
+    JSONResponse with structured error envelope format.
 
     Args:
         func: The HTTP endpoint function to wrap.
@@ -41,6 +52,17 @@ def handle_http_errors(func: Callable) -> Callable:
             command = CreateAuthorCommand(repo)
             return await command.execute(data)  # No try/except needed!
         ```
+
+        Error response format:
+        ```json
+        {
+            "error": {
+                "code": "validation_error",
+                "message": "Author name is required",
+                "details": {"field": "name"}
+            }
+        }
+        ```
     """
 
     @wraps(func)
@@ -52,18 +74,23 @@ def handle_http_errors(func: Callable) -> Callable:
                 f"AppException in {func.__name__}: {ex.message}",
                 extra={"exception_type": type(ex).__name__},
             )
-            raise HTTPException(
+            error_response = http_error_from_exception(ex)
+            return JSONResponse(
                 status_code=ex.http_status,
-                detail=ex.message,
+                content=error_response.model_dump(),
             )
         except SQLAlchemyError as ex:
             logger.error(
                 f"Database error in {func.__name__}: {ex}",
                 exc_info=True,
             )
-            raise HTTPException(
+            error_response = http_error_response(
+                code=ErrorCode.DATABASE_ERROR,
+                msg="Database error occurred",
+            )
+            return JSONResponse(
                 status_code=500,
-                detail="Database error occurred",
+                content=error_response.model_dump(),
             )
 
     return wrapper
@@ -71,10 +98,10 @@ def handle_http_errors(func: Callable) -> Callable:
 
 def handle_ws_errors(func: Callable) -> Callable:
     """
-    Decorator for WebSocket handlers to convert AppException to ResponseModel.
+    Decorator for WebSocket handlers to convert AppException to unified error envelope.
 
     Automatically catches AppException instances and converts them to
-    WebSocket error responses with appropriate RSPCode values.
+    WebSocket error responses with structured error envelope in data field.
 
     Args:
         func: The WebSocket handler function to wrap.
@@ -93,6 +120,20 @@ def handle_ws_errors(func: Callable) -> Callable:
                 author = await command.execute(CreateAuthorInput(**request.data))
                 return ResponseModel.success(request.pkg_id, request.req_id, data=author.model_dump())
         ```
+
+        Error response format:
+        ```json
+        {
+            "pkg_id": 3,
+            "req_id": "123e4567-e89b-12d3-a456-426614174000",
+            "status_code": 2,
+            "data": {
+                "code": "validation_error",
+                "message": "Author name is required",
+                "details": {"field": "name"}
+            }
+        }
+        ```
     """
 
     @wraps(func)
@@ -108,11 +149,15 @@ def handle_ws_errors(func: Callable) -> Callable:
                     "req_id": request.req_id,
                 },
             )
-            return ResponseModel.err_msg(
-                request.pkg_id,
-                request.req_id,
-                msg=ex.message,
-                status_code=ex.ws_status,
+            error_response = ws_error_from_exception(
+                ex, request.pkg_id, request.req_id
+            )
+            # Convert to ResponseModel for backward compatibility
+            return ResponseModel(
+                pkg_id=error_response.pkg_id,
+                req_id=error_response.req_id,
+                status_code=error_response.status_code,
+                data=error_response.data,
             )
         except SQLAlchemyError as ex:
             logger.error(
@@ -120,11 +165,19 @@ def handle_ws_errors(func: Callable) -> Callable:
                 extra={"pkg_id": request.pkg_id, "req_id": request.req_id},
                 exc_info=True,
             )
-            return ResponseModel.err_msg(
+            error_response = ws_error_response(
                 request.pkg_id,
                 request.req_id,
+                code=ErrorCode.DATABASE_ERROR,
                 msg="Database error occurred",
                 status_code=RSPCode.ERROR,
+            )
+            # Convert to ResponseModel for backward compatibility
+            return ResponseModel(
+                pkg_id=error_response.pkg_id,
+                req_id=error_response.req_id,
+                status_code=error_response.status_code,
+                data=error_response.data,
             )
 
     return wrapper

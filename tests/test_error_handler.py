@@ -5,6 +5,8 @@ Tests the handle_ws_errors, handle_http_errors, and handle_errors decorators
 to ensure proper exception handling and response formatting.
 """
 
+import json
+
 import pytest
 from fastapi import HTTPException
 from sqlalchemy.exc import IntegrityError
@@ -161,59 +163,64 @@ class TestHandleHTTPErrors:
 
     @pytest.mark.asyncio
     async def test_handles_app_exception(self):
-        """Should convert AppException to HTTPException."""
+        """Should convert AppException to error envelope JSONResponse."""
 
         @handle_http_errors
         async def handler():
             raise AppValidationError("Invalid input")
 
-        with pytest.raises(HTTPException) as exc_info:
-            await handler()
+        response = await handler()
 
-        assert exc_info.value.status_code == 400
-        assert "Invalid input" in exc_info.value.detail
+        assert response.status_code == 400
+        content = json.loads(response.body)
+        assert "error" in content
+        assert content["error"]["code"] == "validation_error"
+        assert content["error"]["msg"] == "Invalid input"
 
     @pytest.mark.asyncio
     async def test_handles_not_found_exception(self):
-        """Should convert NotFoundError to 404 HTTPException."""
+        """Should convert NotFoundError to 404 error envelope."""
 
         @handle_http_errors
         async def handler():
             raise NotFoundError("Resource not found")
 
-        with pytest.raises(HTTPException) as exc_info:
-            await handler()
+        response = await handler()
 
-        assert exc_info.value.status_code == 404
-        assert "Resource not found" in exc_info.value.detail
+        assert response.status_code == 404
+        content = json.loads(response.body)
+        assert content["error"]["code"] == "not_found"
+        assert content["error"]["msg"] == "Resource not found"
 
     @pytest.mark.asyncio
     async def test_handles_permission_denied_exception(self):
-        """Should convert AuthorizationError to 403 HTTPException."""
+        """Should convert AuthorizationError to 403 error envelope."""
 
         @handle_http_errors
         async def handler():
             raise AuthorizationError("Access denied")
 
-        with pytest.raises(HTTPException) as exc_info:
-            await handler()
+        response = await handler()
 
-        assert exc_info.value.status_code == 403
-        assert "Access denied" in exc_info.value.detail
+        assert response.status_code == 403
+        content = json.loads(response.body)
+        assert content["error"]["code"] == "permission_denied"
+        assert content["error"]["msg"] == "Access denied"
 
     @pytest.mark.asyncio
     async def test_handles_sqlalchemy_error(self):
-        """Should convert SQLAlchemy errors to 500 HTTPException."""
+        """Should convert SQLAlchemy errors to 500 error envelope."""
 
         @handle_http_errors
         async def handler():
             raise IntegrityError("statement", "params", "orig")
 
-        with pytest.raises(HTTPException) as exc_info:
-            await handler()
+        response = await handler()
 
-        assert exc_info.value.status_code == 500
-        assert "Database error occurred" in exc_info.value.detail
+        assert response.status_code == 500
+        content = json.loads(response.body)
+        assert content["error"]["code"] == "database_error"
+        assert content["error"]["msg"] == "Database error occurred"
 
 
 # ============================================================================
@@ -246,11 +253,13 @@ class TestHandleErrors:
         async def http_handler(data: dict) -> dict:
             raise NotFoundError("Not found")
 
-        # Should raise HTTPException (HTTP behavior)
-        with pytest.raises(HTTPException) as exc_info:
-            await http_handler({"test": "data"})
+        # Should return JSONResponse with error envelope (HTTP behavior)
+        response = await http_handler({"test": "data"})
 
-        assert exc_info.value.status_code == 404
+        assert response.status_code == 404
+        content = json.loads(response.body)
+        assert content["error"]["code"] == "not_found"
+        assert content["error"]["msg"] == "Not found"
 
     @pytest.mark.asyncio
     async def test_successful_websocket_execution(self, sample_request):
