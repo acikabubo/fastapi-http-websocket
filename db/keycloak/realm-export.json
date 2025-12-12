@@ -1,7 +1,7 @@
 {
   "id": "53fecc2c-25c8-4d71-b439-03373e8fd96b",
   "realm": "HW-App",
-  "displayName": "",
+  "displayName": "HTTP & WebSocket Hub",
   "displayNameHtml": "",
   "notBefore": 0,
   "defaultSignatureAlgorithm": "RS256",
