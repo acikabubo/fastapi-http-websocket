@@ -667,6 +667,52 @@ from app.models.book import Book  # noqa: F401  # ADD NEW IMPORTS
 
 **See:** [docs/DATABASE_MIGRATIONS.md](docs/DATABASE_MIGRATIONS.md) for complete guide.
 
+#### Migration Testing
+
+This project includes automated migration testing to ensure migrations can be applied and rolled back cleanly.
+
+**Running migration tests:**
+```bash
+# Test migrations manually (upgrade/downgrade cycle)
+make test-migrations
+
+# Run pytest-based structure tests
+uv run pytest tests/test_migrations.py -v
+```
+
+**Pre-commit hook:**
+Migration tests automatically run before commits when migration files are modified. The hook:
+- Tests upgrade to head and downgrade by one revision
+- Validates migration structure (unique IDs, docstrings, no conflicts)
+- Prevents commits if migrations fail
+
+**What gets tested:**
+
+1. **Upgrade/Downgrade Cycle** (`scripts/test_migrations.py`):
+   - Downgrades by one revision
+   - Upgrades back to head
+   - Verifies database stays in consistent state
+
+2. **Migration Structure** (`tests/test_migrations.py`):
+   - All revision IDs are unique
+   - All migrations have descriptive docstrings (>10 chars)
+   - No conflicting migration branches exist
+   - All migrations (except first) have down_revision
+
+**Best practices enforced:**
+- ✅ Every migration must have a clear docstring explaining changes
+- ✅ Migrations must be reversible (have downgrade logic)
+- ✅ No merge conflicts in migration history
+- ✅ Migration IDs must be unique
+
+**Troubleshooting:**
+If migration tests fail during pre-commit:
+1. Check the error message for specific migration issues
+2. Review your migration file in `app/storage/migrations/versions/`
+3. Ensure downgrade logic correctly reverses upgrade changes
+4. Test manually: `make test-migrations`
+5. Fix issues and re-commit
+
 ### Database Pagination
 
 Use `get_paginated_results()` for all list endpoints:

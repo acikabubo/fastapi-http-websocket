@@ -98,3 +98,7 @@ migration-stamp:
 	@test -n "$(rev)" || (echo "Usage: make migration-stamp rev='revision_id'"; exit 1)
 	@echo "Stamping database at revision: $(rev)"
 	@uv run alembic stamp $(rev)
+
+test-migrations:
+	@echo "Testing database migrations (upgrade/downgrade)..."
+	@uv run python scripts/test_migrations.py

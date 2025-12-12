@@ -74,3 +74,11 @@ repos:
         language: system
         files: ''
         exclude: ^(/tests/)$
+
+      - id: test-migrations
+        name: "Test database migrations (upgrade/downgrade)"
+        entry: python scripts/test_migrations.py
+        language: system
+        pass_filenames: false
+        files: '^app/storage/migrations/versions/.*\.py$'
+        stages: [commit]
