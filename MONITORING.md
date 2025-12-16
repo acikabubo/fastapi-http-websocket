@@ -486,66 +486,151 @@ Promtail is configured to collect logs from all Docker containers in this projec
 - Health check requests (`GET /health`)
 - Empty log lines
 
-### Structured Logging Best Practices
+### Structured Logging with Loki Integration
 
-For better log parsing and filtering, use structured logging in your application:
+This application uses structured JSON logging with automatic Loki integration. Logs are sent to Loki in JSON format with contextual fields for easy filtering.
 
-#### Option 1: JSON Logging (Recommended)
+#### Built-in Features
+
+The application automatically includes:
+- **Correlation ID tracking**: Each request gets a unique ID
+- **Contextual fields**: endpoint, method, status_code, user_id
+- **JSON formatting**: All logs sent to Loki are in JSON format
+- **Human-readable console**: Development logs are human-readable
+- **Multiple handlers**: Console, file, and Loki handlers
+
+#### Configuration
+
+Loki integration is controlled via environment variables (see [app/settings.py](app/settings.py:95-101)):
+
+```bash
+# Enable/disable Loki integration
+LOKI_ENABLED=true
+
+# Loki server URL (inside Docker network)
+LOKI_URL=http://loki:3100
+
+# Log level (DEBUG, INFO, WARNING, ERROR)
+LOG_LEVEL=INFO
+
+# Environment tag for filtering
+ENVIRONMENT=development
+```
+
+#### Basic Usage
+
+Simply use the standard Python logger:
 
 ```python
 import logging
-import json
 
-class JsonFormatter(logging.Formatter):
-    def format(self, record):
-        log_data = {
-            "timestamp": self.formatTime(record),
-            "level": record.levelname,
-            "logger": record.name,
-            "message": record.getMessage(),
-            "module": record.module,
-            "function": record.funcName,
-        }
-        if record.exc_info:
-            log_data["exception"] = self.formatException(record.exc_info)
-        return json.dumps(log_data)
+logger = logging.getLogger(__name__)
 
-# Configure in your app
-handler = logging.StreamHandler()
-handler.setFormatter(JsonFormatter())
-logging.root.addHandler(handler)
-logging.root.setLevel(logging.INFO)
+# Basic logging (automatically includes request_id, endpoint, user_id, etc.)
+logger.info("Processing author creation")
+logger.warning("Rate limit approaching threshold")
+logger.error("Database connection failed", exc_info=True)
 ```
 
-#### Option 2: Using structlog
+#### Adding Custom Context
+
+Add custom contextual fields to all logs within a request:
 
 ```python
-import structlog
+from app.logging import set_log_context, logger
 
-# Configure structlog
-structlog.configure(
-    processors=[
-        structlog.processors.TimeStamper(fmt="iso"),
-        structlog.processors.add_log_level,
-        structlog.processors.StackInfoRenderer(),
-        structlog.processors.format_exc_info,
-        structlog.processors.JSONRenderer()
-    ]
+# In your endpoint or handler
+set_log_context(
+    operation="create_author",
+    author_id=123,
+    ip_address=request.client.host
 )
 
-logger = structlog.get_logger()
-
-# Usage
-logger.info("user_login", user_id=123, username="alice", ip="192.168.1.1")
-logger.error("database_error", error=str(e), query=query, duration_ms=145)
-logger.warning("rate_limit_hit", user_id=456, endpoint="/api/data")
+logger.info("Author created successfully")
+# Log will include: operation, author_id, ip_address, plus auto fields
 ```
 
-**Benefits of structured logging:**
-- Easy to parse in Loki with `| json`
-- Filter by specific fields
-- Better searchability
-- Consistent log format
+#### Example Log Output
+
+**Console (Human-readable):**
+```
+2025-12-16 14:30:45 - [a1b2c3d4] INFO: Processing author creation
+2025-12-16 14:30:45 - [a1b2c3d4] INFO: app.api.http.author.create_author:42 - Author created successfully
+```
+
+**Loki (JSON):**
+```json
+{
+  "timestamp": "2025-12-16T14:30:45.123Z",
+  "level": "INFO",
+  "logger": "app.api.http.author",
+  "message": "Author created successfully",
+  "module": "author",
+  "function": "create_author",
+  "line": 42,
+  "request_id": "a1b2c3d4",
+  "endpoint": "/api/authors",
+  "method": "POST",
+  "status_code": 201,
+  "user_id": "user-123",
+  "environment": "development"
+}
+```
+
+#### Query Examples for Structured Logs
+
+Once logs are in Loki, you can query them using LogQL:
+
+```logql
+# All requests from specific user
+{application="fastapi-app"} | json | user_id="user-123"
+
+# Failed requests (5xx status codes)
+{application="fastapi-app"} | json | status_code >= 500
+
+# Slow requests (custom field)
+{application="fastapi-app"} | json | duration_ms > 1000
+
+# Errors for specific endpoint
+{application="fastapi-app"} | json | level="ERROR" | endpoint="/api/authors"
+
+# Requests by correlation ID (trace single request)
+{application="fastapi-app"} | json | request_id="a1b2c3d4"
+```
+
+#### WebSocket Logging
+
+For WebSocket handlers, manually add context:
+
+```python
+from app.logging import set_log_context, logger
+
+async def handle_websocket_message(request: RequestModel):
+    # Add WebSocket-specific context
+    set_log_context(
+        pkg_id=request.pkg_id,
+        req_id=request.req_id,
+        user_id=request.data.get("user_id")
+    )
+
+    logger.info(f"Processing WebSocket request {request.pkg_id}")
+    # Process request...
+```
+
+#### Best Practices
+
+✅ **Do:**
+- Use logger.info() for normal operations
+- Use logger.warning() for recoverable issues
+- Use logger.error() with exc_info=True for exceptions
+- Add contextual fields with set_log_context()
+- Use correlation IDs to trace requests
+
+❌ **Don't:**
+- Log sensitive data (passwords, tokens, PII)
+- Log at DEBUG level in production
+- Create new loggers without using logging.getLogger(__name__)
+- Include large objects in log messages (they're truncated anyway)
 
 ### Correlating Logs with Metrics
 

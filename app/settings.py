@@ -90,6 +90,15 @@ class Settings(BaseSettings):
     LOG_FILE_PATH: str = "logs/logging_errors.log"
     # Paths to exclude from access logs (e.g., /metrics, /health)
     LOG_EXCLUDED_PATHS: list[str] = ["/metrics", "/health"]
+    LOG_LEVEL: str = "INFO"
+
+    # Loki integration settings
+    LOKI_ENABLED: bool = True
+    LOKI_URL: str = "http://loki:3100"
+    LOKI_VERSION: str = "1"  # Loki API version
+
+    # Environment tag for log filtering
+    ENVIRONMENT: str = "development"
 
     # Audit logging settings
     AUDIT_LOG_ENABLED: bool = True
