@@ -27,41 +27,209 @@ class TestGetPaginatedResults:
     """Tests for get_paginated_results function."""
 
     @pytest.mark.asyncio
-    async def test_pagination_first_page(self):
+    async def test_pagination_first_page(self, mock_db_session):
         """Test fetching the first page of results."""
-        # This test would require database setup
-        # For now, we test the function signature and structure
-        # In a real scenario, you'd set up test data in the database
-        pass
+        from unittest.mock import AsyncMock, MagicMock, patch
+
+        from app.models.author import Author
+        from app.storage.db import get_paginated_results
+
+        # Mock data
+        mock_authors = [
+            Author(id=1, name="Author 1"),
+            Author(id=2, name="Author 2"),
+            Author(id=3, name="Author 3"),
+        ]
+
+        mock_count_result = MagicMock()
+        mock_count_result.one.return_value = 10
+
+        mock_data_result = MagicMock()
+        mock_data_result.all.return_value = mock_authors
+
+        mock_session_inst = AsyncMock()
+        mock_session_inst.exec = AsyncMock(
+            side_effect=[mock_count_result, mock_data_result]
+        )
+        mock_session_inst.__aenter__.return_value = mock_session_inst
+        mock_session_inst.__aexit__.return_value = None
+
+        with patch("app.storage.db.async_session", return_value=mock_session_inst):
+            results, meta = await get_paginated_results(Author, page=1, per_page=3)
+
+            assert len(results) == 3
+            assert meta.page == 1
+            assert meta.per_page == 3
+            assert meta.total == 10
+            assert meta.pages == 4
 
     @pytest.mark.asyncio
-    async def test_pagination_with_filters(self):
+    async def test_pagination_with_filters(self, mock_db_session):
         """Test pagination with filters applied."""
-        pass
+        from unittest.mock import AsyncMock, MagicMock, patch
+
+        from app.models.author import Author
+        from app.storage.db import get_paginated_results
+
+        mock_authors = [Author(id=1, name="Test Author")]
+
+        mock_count_result = MagicMock()
+        mock_count_result.one.return_value = 1
+
+        mock_data_result = MagicMock()
+        mock_data_result.all.return_value = mock_authors
+
+        mock_session_inst = AsyncMock()
+        mock_session_inst.exec = AsyncMock(
+            side_effect=[mock_count_result, mock_data_result]
+        )
+        mock_session_inst.__aenter__.return_value = mock_session_inst
+        mock_session_inst.__aexit__.return_value = None
+
+        with patch("app.storage.db.async_session", return_value=mock_session_inst):
+            results, meta = await get_paginated_results(
+                Author, page=1, per_page=10, filters={"name": "Test"}
+            )
+
+            assert len(results) == 1
+            assert meta.total == 1
+            assert meta.pages == 1
 
     @pytest.mark.asyncio
-    async def test_pagination_skip_count(self):
+    async def test_pagination_skip_count(self, mock_db_session):
         """
         Test pagination with skip_count=True.
 
-        Should return total=-1 and pages=0 for performance.
+        Should return total=0 and pages=0 for performance (skips count query).
         """
-        pass
+        from unittest.mock import AsyncMock, MagicMock, patch
+
+        from app.models.author import Author
+        from app.storage.db import get_paginated_results
+
+        mock_authors = [Author(id=1, name="Author 1")]
+
+        mock_data_result = MagicMock()
+        mock_data_result.all.return_value = mock_authors
+
+        mock_session_inst = AsyncMock()
+        mock_session_inst.exec = AsyncMock(return_value=mock_data_result)
+
+        mock_context_manager = MagicMock()
+        mock_context_manager.__aenter__ = AsyncMock(return_value=mock_session_inst)
+        mock_context_manager.__aexit__ = AsyncMock(return_value=None)
+
+        mock_session_maker = MagicMock(return_value=mock_context_manager)
+
+        with patch("app.storage.db.async_session", mock_session_maker):
+            results, meta = await get_paginated_results(
+                Author, page=1, per_page=10, skip_count=True
+            )
+
+            assert len(results) == 1
+            assert meta.total == 0  # Count query was skipped
+            assert meta.pages == 0
 
     @pytest.mark.asyncio
-    async def test_pagination_empty_results(self):
+    async def test_pagination_empty_results(self, mock_db_session):
         """Test pagination when no results match."""
-        pass
+        from unittest.mock import AsyncMock, MagicMock, patch
+
+        from app.models.author import Author
+        from app.storage.db import get_paginated_results
+
+        mock_count_result = MagicMock()
+        mock_count_result.one.return_value = 0
+
+        mock_data_result = MagicMock()
+        mock_data_result.all.return_value = []
+
+        mock_session_inst = AsyncMock()
+        mock_session_inst.exec = AsyncMock(
+            side_effect=[mock_count_result, mock_data_result]
+        )
+        mock_session_inst.__aenter__.return_value = mock_session_inst
+        mock_session_inst.__aexit__.return_value = None
+
+        with patch("app.storage.db.async_session", return_value=mock_session_inst):
+            results, meta = await get_paginated_results(Author, page=1, per_page=10)
+
+            assert len(results) == 0
+            assert meta.total == 0
+            assert meta.pages == 0
 
     @pytest.mark.asyncio
-    async def test_pagination_last_page_partial(self):
+    async def test_pagination_last_page_partial(self, mock_db_session):
         """Test last page with fewer items than per_page."""
-        pass
+        from unittest.mock import AsyncMock, MagicMock, patch
+
+        from app.models.author import Author
+        from app.storage.db import get_paginated_results
+
+        mock_authors = [Author(id=21, name="Author 21"), Author(id=22, name="Author 22")]
+
+        mock_count_result = MagicMock()
+        mock_count_result.one.return_value = 22
+
+        mock_data_result = MagicMock()
+        mock_data_result.all.return_value = mock_authors
+
+        mock_session_inst = AsyncMock()
+        mock_session_inst.exec = AsyncMock(
+            side_effect=[mock_count_result, mock_data_result]
+        )
+        mock_session_inst.__aenter__.return_value = mock_session_inst
+        mock_session_inst.__aexit__.return_value = None
+
+        with patch("app.storage.db.async_session", return_value=mock_session_inst):
+            results, meta = await get_paginated_results(Author, page=3, per_page=10)
+
+            assert len(results) == 2
+            assert meta.page == 3
+            assert meta.per_page == 10
+            assert meta.total == 22
+            assert meta.pages == 3
 
     @pytest.mark.asyncio
-    async def test_pagination_custom_filter_function(self):
+    async def test_pagination_custom_filter_function(self, mock_db_session):
         """Test pagination with custom apply_filters function."""
-        pass
+        from unittest.mock import AsyncMock, MagicMock, patch
+
+        from app.models.author import Author
+        from app.storage.db import get_paginated_results
+
+        def custom_filter(query, model, filters):
+            """Custom filter that only filters by exact name match."""
+            if "name" in filters:
+                query = query.filter(model.name == filters["name"])
+            return query
+
+        mock_authors = [Author(id=1, name="Exact Match")]
+
+        mock_count_result = MagicMock()
+        mock_count_result.one.return_value = 1
+
+        mock_data_result = MagicMock()
+        mock_data_result.all.return_value = mock_authors
+
+        mock_session_inst = AsyncMock()
+        mock_session_inst.exec = AsyncMock(
+            side_effect=[mock_count_result, mock_data_result]
+        )
+        mock_session_inst.__aenter__.return_value = mock_session_inst
+        mock_session_inst.__aexit__.return_value = None
+
+        with patch("app.storage.db.async_session", return_value=mock_session_inst):
+            results, meta = await get_paginated_results(
+                Author,
+                page=1,
+                per_page=10,
+                filters={"name": "Exact Match"},
+                apply_filters=custom_filter,
+            )
+
+            assert len(results) == 1
+            assert results[0].name == "Exact Match"
 
 
 class TestDefaultApplyFilters:
@@ -179,22 +347,132 @@ class TestDatabaseConnection:
         assert hasattr(gen, "__anext__")
 
     @pytest.mark.asyncio
+    async def test_get_session_commits_on_success(self):
+        """Test get_session commits transaction on success."""
+        from unittest.mock import AsyncMock, MagicMock, patch
+
+        from app.storage.db import get_session
+
+        mock_session = AsyncMock()
+
+        mock_context_manager = MagicMock()
+        mock_context_manager.__aenter__ = AsyncMock(return_value=mock_session)
+        mock_context_manager.__aexit__ = AsyncMock(return_value=None)
+
+        mock_session_maker = MagicMock(return_value=mock_context_manager)
+
+        with patch("app.storage.db.async_session", mock_session_maker):
+            async for session in get_session():
+                assert session == mock_session
+
+            mock_session.commit.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_get_session_rolls_back_on_integrity_error(self):
+        """Test get_session rolls back on IntegrityError."""
+        from unittest.mock import AsyncMock, MagicMock, patch
+
+        from sqlalchemy.exc import IntegrityError
+
+        from app.storage.db import get_session
+
+        mock_session = AsyncMock()
+        mock_session.commit.side_effect = IntegrityError("test", "params", "orig")
+
+        mock_context_manager = MagicMock()
+        mock_context_manager.__aenter__ = AsyncMock(return_value=mock_session)
+        mock_context_manager.__aexit__ = AsyncMock(return_value=None)
+
+        mock_session_maker = MagicMock(return_value=mock_context_manager)
+
+        with patch("app.storage.db.async_session", mock_session_maker):
+            with pytest.raises(IntegrityError):
+                async for session in get_session():
+                    pass
+
+            mock_session.rollback.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_get_session_rolls_back_on_sqlalchemy_error(self):
+        """Test get_session rolls back on SQLAlchemyError."""
+        from unittest.mock import AsyncMock, MagicMock, patch
+
+        from sqlalchemy.exc import SQLAlchemyError
+
+        from app.storage.db import get_session
+
+        mock_session = AsyncMock()
+        mock_session.commit.side_effect = SQLAlchemyError("test error")
+
+        mock_context_manager = MagicMock()
+        mock_context_manager.__aenter__ = AsyncMock(return_value=mock_session)
+        mock_context_manager.__aexit__ = AsyncMock(return_value=None)
+
+        mock_session_maker = MagicMock(return_value=mock_context_manager)
+
+        with patch("app.storage.db.async_session", mock_session_maker):
+            with pytest.raises(SQLAlchemyError):
+                async for session in get_session():
+                    pass
+
+            mock_session.rollback.assert_called_once()
+
+    @pytest.mark.asyncio
     async def test_wait_and_init_db_success(self):
         """
         Test successful database initialization.
 
         This test would require mocking the database connection.
         """
-        pass
+        from unittest.mock import AsyncMock, MagicMock, patch
+
+        from app.storage.db import wait_and_init_db
+
+        mock_conn = AsyncMock()
+        mock_conn.exec_driver_sql = AsyncMock()
+        mock_conn.__aenter__.return_value = mock_conn
+        mock_conn.__aexit__.return_value = None
+
+        mock_engine = MagicMock()
+        mock_engine.connect.return_value = mock_conn
+
+        with patch("app.storage.db.engine", mock_engine):
+            await wait_and_init_db(retry_interval=0, max_retries=3)
+
+            mock_engine.connect.assert_called_once()
+            mock_conn.exec_driver_sql.assert_called_once_with("SELECT 1")
 
     @pytest.mark.asyncio
     async def test_wait_and_init_db_retry_logic(self):
         """
         Test retry logic when database is initially unavailable.
 
-        Should retry connection attempts with exponential backoff.
+        Should retry connection attempts with configured interval.
         """
-        pass
+        from unittest.mock import AsyncMock, MagicMock, patch
+
+        from sqlalchemy.exc import OperationalError
+
+        from app.storage.db import wait_and_init_db
+
+        mock_conn = AsyncMock()
+        mock_conn.exec_driver_sql = AsyncMock()
+        mock_conn.__aenter__.return_value = mock_conn
+        mock_conn.__aexit__.return_value = None
+
+        mock_engine = MagicMock()
+        # Fail twice, then succeed
+        mock_engine.connect.side_effect = [
+            OperationalError("test", "params", "orig"),
+            OperationalError("test", "params", "orig"),
+            mock_conn,
+        ]
+
+        with patch("app.storage.db.engine", mock_engine):
+            with patch("app.storage.db.asyncio.sleep", new_callable=AsyncMock):
+                await wait_and_init_db(retry_interval=0, max_retries=3)
+
+                assert mock_engine.connect.call_count == 3
 
     @pytest.mark.asyncio
     async def test_wait_and_init_db_max_retries_exceeded(self):
@@ -203,7 +481,24 @@ class TestDatabaseConnection:
 
         Should raise RuntimeError after all retry attempts fail.
         """
-        pass
+        from unittest.mock import MagicMock, patch
+
+        from sqlalchemy.exc import OperationalError
+
+        from app.storage.db import wait_and_init_db
+
+        mock_engine = MagicMock()
+        mock_engine.connect.side_effect = OperationalError("test", "params", "orig")
+
+        with patch("app.storage.db.engine", mock_engine):
+            with patch("app.storage.db.asyncio.sleep"):
+                with pytest.raises(RuntimeError) as exc_info:
+                    await wait_and_init_db(retry_interval=0, max_retries=3)
+
+                assert "Database connection could not be established" in str(
+                    exc_info.value
+                )
+                assert mock_engine.connect.call_count == 3
 
 
 class TestPaginationMetadata:

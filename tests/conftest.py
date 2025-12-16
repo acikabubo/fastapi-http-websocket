@@ -186,3 +186,16 @@ def limited_user_data():
         "realm_access": {"roles": ["offline_access"]},
         "resource_access": {"test-client": {"roles": []}},
     }
+
+
+@pytest.fixture
+def mock_db_session():
+    """
+    Provides a mock database session for testing.
+
+    Returns:
+        Mock: Mock AsyncSession instance
+    """
+    from unittest.mock import AsyncMock
+
+    return AsyncMock()

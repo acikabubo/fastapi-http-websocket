@@ -113,10 +113,10 @@ async def get_paginated_results(
         per_page (int | None, optional): The number of results to return per page. Defaults to app_settings.DEFAULT_PAGE_SIZE. Capped at MAX_PAGE_SIZE.
         filters (dict[str, Any] | None, optional): A dictionary of filters to apply to the query.
         apply_filters (Callable[[Select, Type[GenericSQLModelType], dict[str, Any]], Select] | None, optional): A custom function to apply filters to the query. If not provided, the `default_apply_filters` function will be used.
-        skip_count (bool, optional): Skip the count query for performance. When True, total will be -1. Defaults to False.
+        skip_count (bool, optional): Skip the count query for performance. When True, total will be 0. Defaults to False.
 
     Returns:
-        tuple[list[GenericSQLModelType], MetadataModel]: A tuple containing the list of results and a `MetadataModel` instance with pagination metadata. When skip_count is True, total will be -1 and pages will be 0.
+        tuple[list[GenericSQLModelType], MetadataModel]: A tuple containing the list of results and a `MetadataModel` instance with pagination metadata. When skip_count is True, total will be 0 and pages will be 0.
     """
     # Use settings default if not specified, cap at MAX_PAGE_SIZE
     if per_page is None:
@@ -134,7 +134,7 @@ async def get_paginated_results(
     async with async_session() as s:
         # Calculate total
         if skip_count:
-            total = -1
+            total = 0  # Skip count query for performance
         else:
             # More efficient count on primary key instead of subquery
             count_query = select(func.count(model.id))
