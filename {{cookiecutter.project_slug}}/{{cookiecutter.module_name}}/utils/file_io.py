@@ -1,4 +1,4 @@
-from json import loads
+from json import JSONDecodeError, loads
 from typing import Any
 
 from jsonschema import ValidationError, validate
@@ -32,6 +32,9 @@ def read_json_file(file_path: str, schema: JsonSchemaType) -> dict[str, Any]:
     except ValidationError as ex:
         logger.error(f"Invalid data for {file_path}")
         raise ex
-    except Exception as ex:
-        logger.error(f"Failed to open {file_path}: {ex}")
+    except (OSError, IOError) as ex:
+        logger.error(f"Failed to open or read {file_path}: {ex}")
+        return {}
+    except JSONDecodeError as ex:
+        logger.error(f"Invalid JSON in {file_path}: {ex}")
         return {}
