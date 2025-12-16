@@ -912,3 +912,61 @@ db_query_duration_seconds.labels(operation="select").observe(0.045)
 ```
 
 **IMPORTANT**: When adding new Prometheus metrics to `app/utils/metrics.py`, you must also update the Grafana dashboard at `docker/grafana/provisioning/dashboards/fastapi-metrics.json` to visualize the new metrics. This ensures monitoring dashboards stay in sync with available metrics.
+
+### Monitoring Keycloak with Prometheus
+
+**Keycloak Metrics Endpoint:**
+- Metrics endpoint: `http://localhost:9999/metrics` (exposed on port 9000 internally, mapped to 9999 externally)
+- Enabled via `KC_METRICS_ENABLED=true` in `docker/.kc_env`
+- Scraped by Prometheus every 30 seconds
+
+**Key Keycloak Metrics:**
+```
+# Authentication & Sessions
+keycloak_sessions - Active user sessions count
+keycloak_logins_total - Total successful logins
+keycloak_login_failures_total - Total failed login attempts
+
+# Performance
+keycloak_request_total - Total HTTP requests to Keycloak
+keycloak_request_duration_bucket - Request duration histogram
+
+# JVM Metrics
+jvm_memory_used_bytes{area="heap"} - JVM heap memory usage
+jvm_memory_max_bytes{area="heap"} - Maximum heap memory
+jvm_gc_pause_seconds_sum - Garbage collection pause time
+jvm_threads_current - Current thread count
+jvm_threads_peak - Peak thread count
+
+# Database Connection Pool (HikariCP)
+hikaricp_connections_active - Active database connections
+hikaricp_connections_idle - Idle database connections
+hikaricp_connections_pending - Pending connection requests
+```
+
+**Grafana Dashboard:**
+- Dashboard location: `docker/grafana/provisioning/dashboards/keycloak-metrics.json`
+- Auto-provisioned on Grafana startup
+- Access at: http://localhost:3000/d/keycloak-metrics
+
+**Dashboard Panels:**
+1. **Active Sessions** (Gauge) - Real-time session count
+2. **Login Success/Failure Rate** (Time Series) - Authentication trends
+3. **Failed Logins (Last Hour)** (Stat) - Security monitoring
+4. **Request Duration (Percentiles)** (Time Series) - Performance p50/p95/p99
+5. **Request Rate** (Time Series) - Traffic monitoring
+6. **JVM Heap Memory Usage** (Time Series) - Memory consumption
+7. **Garbage Collection Pause Time** (Time Series) - GC impact
+8. **JVM Thread Count** (Time Series) - Thread pool status
+9. **Database Connection Pool** (Time Series) - Connection pool health
+
+**Troubleshooting:**
+- If metrics endpoint is not accessible, check `KC_METRICS_ENABLED=true` in `docker/.kc_env`
+- Verify Keycloak container exposes port 9000: `docker ps | grep keycloak`
+- Check Prometheus targets: http://localhost:9090/targets
+- View raw metrics: `curl http://localhost:9999/metrics`
+
+**Security Considerations:**
+- Metrics endpoint should be restricted in production (use network policies or firewall rules)
+- Monitor failed login attempts for suspicious activity
+- Set up alerts for high failure rates or unusual session patterns
