@@ -9,3 +9,9 @@ KC_DB_USERNAME=hw-user
 KC_DB_PASSWORD=hw-pass
 
 # KEYCLOAK_IMPORT=/keycloak-realm.json
+
+# Enable metrics endpoint
+KC_METRICS_ENABLED=true
+
+# Enable health endpoints (optional but recommended)
+KC_HEALTH_ENABLED=true

@@ -8,3 +8,9 @@ scrape_configs:
       - targets: ['hw-server:8000']
     metrics_path: '/metrics'
     scrape_interval: 60s  # Reduced frequency: 1 minute instead of 10 seconds
+
+  - job_name: 'keycloak'
+    static_configs:
+      - targets: ['hw-keycloak:9000']
+    metrics_path: '/metrics'
+    scrape_interval: 30s  # Scrape every 30 seconds

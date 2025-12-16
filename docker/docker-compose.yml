@@ -92,6 +92,7 @@ services:
 
     ports:
       - 8080:8080
+      - 9999:9000
 
     volumes:
       - ../db/keycloak:/opt/keycloak/data/import
@@ -197,7 +198,7 @@ services:
 
       # OAuth behavior
       - GF_AUTH_GENERIC_OAUTH_ALLOW_SIGN_UP=true
-      - GF_AUTH_GENERIC_OAUTH_AUTO_LOGIN=false
+      - GF_AUTH_GENERIC_OAUTH_AUTO_LOGIN=true
       - GF_AUTH_GENERIC_OAUTH_USE_REFRESH_TOKEN=true
 
       # Logout configuration - terminates Keycloak session on Grafana logout
@@ -205,7 +206,7 @@ services:
 
       # Security settings
       - GF_SERVER_ROOT_URL=http://localhost:3000
-      - GF_AUTH_DISABLE_LOGIN_FORM=false
+      - GF_AUTH_DISABLE_LOGIN_FORM=true
 
     volumes:
       - grafana-data:/var/lib/grafana
