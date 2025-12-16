@@ -1,0 +1,107 @@
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+
+scrape_configs:
+  # Scrape logs from Docker containers
+  - job_name: docker
+    docker_sd_configs:
+      - host: unix:///var/run/docker.sock
+        refresh_interval: 5s
+        filters:
+          - name: label
+            values: ["com.docker.compose.project=docker"]
+
+    relabel_configs:
+      # Extract container name
+      - source_labels: ['__meta_docker_container_name']
+        regex: '/(.*)'
+        target_label: 'container'
+
+      # Extract container ID (short version)
+      - source_labels: ['__meta_docker_container_id']
+        regex: '(.{12})'
+        target_label: 'container_id'
+
+      # Extract log stream (stdout/stderr)
+      - source_labels: ['__meta_docker_container_log_stream']
+        target_label: 'stream'
+
+      # Extract docker compose service name
+      - source_labels: ['__meta_docker_container_label_com_docker_compose_service']
+        target_label: 'service'
+
+      # Extract image name
+      - source_labels: ['__meta_docker_container_label_com_docker_compose_image']
+        target_label: 'image'
+
+      # Add static labels
+      - target_label: 'environment'
+        replacement: 'development'
+
+      - target_label: 'job'
+        replacement: 'docker'
+
+    pipeline_stages:
+      # Parse JSON logs if present
+      - json:
+          expressions:
+            level: level
+            timestamp: timestamp
+            logger: logger
+            message: message
+            error: error
+
+      # Extract log level from text logs
+      - regex:
+          expression: '^(?P<time>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}[,\.]\d{3}) (?P<level>\w+) '
+
+      # Set log level as label
+      - labels:
+          level:
+          logger:
+
+      # Parse timestamp
+      - timestamp:
+          source: timestamp
+          format: RFC3339Nano
+          fallback_formats:
+            - "2006-01-02 15:04:05.000"
+            - "2006-01-02 15:04:05,000"
+
+      # Drop health check logs to reduce noise
+      - drop:
+          expression: '.*GET /health.*'
+          drop_counter_reason: health_check
+
+      # Drop empty lines
+      - match:
+          selector: '{job="docker"}'
+          stages:
+            - drop:
+                expression: '^$'
+                drop_counter_reason: empty_line
+
+  # Scrape systemd journal logs (optional, for host-level logs)
+  - job_name: systemd
+    journal:
+      max_age: 12h
+      path: /var/log/journal
+      labels:
+        job: systemd
+
+    relabel_configs:
+      - source_labels: ['__journal__systemd_unit']
+        target_label: 'unit'
+
+      - source_labels: ['__journal__hostname']
+        target_label: 'hostname'
+
+      - source_labels: ['__journal_priority']
+        target_label: 'priority'

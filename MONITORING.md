@@ -1,6 +1,6 @@
 # Monitoring Setup Guide
 
-This application includes comprehensive Prometheus metrics for monitoring HTTP requests, WebSocket connections, and application health.
+This application includes comprehensive observability with Prometheus metrics for monitoring and Grafana Loki for centralized log aggregation.
 
 ## Quick Start
 
@@ -24,16 +24,19 @@ ws_connections_active 5.0
 
 ### 2. Using Docker Compose (Recommended)
 
-Start Prometheus and Grafana with your application:
+Start the full observability stack with your application:
 
 ```bash
 cd docker
-docker-compose up -d prometheus grafana
+docker-compose up -d
 ```
 
-Access the monitoring tools:
+Access the monitoring and logging tools:
+- **Application**: http://localhost:8000
 - **Prometheus UI**: http://localhost:9090
 - **Grafana**: http://localhost:3000 (admin/admin)
+- **Loki API**: http://localhost:3100
+- **Metrics Endpoint**: http://localhost:8000/metrics
 
 ## Available Metrics
 
@@ -338,9 +341,329 @@ If Prometheus uses too much memory:
    count({__name__=~".+"}) by (__name__)
    ```
 
+## Centralized Logging with Loki
+
+### Overview
+
+Grafana Loki provides centralized log aggregation for all Docker containers. Promtail collects logs from Docker containers and ships them to Loki for storage and querying.
+
+### Architecture
+
+```
+Docker Containers → Promtail → Loki → Grafana
+                      ↓
+                 /var/run/docker.sock
+```
+
+- **Loki**: Log aggregation system (similar to Prometheus but for logs)
+- **Promtail**: Log collection agent that reads Docker container logs
+- **Grafana**: Visualization layer for both metrics and logs
+
+### Viewing Logs in Grafana
+
+#### 1. Using the Logs Dashboard
+
+1. Navigate to Grafana: http://localhost:3000
+2. Go to Dashboards → Application Logs
+3. The dashboard includes:
+   - Log volume by service
+   - Log level distribution (ERROR, WARNING, INFO)
+   - Error logs panel
+   - Error rate trends
+   - Service-specific log panels
+
+#### 2. Using Explore (Ad-hoc Queries)
+
+1. Go to Explore → Select "Loki" datasource
+2. Use LogQL to query logs
+
+### LogQL Query Examples
+
+**Basic Queries:**
+
+```logql
+# All logs from shell service (FastAPI)
+{service="shell"}
+
+# All logs from specific container
+{container="hw-shell"}
+
+# Logs from multiple services
+{service=~"shell|hw-db|hw-keycloak"}
+```
+
+**Filtering by Content:**
+
+```logql
+# All error logs
+{service="shell"} |= "ERROR"
+
+# Case-insensitive error search
+{service="shell"} |~ "(?i)(error|exception)"
+
+# Filter out health checks
+{service="shell"} != "GET /health"
+
+# Python tracebacks
+{service="shell"} |= "Traceback"
+```
+
+**JSON Log Parsing:**
+
+```logql
+# Parse JSON logs and filter by level
+{service="shell"} | json | level="ERROR"
+
+# Extract specific JSON field
+{service="shell"} | json | line_format "{{.message}}"
+
+# Filter by nested JSON field
+{service="shell"} | json | error!=""
+```
+
+**Advanced Queries:**
+
+```logql
+# Count log lines per service
+sum by (service) (count_over_time({job="docker"}[5m]))
+
+# Error rate per service
+sum by (service) (rate({job="docker"} |~ "(?i)error" [5m]))
+
+# Top 10 error messages
+topk(10, sum by (service) (count_over_time({job="docker"} |~ "(?i)error" [1h])))
+
+# Filter by multiple conditions
+{service="shell"}
+  | json
+  | level="ERROR"
+  | line_format "{{.timestamp}} - {{.message}}"
+```
+
+**Time-based Queries:**
+
+```logql
+# Logs in the last 5 minutes
+{service="shell"} [5m]
+
+# Log volume rate
+rate({service="shell"}[1m])
+
+# Count over time window
+count_over_time({service="shell"}[10m])
+```
+
+### Log Retention
+
+By default, logs are retained for **7 days (168 hours)**. This is configured in [docker/loki/loki-config.yml](docker/loki/loki-config.yml:44):
+
+```yaml
+limits_config:
+  reject_old_samples_max_age: 168h  # 7 days
+
+compactor:
+  retention_enabled: true
+  retention_delete_delay: 2h
+```
+
+To change retention:
+1. Edit `docker/loki/loki-config.yml`
+2. Update `reject_old_samples_max_age` value (e.g., `720h` for 30 days)
+3. Restart Loki: `docker-compose restart loki`
+
+### Log Collection Configuration
+
+Promtail is configured to collect logs from all Docker containers in this project. Configuration is in [docker/promtail/promtail-config.yml](docker/promtail/promtail-config.yml).
+
+**What gets collected:**
+- Container logs (stdout/stderr)
+- Service name from Docker Compose labels
+- Log stream (stdout vs stderr)
+- Container ID and name
+- Timestamps
+
+**What gets filtered out:**
+- Health check requests (`GET /health`)
+- Empty log lines
+
+### Structured Logging Best Practices
+
+For better log parsing and filtering, use structured logging in your application:
+
+#### Option 1: JSON Logging (Recommended)
+
+```python
+import logging
+import json
+
+class JsonFormatter(logging.Formatter):
+    def format(self, record):
+        log_data = {
+            "timestamp": self.formatTime(record),
+            "level": record.levelname,
+            "logger": record.name,
+            "message": record.getMessage(),
+            "module": record.module,
+            "function": record.funcName,
+        }
+        if record.exc_info:
+            log_data["exception"] = self.formatException(record.exc_info)
+        return json.dumps(log_data)
+
+# Configure in your app
+handler = logging.StreamHandler()
+handler.setFormatter(JsonFormatter())
+logging.root.addHandler(handler)
+logging.root.setLevel(logging.INFO)
+```
+
+#### Option 2: Using structlog
+
+```python
+import structlog
+
+# Configure structlog
+structlog.configure(
+    processors=[
+        structlog.processors.TimeStamper(fmt="iso"),
+        structlog.processors.add_log_level,
+        structlog.processors.StackInfoRenderer(),
+        structlog.processors.format_exc_info,
+        structlog.processors.JSONRenderer()
+    ]
+)
+
+logger = structlog.get_logger()
+
+# Usage
+logger.info("user_login", user_id=123, username="alice", ip="192.168.1.1")
+logger.error("database_error", error=str(e), query=query, duration_ms=145)
+logger.warning("rate_limit_hit", user_id=456, endpoint="/api/data")
+```
+
+**Benefits of structured logging:**
+- Easy to parse in Loki with `| json`
+- Filter by specific fields
+- Better searchability
+- Consistent log format
+
+### Correlating Logs with Metrics
+
+In Grafana, you can correlate metrics spikes with logs:
+
+1. **From Metrics Dashboard to Logs:**
+   - Click on a metric spike in Prometheus dashboard
+   - Select "Explore" → Switch to Loki datasource
+   - Logs from the same time range will appear
+
+2. **From Logs to Metrics:**
+   - Find an error in logs
+   - Note the timestamp
+   - Switch to Prometheus datasource
+   - Query metrics around that timestamp
+
+3. **Split View:**
+   - Use Grafana's split view (Explore → Split)
+   - Prometheus on one side, Loki on the other
+   - Same time range for correlation
+
+### Troubleshooting Loki
+
+#### No logs appearing
+
+1. **Check Promtail is running:**
+   ```bash
+   docker ps | grep promtail
+   docker logs hw-promtail
+   ```
+
+2. **Verify Promtail can access Docker socket:**
+   ```bash
+   docker exec hw-promtail ls -la /var/run/docker.sock
+   ```
+
+3. **Check Promtail targets:**
+   ```bash
+   curl http://localhost:9080/targets
+   ```
+
+4. **Verify Loki is receiving logs:**
+   ```bash
+   curl http://localhost:3100/loki/api/v1/label
+   curl http://localhost:3100/loki/api/v1/label/service/values
+   ```
+
+#### Logs are delayed
+
+- Promtail buffers logs before sending to Loki
+- Default refresh interval: 5 seconds
+- Check Promtail logs for errors: `docker logs hw-promtail`
+
+#### High Loki memory usage
+
+1. **Reduce retention period** in `loki-config.yml`:
+   ```yaml
+   limits_config:
+     reject_old_samples_max_age: 72h  # 3 days instead of 7
+   ```
+
+2. **Limit ingestion rate**:
+   ```yaml
+   limits_config:
+     ingestion_rate_mb: 5  # Reduce from 10MB
+     ingestion_burst_size_mb: 10  # Reduce from 20MB
+   ```
+
+3. **Filter noisy logs** in `promtail-config.yml`:
+   ```yaml
+   pipeline_stages:
+     - drop:
+         expression: '.*DEBUG.*'
+         drop_counter_reason: debug_logs
+   ```
+
+#### Cannot query old logs
+
+- Check retention settings in `loki-config.yml`
+- Verify compactor is running:
+  ```bash
+  docker logs hw-loki | grep compactor
+  ```
+
+### Loki API Usage
+
+Query logs programmatically:
+
+```bash
+# Query logs via API
+curl -G -s "http://localhost:3100/loki/api/v1/query_range" \
+  --data-urlencode 'query={service="shell"} |= "error"' \
+  --data-urlencode "start=$(date -d '1 hour ago' +%s)000000000" \
+  --data-urlencode "end=$(date +%s)000000000" \
+  | jq '.data.result'
+
+# Get label values
+curl -s "http://localhost:3100/loki/api/v1/label/service/values" | jq
+
+# Get all labels
+curl -s "http://localhost:3100/loki/api/v1/labels" | jq
+```
+
+### LogQL vs PromQL
+
+| Feature | PromQL (Metrics) | LogQL (Logs) |
+|---------|-----------------|--------------|
+| Data type | Time-series metrics | Log lines |
+| Query | `rate(http_requests_total[5m])` | `{service="shell"} \|= "error"` |
+| Aggregation | `sum by (method)` | `count_over_time()` |
+| Filtering | Label matchers | Text search + JSON parsing |
+| Output | Numbers | Log lines + counts |
+
 ## Additional Resources
 
 - [Prometheus Documentation](https://prometheus.io/docs/)
 - [Grafana Documentation](https://grafana.com/docs/)
+- [Grafana Loki Documentation](https://grafana.com/docs/loki/latest/)
+- [LogQL Documentation](https://grafana.com/docs/loki/latest/logql/)
 - [PromQL Cheat Sheet](https://promlabs.com/promql-cheat-sheet/)
 - [FastAPI Best Practices](https://fastapi.tiangolo.com/advanced/monitoring/)

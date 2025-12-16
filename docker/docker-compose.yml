@@ -139,6 +139,10 @@ services:
         condition: service_started
       grafana:
         condition: service_started
+      loki:
+        condition: service_started
+      promtail:
+        condition: service_started
 
   prometheus:
     image: prom/prometheus:latest
@@ -214,7 +218,47 @@ services:
 
     depends_on:
       - prometheus
+      - loki
       - hw-keycloak
+
+    restart: unless-stopped
+
+  loki:
+    image: grafana/loki:latest
+    container_name: hw-loki
+    hostname: loki
+
+    networks:
+      - hw-network
+
+    ports:
+      - "3100:3100"
+
+    volumes:
+      - ./loki/loki-config.yml:/etc/loki/local-config.yaml:ro
+      - loki-data:/loki
+
+    command: -config.file=/etc/loki/local-config.yaml
+
+    restart: unless-stopped
+
+  promtail:
+    image: grafana/promtail:latest
+    container_name: hw-promtail
+    hostname: promtail
+
+    networks:
+      - hw-network
+
+    volumes:
+      - ./promtail/promtail-config.yml:/etc/promtail/config.yml:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+
+    command: -config.file=/etc/promtail/config.yml
+
+    depends_on:
+      - loki
 
     restart: unless-stopped
 
@@ -222,6 +266,7 @@ volumes:
   postgres-hw-data:
   prometheus-data:
   grafana-data:
+  loki-data:
 
 
 networks:
