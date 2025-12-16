@@ -920,29 +920,38 @@ db_query_duration_seconds.labels(operation="select").observe(0.045)
 - Enabled via `KC_METRICS_ENABLED=true` in `docker/.kc_env`
 - Scraped by Prometheus every 30 seconds
 
-**Key Keycloak Metrics:**
+**Available Keycloak Metrics:**
+
+Keycloak provides primarily JVM and HTTP server metrics out of the box:
+
 ```
-# Authentication & Sessions
-keycloak_sessions - Active user sessions count
-keycloak_logins_total - Total successful logins
-keycloak_login_failures_total - Total failed login attempts
+# HTTP Server Metrics (Available Now)
+http_server_requests_seconds_count - Total HTTP requests
+http_server_requests_seconds_sum - Total request duration
+http_server_active_requests - Current active requests
+http_server_connections_seconds_duration_sum - Connection duration
 
-# Performance
-keycloak_request_total - Total HTTP requests to Keycloak
-keycloak_request_duration_bucket - Request duration histogram
-
-# JVM Metrics
+# JVM Metrics (Available Now)
 jvm_memory_used_bytes{area="heap"} - JVM heap memory usage
 jvm_memory_max_bytes{area="heap"} - Maximum heap memory
 jvm_gc_pause_seconds_sum - Garbage collection pause time
+jvm_gc_pause_seconds_count - GC pause count
 jvm_threads_current - Current thread count
 jvm_threads_peak - Peak thread count
+jvm_threads_daemon - Daemon thread count
 
-# Database Connection Pool (HikariCP)
-hikaricp_connections_active - Active database connections
-hikaricp_connections_idle - Idle database connections
-hikaricp_connections_pending - Pending connection requests
+# Cache/Session Metrics (Available Now - via vendor metrics)
+vendor_statistics_hits - Cache hit count by cache type
+vendor_statistics_misses - Cache miss count
+vendor_statistics_entries - Number of entries in cache
 ```
+
+**Note on Authentication Metrics**: The dashboard includes panels for authentication-specific metrics (sessions, login success/failure). These metrics require additional setup:
+- **Option 1**: Install [Keycloak Metrics SPI](https://github.com/aerogear/keycloak-metrics-spi) for detailed auth metrics
+- **Option 2**: Enable Keycloak event listeners and export to Prometheus
+- **Option 3**: Track authentication via FastAPI app's own metrics (already available in `fastapi-metrics` dashboard)
+
+**Currently working panels**: JVM Heap Memory (panel 6), GC Pause Time (panel 7), Thread Count (panel 8). Panels 1-5 and 9 will show "No data" until authentication metrics are configured.
 
 **Grafana Dashboard:**
 - Dashboard location: `docker/grafana/provisioning/dashboards/keycloak-metrics.json`
