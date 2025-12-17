@@ -235,13 +235,13 @@ def setup_logging() -> logging.Logger:
     logger.handlers.clear()
 
     # Console handler - format based on LOG_CONSOLE_FORMAT setting
-    # 'json' for Promtail collection, 'human' for development readability
+    # 'json' for Grafana Alloy collection, 'human' for development readability
     console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setLevel(logging.DEBUG)
     if app_settings.LOG_CONSOLE_FORMAT.lower() == "human":
         console_handler.setFormatter(HumanReadableFormatter())
     else:
-        # Default to JSON format for Promtail collection
+        # Default to JSON format for Grafana Alloy collection
         console_handler.setFormatter(StructuredJSONFormatter())
     logger.addHandler(console_handler)
 
@@ -254,26 +254,10 @@ def setup_logging() -> logging.Logger:
     except Exception as e:
         logger.warning(f"Could not create file handler: {e}")
 
-    # Loki handler (if enabled)
-    if app_settings.LOKI_ENABLED:
-        try:
-            from logging_loki import LokiHandler
-
-            loki_handler = LokiHandler(
-                url=f"{app_settings.LOKI_URL}/loki/api/v{app_settings.LOKI_VERSION}/push",
-                tags={
-                    "application": "fastapi-app",
-                    "environment": app_settings.ENVIRONMENT,
-                },
-                version=app_settings.LOKI_VERSION,
-            )
-            loki_handler.setLevel(logging.INFO)
-            # Don't set formatter - LokiHandler creates its own JSON structure
-            # Setting StructuredJSONFormatter causes double-encoding
-            logger.addHandler(loki_handler)
-            logger.info("Loki handler configured successfully")
-        except Exception as e:
-            logger.warning(f"Could not configure Loki handler: {e}")
+    # Note: We use Grafana Alloy to collect logs from Docker stdout and send to Loki
+    # Alloy replaced deprecated Promtail (deprecated Feb 2025, EOL March 2026)
+    # LokiHandler was removed to avoid duplicate logs and complexity
+    # Alloy scrapes container logs and handles shipping to Loki
 
     # Disable logging during pytest runs
     if sys.argv[0].split("/")[-1] in ["pytest"]:

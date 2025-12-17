@@ -91,13 +91,13 @@ class Settings(BaseSettings):
     # Paths to exclude from access logs (e.g., /metrics, /health)
     LOG_EXCLUDED_PATHS: list[str] = ["/metrics", "/health"]
     LOG_LEVEL: str = "INFO"
-    # Console log format: 'json' for Promtail collection, 'human' for development
+    # Console log format: 'json' for Grafana Alloy collection, 'human' for development
     LOG_CONSOLE_FORMAT: str = "human"
 
-    # Loki integration settings
-    LOKI_ENABLED: bool = True
-    LOKI_URL: str = "http://loki:3100"
-    LOKI_VERSION: str = "1"  # Loki API version
+    # Loki integration settings (via Grafana Alloy)
+    # Alloy scrapes Docker logs and sends to Loki
+    # Alloy replaced deprecated Promtail (Feb 2025)
+    # No direct LokiHandler needed - simplified architecture
 
     # Environment tag for log filtering
     ENVIRONMENT: str = "development"

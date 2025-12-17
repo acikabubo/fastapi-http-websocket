@@ -987,25 +987,41 @@ The application uses structured JSON logging with Grafana Loki for centralized l
 
 **Logging Stack:**
 - **Structured Logging**: JSON format with contextual fields (`app/logging.py`)
+- **Grafana Alloy**: Modern observability collector (replaced deprecated Promtail)
 - **Loki**: Centralized log aggregation and storage
-- **Promtail**: Log collector that ships logs from Docker containers to Loki
 - **Grafana**: Log visualization and querying with LogQL
+
+**Architecture:**
+Logs flow: Application → stdout (JSON or human-readable) → Grafana Alloy → Loki → Grafana
+
+We use **only Grafana Alloy** to send logs to Loki (no LokiHandler). This is the modern, recommended approach that avoids duplicate logs and complexity.
+
+**Why Grafana Alloy?**
+- Promtail was deprecated in February 2025 (EOL March 2026)
+- Alloy is the unified observability agent supporting logs, metrics, and traces
+- Uses modern "River" configuration language
+- Better performance and more features than Promtail
+- Alloy UI available at http://localhost:12345 for debugging
 
 **Console Log Format:**
 You can choose between JSON and human-readable console output:
-- **JSON format** (default): Required for Promtail to parse logs correctly. Use in production.
-- **Human-readable format**: Easier to read during development. Use locally.
+- **JSON format**: Required for Grafana Alloy to parse logs correctly. Use in production.
+- **Human-readable format** (default): Easier to read during development. Use locally.
 
 Set via environment variable in `docker/.srv_env`:
 ```bash
-# For development (human-readable)
+# For development (human-readable) - DEFAULT
 LOG_CONSOLE_FORMAT=human
 
-# For production (JSON for Promtail)
+# For production (JSON for Grafana Alloy)
 LOG_CONSOLE_FORMAT=json
 ```
 
-Note: Logs sent to Loki via LokiHandler and error logs in files are always in JSON format regardless of this setting.
+**Important Notes:**
+- When `LOG_CONSOLE_FORMAT=human`, Alloy will fail to parse JSON fields from logs (acceptable for local dev without Grafana)
+- When `LOG_CONSOLE_FORMAT=json`, all logs are properly parsed and indexed in Loki for Grafana dashboards
+- Error log files (`logs/logging_errors.log`) are always in JSON format regardless of this setting
+- For production deployments with Grafana monitoring, always use `LOG_CONSOLE_FORMAT=json`
 
 **Available Log Fields:**
 Structured logs automatically include:
