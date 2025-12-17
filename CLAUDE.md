@@ -991,6 +991,22 @@ The application uses structured JSON logging with Grafana Loki for centralized l
 - **Promtail**: Log collector that ships logs from Docker containers to Loki
 - **Grafana**: Log visualization and querying with LogQL
 
+**Console Log Format:**
+You can choose between JSON and human-readable console output:
+- **JSON format** (default): Required for Promtail to parse logs correctly. Use in production.
+- **Human-readable format**: Easier to read during development. Use locally.
+
+Set via environment variable in `docker/.srv_env`:
+```bash
+# For development (human-readable)
+LOG_CONSOLE_FORMAT=human
+
+# For production (JSON for Promtail)
+LOG_CONSOLE_FORMAT=json
+```
+
+Note: Logs sent to Loki via LokiHandler and error logs in files are always in JSON format regardless of this setting.
+
 **Available Log Fields:**
 Structured logs automatically include:
 - `timestamp`: ISO 8601 timestamp

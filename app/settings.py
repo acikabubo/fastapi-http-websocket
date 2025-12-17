@@ -91,6 +91,8 @@ class Settings(BaseSettings):
     # Paths to exclude from access logs (e.g., /metrics, /health)
     LOG_EXCLUDED_PATHS: list[str] = ["/metrics", "/health"]
     LOG_LEVEL: str = "INFO"
+    # Console log format: 'json' for Promtail collection, 'human' for development
+    LOG_CONSOLE_FORMAT: str = "human"
 
     # Loki integration settings
     LOKI_ENABLED: bool = True

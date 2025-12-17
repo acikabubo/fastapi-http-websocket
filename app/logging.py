@@ -121,7 +121,7 @@ class StructuredJSONFormatter(logging.Formatter):
         if record.exc_info:
             log_data["exception"] = self.formatException(record.exc_info)
 
-        # Add extra fields from record
+        # Add extra fields from record (only JSON-serializable ones)
         for key, value in record.__dict__.items():
             if key not in [
                 "name",
@@ -147,7 +147,13 @@ class StructuredJSONFormatter(logging.Formatter):
                 "stack_info",
                 "taskName",
             ]:
-                log_data[key] = value
+                # Only add JSON-serializable values
+                try:
+                    json.dumps(value)
+                    log_data[key] = value
+                except (TypeError, ValueError):
+                    # Skip non-serializable fields
+                    log_data[key] = str(value)
 
         # Truncate message if too long (for Loki compatibility)
         json_str = json.dumps(log_data)
@@ -228,10 +234,15 @@ def setup_logging() -> logging.Logger:
     # Clear existing handlers to avoid duplicates
     logger.handlers.clear()
 
-    # Console handler (human-readable for development)
+    # Console handler - format based on LOG_CONSOLE_FORMAT setting
+    # 'json' for Promtail collection, 'human' for development readability
     console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setLevel(logging.DEBUG)
-    console_handler.setFormatter(HumanReadableFormatter())
+    if app_settings.LOG_CONSOLE_FORMAT.lower() == "human":
+        console_handler.setFormatter(HumanReadableFormatter())
+    else:
+        # Default to JSON format for Promtail collection
+        console_handler.setFormatter(StructuredJSONFormatter())
     logger.addHandler(console_handler)
 
     # File handler (JSON format for errors)
@@ -257,7 +268,8 @@ def setup_logging() -> logging.Logger:
                 version=app_settings.LOKI_VERSION,
             )
             loki_handler.setLevel(logging.INFO)
-            loki_handler.setFormatter(StructuredJSONFormatter())
+            # Don't set formatter - LokiHandler creates its own JSON structure
+            # Setting StructuredJSONFormatter causes double-encoding
             logger.addHandler(loki_handler)
             logger.info("Loki handler configured successfully")
         except Exception as e:

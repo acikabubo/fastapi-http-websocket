@@ -59,9 +59,13 @@ class RBACManager(metaclass=SingletonMeta):
 
         if not has_permission:
             logger.info(
-                f"Permission denied for user {user.username} on pkg_id {pkg_id}. "
-                f"Required roles: {required_roles}, User roles: {user.roles}, "
-                f"Missing roles: {missing_roles}"
+                f"Permission denied for user {user.username} on pkg_id {pkg_id}",
+                extra={
+                    "required_roles": required_roles,
+                    "user_roles": user.roles,
+                    "missing_roles": list(missing_roles),
+                    "pkg_id": pkg_id,
+                },
             )
 
         return has_permission
@@ -118,9 +122,14 @@ class RBACManager(metaclass=SingletonMeta):
 
             if not has_permission:
                 logger.info(
-                    f"HTTP permission denied for user {user.username} on {request.method} {request.url.path}. "
-                    f"Required roles: {list(roles)}, User roles: {user.roles}, "
-                    f"Missing roles: {missing_roles}"
+                    f"HTTP permission denied for user {user.username} on {request.method} {request.url.path}",
+                    extra={
+                        "required_roles": list(roles),
+                        "user_roles": user.roles,
+                        "missing_roles": list(missing_roles),
+                        "http_method": request.method,
+                        "endpoint": str(request.url.path),
+                    },
                 )
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,

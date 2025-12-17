@@ -1,0 +1,8 @@
+- pytest-xdist
+
+- try to simplify unittests and fixtures
+- review unittests fixtures
+- check unittests mocks and put mocks for unittests in one place
+
+- Documentation how to add Grafana, Prometheus and Loki in
+  later development (.worktree)

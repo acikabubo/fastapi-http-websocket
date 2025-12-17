@@ -14,3 +14,7 @@ AUTH_REDIS_DB = 10
 # Database credentials (must match .pg_env)
 DB_USER=hw-user
 DB_PASSWORD=hw-pass
+
+# Logging settings
+# LOG_CONSOLE_FORMAT: 'json' for production (Promtail), 'human' for development
+LOG_CONSOLE_FORMAT=human
