@@ -80,30 +80,10 @@ loki.source.docker "docker" {
 loki.process "docker" {
   forward_to = [loki.write.loki.receiver]
 
-  // Strip ANSI escape codes - comprehensive pattern for tmux sequences
-  // Matches: ESC [ <params> <letter> where params can include numbers, semicolons, and ?
-  // Examples: \x1b[1;43r, \x1b[42;1H, \x1b[2S, \x1b[40d, \x1b[36m, \x1b[0m
+  // Strip ANSI escape codes (basic cleanup for any remaining escape sequences)
   stage.replace {
     expression = "\\x1b\\[[0-9;?]*[a-zA-Z]"
     replace    = ""
-  }
-
-  // Strip any remaining escape sequences before JSON (handles edge cases)
-  stage.replace {
-    expression = "\\x1b[^{]*"
-    replace    = ""
-  }
-
-  // Extract only the JSON part from each log line
-  // This removes any remaining non-JSON characters before/after the JSON
-  stage.regex {
-    expression = "^[^{]*(?P<extracted_json>\\{.*\\}).*$"
-  }
-
-  // Replace entire log line with just the extracted JSON
-  stage.template {
-    source   = "extracted_json"
-    template = "{{ .Value }}"
   }
 
   // Parse JSON logs if present

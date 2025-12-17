@@ -126,7 +126,8 @@ services:
       - /tmp:/tmp
       - ~/.ssh:/home/devel/.ssh
 
-    command: "/usr/bin/tmux -L server"
+    # Keep container running for shell access (no tmux to avoid ANSI codes in logs)
+    command: "tail -f /dev/null"
 
     depends_on:
       hw-db:
