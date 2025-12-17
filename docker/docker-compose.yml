@@ -126,8 +126,10 @@ services:
       - /tmp:/tmp
       - ~/.ssh:/home/devel/.ssh
 
-    # Keep container running for shell access (no tmux to avoid ANSI codes in logs)
-    command: "tail -f /dev/null"
+    # Keep container running with bash shell (no tmux to avoid ANSI codes in logs)
+    command: "bash"
+    stdin_open: true
+    tty: true
 
     depends_on:
       hw-db:
