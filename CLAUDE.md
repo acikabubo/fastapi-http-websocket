@@ -979,3 +979,170 @@ vendor_statistics_entries - Number of entries in cache
 - Metrics endpoint should be restricted in production (use network policies or firewall rules)
 - Monitor failed login attempts for suspicious activity
 - Set up alerts for high failure rates or unusual session patterns
+
+### Centralized Logging with Loki
+
+**Overview:**
+The application uses structured JSON logging with Grafana Loki for centralized log aggregation. All logs include contextual fields for correlation and debugging.
+
+**Logging Stack:**
+- **Structured Logging**: JSON format with contextual fields (`app/logging.py`)
+- **Loki**: Centralized log aggregation and storage
+- **Promtail**: Log collector that ships logs from Docker containers to Loki
+- **Grafana**: Log visualization and querying with LogQL
+
+**Available Log Fields:**
+Structured logs automatically include:
+- `timestamp`: ISO 8601 timestamp
+- `level`: Log level (DEBUG, INFO, WARNING, ERROR)
+- `logger`: Python logger name (e.g., `app.auth`, `app.api.ws.consumers`)
+- `message`: Log message
+- `request_id`: Correlation ID from `X-Correlation-ID` header
+- `user_id`: Authenticated user ID (if available)
+- `endpoint`: HTTP endpoint path
+- `method`: HTTP method (GET, POST, etc.)
+- `status_code`: HTTP response status code
+- `environment`: Deployment environment (dev, staging, production)
+- `module`, `function`, `line`: Code location
+- `exception`: Stack trace (for ERROR logs)
+
+**Setting Log Context:**
+Use `set_log_context()` to add custom fields to all logs in the current request:
+
+```python
+from app.logging import logger, set_log_context
+
+# Add custom contextual fields
+set_log_context(
+    user_id="user123",
+    operation="create_author",
+    duration_ms=45
+)
+
+logger.info("Operation completed")  # Will include user_id, operation, duration_ms
+```
+
+**Grafana Dashboards:**
+1. **Application Logs Dashboard** (`application-logs`):
+   - Access at: http://localhost:3000/d/application-logs
+   - Panels: Log volume, error logs, HTTP requests, WebSocket logs, rate limits, auth failures
+   - Variables: service, level, user_id, endpoint, method, status_code
+
+2. **FastAPI Metrics Dashboard** (`fastapi-metrics`):
+   - Includes log panels for correlating logs with metrics
+   - Recent errors, HTTP request logs, rate limit events
+
+**Common LogQL Queries:**
+
+```logql
+# Recent error logs
+{service="shell"} | json | level="ERROR"
+
+# Logs for specific user
+{service="shell"} | json | user_id="user123"
+
+# HTTP requests to specific endpoint
+{service="shell"} | json | endpoint=~"/api/authors.*"
+
+# Failed authentication attempts
+{service="shell"} | json | logger=~"app.auth.*" |~ "(?i)(error|failed|invalid)"
+
+# Rate limit violations
+{service="shell"} | json |~ "(?i)(rate limit|too many requests)"
+
+# WebSocket logs
+{service="shell"} | json | logger=~"app.api.ws.*"
+
+# Logs by HTTP status code
+{service="shell"} | json | status_code=~"5.."  # 5xx errors
+{service="shell"} | json | status_code="429"   # Rate limit hits
+
+# Slow operations (requires duration_ms field)
+{service="shell"} | json | duration_ms > 100
+
+# Permission denied events
+{service="shell"} | json |~ "(?i)(permission denied|unauthorized|forbidden)"
+
+# Correlate logs by request ID
+{service="shell"} | json | request_id="550e8400-e29b-41d4-a716-446655440000"
+```
+
+**Log Filtering Variables:**
+Dashboards support filtering by:
+- **service**: Docker service name (shell, hw-db, hw-keycloak)
+- **level**: Log level (INFO, WARNING, ERROR)
+- **user_id**: Filter by authenticated user (regex)
+- **endpoint**: Filter by HTTP endpoint (regex)
+- **method**: HTTP method (GET, POST, PUT, PATCH, DELETE)
+- **status_code**: HTTP status code (regex)
+
+**Correlation Between Logs and Metrics:**
+Use `request_id` (correlation ID) to trace requests across:
+1. HTTP/WebSocket logs
+2. Database query logs
+3. Authentication logs
+4. Error logs
+5. Prometheus metrics (via exemplars)
+
+**Best Practices:**
+1. **Always include context**: Use `set_log_context()` for request-specific fields
+2. **Use structured fields**: Add fields as keyword arguments, not in message strings
+3. **Log at appropriate levels**:
+   - `DEBUG`: Detailed diagnostic info
+   - `INFO`: Normal operations, request handling
+   - `WARNING`: Unexpected but recoverable issues
+   - `ERROR`: Errors requiring attention
+4. **Include duration for performance tracking**: Add `duration_ms` field for slow operations
+5. **Correlate with request_id**: Every log includes correlation ID for tracing
+
+**Example Logging Pattern:**
+
+```python
+from app.logging import logger, set_log_context
+import time
+
+async def process_request(request: RequestModel, user_id: str) -> ResponseModel:
+    # Set context for all logs in this request
+    set_log_context(
+        user_id=user_id,
+        pkg_id=request.pkg_id,
+        operation="process_request"
+    )
+
+    start_time = time.time()
+
+    try:
+        logger.info("Processing request")
+
+        # Your logic here
+        result = await do_work()
+
+        duration_ms = (time.time() - start_time) * 1000
+        logger.info("Request completed", extra={"duration_ms": duration_ms})
+
+        return ResponseModel.success(...)
+
+    except Exception as e:
+        duration_ms = (time.time() - start_time) * 1000
+        logger.error(
+            f"Request failed: {e}",
+            exc_info=True,
+            extra={"duration_ms": duration_ms}
+        )
+        raise
+```
+
+**Troubleshooting with Logs:**
+1. Check application logs dashboard for recent errors
+2. Filter by user_id or endpoint to narrow down issues
+3. Use request_id to trace the full request lifecycle
+4. Correlate error spikes in logs with metrics anomalies
+5. Check authentication failures for security issues
+6. Monitor rate limit violations for abuse patterns
+
+**Configuration:**
+- Logging config: `app/logging.py`
+- Log level: Set via `LOG_LEVEL` environment variable
+- Loki config: `docker/loki/loki-config.yml`
+- Promtail config: `docker/promtail/promtail-config.yml`
+- Loki URL: `LOKI_URL` in `app/settings.py` (default: http://loki:3100)
