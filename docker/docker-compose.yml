@@ -250,41 +250,6 @@ services:
       alloy:
         condition: service_started
 
-  oauth2-proxy:
-    image: quay.io/oauth2-proxy/oauth2-proxy:latest
-    container_name: hw-oauth2-proxy
-    hostname: oauth2-proxy
-
-    networks:
-      - hw-network
-
-    ports:
-      - "4180:4180"
-
-    env_file:
-      - .oauth2_proxy_env
-
-    labels:
-      # Enable Traefik
-      - "traefik.enable=true"
-
-      # HTTP Router for OAuth2 Proxy
-      - "traefik.http.routers.oauth2-proxy.rule=Host(`oauth.localhost`)"
-      - "traefik.http.routers.oauth2-proxy.entrypoints=web"
-      - "traefik.http.routers.oauth2-proxy.service=oauth2-proxy"
-
-      # Service definition
-      - "traefik.http.services.oauth2-proxy.loadbalancer.server.port=4180"
-
-      # Middleware chain
-      - "traefik.http.routers.oauth2-proxy.middlewares=secure-headers@file"
-
-    depends_on:
-      - hw-keycloak
-      - traefik
-
-    restart: unless-stopped
-
   prometheus:
     image: prom/prometheus:latest
     container_name: hw-prometheus
@@ -304,7 +269,7 @@ services:
       # Enable Traefik
       - "traefik.enable=true"
 
-      # HTTP Router for Prometheus (protected by OAuth2 Proxy)
+      # HTTP Router for Prometheus
       - "traefik.http.routers.prometheus.rule=Host(`prometheus.localhost`)"
       - "traefik.http.routers.prometheus.entrypoints=web"
       - "traefik.http.routers.prometheus.service=prometheus"
@@ -312,8 +277,8 @@ services:
       # Service definition
       - "traefik.http.services.prometheus.loadbalancer.server.port=9090"
 
-      # Middleware chain (added OAuth2 authentication)
-      - "traefik.http.routers.prometheus.middlewares=oauth2-auth@file,secure-headers@file"
+      # Middleware chain
+      - "traefik.http.routers.prometheus.middlewares=secure-headers@file"
 
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
@@ -414,7 +379,7 @@ services:
       # Enable Traefik
       - "traefik.enable=true"
 
-      # HTTP Router for Loki (protected by OAuth2 Proxy)
+      # HTTP Router for Loki
       - "traefik.http.routers.loki.rule=Host(`loki.localhost`)"
       - "traefik.http.routers.loki.entrypoints=web"
       - "traefik.http.routers.loki.service=loki"
@@ -422,8 +387,8 @@ services:
       # Service definition
       - "traefik.http.services.loki.loadbalancer.server.port=3100"
 
-      # Middleware chain (added OAuth2 authentication)
-      - "traefik.http.routers.loki.middlewares=oauth2-auth@file,secure-headers@file"
+      # Middleware chain
+      - "traefik.http.routers.loki.middlewares=secure-headers@file"
 
     command: -config.file=/etc/loki/local-config.yaml
 
@@ -448,7 +413,7 @@ services:
       # Enable Traefik
       - "traefik.enable=true"
 
-      # HTTP Router for Alloy UI (protected by OAuth2 Proxy)
+      # HTTP Router for Alloy UI
       - "traefik.http.routers.alloy.rule=Host(`alloy.localhost`)"
       - "traefik.http.routers.alloy.entrypoints=web"
       - "traefik.http.routers.alloy.service=alloy"
@@ -456,8 +421,8 @@ services:
       # Service definition
       - "traefik.http.services.alloy.loadbalancer.server.port=12345"
 
-      # Middleware chain (added OAuth2 authentication)
-      - "traefik.http.routers.alloy.middlewares=oauth2-auth@file,secure-headers@file"
+      # Middleware chain
+      - "traefik.http.routers.alloy.middlewares=secure-headers@file"
 
     command:
       - run
