@@ -62,8 +62,9 @@ http:
 
     # Retry Middleware
     retry:
-      attempts: 3
-      initialInterval: 100ms
+      retry:
+        attempts: 3
+        initialInterval: 100ms
 
     # IP Whitelist (for sensitive endpoints)
     # admin-whitelist:
@@ -104,8 +105,3 @@ http:
     #   basicAuth:
     #     users:
     #       - "admin:$$apr1$$..."  # admin:password (hashed)
-
-# TCP Middlewares (if needed)
-tcp:
-  middlewares:
-    {}
