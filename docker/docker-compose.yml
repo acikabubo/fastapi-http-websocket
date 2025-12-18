@@ -375,6 +375,21 @@ services:
       - ./loki/loki-config.yml:/etc/loki/local-config.yaml:ro
       - loki-data:/loki
 
+    labels:
+      # Enable Traefik
+      - "traefik.enable=true"
+
+      # HTTP Router for Loki
+      - "traefik.http.routers.loki.rule=Host(`loki.localhost`)"
+      - "traefik.http.routers.loki.entrypoints=web"
+      - "traefik.http.routers.loki.service=loki"
+
+      # Service definition
+      - "traefik.http.services.loki.loadbalancer.server.port=3100"
+
+      # Middleware chain
+      - "traefik.http.routers.loki.middlewares=secure-headers@file"
+
     command: -config.file=/etc/loki/local-config.yaml
 
     restart: unless-stopped
@@ -393,6 +408,21 @@ services:
     volumes:
       - ./alloy/config.alloy:/etc/alloy/config.alloy:ro
       - /var/run/docker.sock:/var/run/docker.sock
+
+    labels:
+      # Enable Traefik
+      - "traefik.enable=true"
+
+      # HTTP Router for Alloy UI
+      - "traefik.http.routers.alloy.rule=Host(`alloy.localhost`)"
+      - "traefik.http.routers.alloy.entrypoints=web"
+      - "traefik.http.routers.alloy.service=alloy"
+
+      # Service definition
+      - "traefik.http.services.alloy.loadbalancer.server.port=12345"
+
+      # Middleware chain
+      - "traefik.http.routers.alloy.middlewares=secure-headers@file"
 
     command:
       - run
