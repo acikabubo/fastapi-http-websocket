@@ -1,6 +1,6 @@
 site_name: FastAPI HTTP/WebSocket Template
 site_description: Production-ready FastAPI template with HTTP and WebSocket support, authentication, RBAC, rate limiting, and comprehensive monitoring
-site_author: acikabubo
+site_author: Aleksandar Krsteski
 site_url: https://acikabubo.github.io/fastapi-http-websocket/
 
 repo_name: acikabubo/fastapi-http-websocket
@@ -128,7 +128,7 @@ extra:
     provider: mike
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/yourusername/fastapi-http-websocket
+      link: https://github.com/acikabubo/fastapi-http-websocket
     - icon: fontawesome/brands/python
       link: https://pypi.org/project/fastapi/
   generator: false

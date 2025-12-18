@@ -238,7 +238,7 @@ services:
 
 ```bash
 # Clone repository
-git clone https://github.com/yourusername/fastapi-http-websocket.git
+git clone https://github.com/acikabubo/fastapi-http-websocket.git
 cd fastapi-http-websocket
 
 # Checkout production branch
@@ -633,6 +633,6 @@ curl https://api.example.com/health
 
 ## Support
 
-- GitHub Issues: https://github.com/yourusername/fastapi-http-websocket/issues
+- GitHub Issues: https://github.com/acikabubo/fastapi-http-websocket/issues
 - Internal Docs: Confluence/Wiki
 - On-call: PagerDuty rotation

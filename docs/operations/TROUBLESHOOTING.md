@@ -1238,7 +1238,7 @@ If issues persist after trying these solutions:
    - [Security Guide](../security/SECURITY_GUIDE.md)
 
 4. **Contact support:**
-   - GitHub Issues: https://github.com/yourusername/fastapi-http-websocket/issues
+   - GitHub Issues: https://github.com/acikabubo/fastapi-http-websocket/issues
    - Internal documentation: Confluence/Wiki
    - On-call rotation: PagerDuty
 
