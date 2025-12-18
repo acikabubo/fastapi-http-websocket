@@ -1,0 +1,110 @@
+/* Custom styles for FastAPI HTTP/WebSocket documentation */
+
+:root {
+  --md-primary-fg-color: #4051b5;
+  --md-accent-fg-color: #526cfe;
+}
+
+/* Grid cards styling */
+.grid.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1rem;
+  margin: 2rem 0;
+}
+
+.grid.cards > * {
+  border: 1px solid var(--md-default-fg-color--lightest);
+  border-radius: 0.2rem;
+  padding: 1.5rem;
+  transition: all 0.3s;
+}
+
+.grid.cards > *:hover {
+  border-color: var(--md-accent-fg-color);
+  box-shadow: 0 0.2rem 0.8rem rgba(0,0,0,0.1);
+  transform: translateY(-0.1rem);
+}
+
+/* Feature list styling */
+.md-typeset ul li {
+  margin-bottom: 0.5rem;
+}
+
+/* Code block improvements */
+.md-typeset pre > code {
+  border-radius: 0.2rem;
+}
+
+/* Table improvements */
+.md-typeset table:not([class]) {
+  border: 1px solid var(--md-default-fg-color--lightest);
+  border-radius: 0.2rem;
+}
+
+.md-typeset table:not([class]) th {
+  background-color: var(--md-default-fg-color--lightest);
+  font-weight: 600;
+}
+
+/* Admonition customization */
+.md-typeset .admonition {
+  border-left: 0.2rem solid;
+  border-radius: 0.2rem;
+}
+
+/* Mermaid diagram styling */
+.mermaid {
+  text-align: center;
+  margin: 2rem 0;
+}
+
+/* Button styling */
+.md-button {
+  margin: 0.5rem 0.5rem 0.5rem 0;
+}
+
+/* Header improvements */
+.md-typeset h1 {
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.md-typeset h2 {
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  border-bottom: 1px solid var(--md-default-fg-color--lightest);
+  padding-bottom: 0.5rem;
+}
+
+/* Homepage hero section */
+.md-typeset .hero {
+  text-align: center;
+  padding: 3rem 0;
+}
+
+/* Status badges */
+.badge {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.2rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.badge-success {
+  background-color: #4caf50;
+  color: white;
+}
+
+.badge-warning {
+  background-color: #ff9800;
+  color: white;
+}
+
+.badge-info {
+  background-color: #2196f3;
+  color: white;
+}
