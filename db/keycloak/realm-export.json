@@ -820,8 +820,8 @@
       "clientId": "grafana-oauth",
       "name": "Grafana OAuth",
       "description": "Grafana monitoring dashboard OAuth client",
-      "rootUrl": "http://localhost:3000",
-      "adminUrl": "http://localhost:3000",
+      "rootUrl": "http://grafana.localhost",
+      "adminUrl": "http://grafana.localhost",
       "baseUrl": "/",
       "surrogateAuthRequired": false,
       "enabled": true,
@@ -829,12 +829,12 @@
       "clientAuthenticatorType": "client-secret",
       "secret": "grafana-client-secret-change-in-production",
       "redirectUris": [
-        "http://localhost:3000/*",
-        "http://localhost:3000/login/generic_oauth",
-        "http://localhost:3000/login"
+        "http://grafana.localhost/*",
+        "http://grafana.localhost/login/generic_oauth",
+        "http://grafana.localhost/login"
       ],
       "webOrigins": [
-        "http://localhost:3000"
+        "http://grafana.localhost"
       ],
       "notBefore": 0,
       "bearerOnly": false,
@@ -852,7 +852,7 @@
         "display.on.consent.screen": "false",
         "oauth2.device.authorization.grant.enabled": "false",
         "backchannel.logout.revoke.offline.tokens": "false",
-        "post.logout.redirect.uris": "http://localhost:3000/login"
+        "post.logout.redirect.uris": "http://grafana.localhost/login"
       },
       "authenticationFlowBindingOverrides": {},
       "fullScopeAllowed": true,

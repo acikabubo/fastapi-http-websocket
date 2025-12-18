@@ -11,13 +11,6 @@ entryPoints:
   # HTTP entry point (port 80)
   web:
     address: ":80"
-    # Redirect all HTTP traffic to HTTPS
-    http:
-      redirections:
-        entryPoint:
-          to: websecure
-          scheme: https
-          permanent: true
 
   # HTTPS entry point (port 443)
   websecure:

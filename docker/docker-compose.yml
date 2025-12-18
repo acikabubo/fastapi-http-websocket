@@ -312,7 +312,7 @@ services:
       - GF_AUTH_GENERIC_OAUTH_CLIENT_ID=grafana-oauth
       - GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET=grafana-client-secret-change-in-production
       - GF_AUTH_GENERIC_OAUTH_SCOPES=openid profile email roles
-      - GF_AUTH_GENERIC_OAUTH_AUTH_URL=http://localhost:8080/realms/HW-App/protocol/openid-connect/auth
+      - GF_AUTH_GENERIC_OAUTH_AUTH_URL=http://auth.localhost/realms/HW-App/protocol/openid-connect/auth
       - GF_AUTH_GENERIC_OAUTH_TOKEN_URL=http://hw-keycloak:8080/realms/HW-App/protocol/openid-connect/token
       - GF_AUTH_GENERIC_OAUTH_API_URL=http://hw-keycloak:8080/realms/HW-App/protocol/openid-connect/userinfo
 
@@ -327,10 +327,10 @@ services:
       - GF_AUTH_GENERIC_OAUTH_USE_REFRESH_TOKEN=true
 
       # Logout configuration - terminates Keycloak session on Grafana logout
-      - GF_AUTH_SIGNOUT_REDIRECT_URL=http://localhost:8080/realms/HW-App/protocol/openid-connect/logout?client_id=grafana-oauth&post_logout_redirect_uri=http://localhost:3000/login
+      - GF_AUTH_SIGNOUT_REDIRECT_URL=http://auth.localhost/realms/HW-App/protocol/openid-connect/logout?client_id=grafana-oauth&post_logout_redirect_uri=http://grafana.localhost/login
 
       # Security settings
-      - GF_SERVER_ROOT_URL=http://localhost:3000
+      - GF_SERVER_ROOT_URL=http://grafana.localhost
       - GF_AUTH_DISABLE_LOGIN_FORM=true
 
     labels:

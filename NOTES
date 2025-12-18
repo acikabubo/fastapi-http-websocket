@@ -6,3 +6,6 @@
 
 - Documentation how to add Grafana, Prometheus and Loki in
   later development (.worktree)
+
+- use traefik paths in prometheus.yml
+- is there a need to update /etc/hosts
