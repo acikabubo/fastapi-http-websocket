@@ -14,3 +14,9 @@ scrape_configs:
       - targets: ['hw-keycloak:9000']
     metrics_path: '/metrics'
     scrape_interval: 30s  # Scrape every 30 seconds
+
+  - job_name: 'traefik'
+    static_configs:
+      - targets: ['traefik:8080']
+    metrics_path: '/metrics'
+    scrape_interval: 30s  # Scrape Traefik metrics every 30 seconds
