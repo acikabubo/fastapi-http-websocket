@@ -105,3 +105,13 @@ http:
     #   basicAuth:
     #     users:
     #       - "admin:$$apr1$$..."  # admin:password (hashed)
+
+    # OAuth2 Proxy ForwardAuth - Protects services via Keycloak
+    oauth2-auth:
+      forwardAuth:
+        address: "http://oauth2-proxy:4180/oauth2/auth"
+        trustForwardHeader: true
+        authResponseHeaders:
+          - "X-Auth-Request-User"
+          - "X-Auth-Request-Email"
+          - "X-Auth-Request-Access-Token"

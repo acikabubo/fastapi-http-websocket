@@ -1,0 +1,49 @@
+# OAuth2 Proxy Configuration for Keycloak Integration
+# This proxy protects services that don't natively support OAuth (Prometheus, Loki, Alloy)
+
+# OAuth Provider
+OAUTH2_PROXY_PROVIDER=oidc
+OAUTH2_PROXY_PROVIDER_DISPLAY_NAME=Keycloak
+
+# Keycloak OIDC Configuration
+OAUTH2_PROXY_OIDC_ISSUER_URL=http://hw-keycloak:8080/realms/HW-App
+OAUTH2_PROXY_CLIENT_ID=oauth2-proxy
+OAUTH2_PROXY_CLIENT_SECRET=oauth2-proxy-secret-change-in-production
+
+# Redirect URL (where OAuth2 Proxy is accessible)
+OAUTH2_PROXY_REDIRECT_URL=http://oauth.localhost/oauth2/callback
+
+# Cookie Settings
+OAUTH2_PROXY_COOKIE_NAME=_oauth2_proxy
+OAUTH2_PROXY_COOKIE_SECRET=pg7CjaPRjr-kKyb1-u7BVc_EtrREE31hwXjjL6b-68c
+OAUTH2_PROXY_COOKIE_SECURE=false
+OAUTH2_PROXY_COOKIE_DOMAINS=.localhost
+OAUTH2_PROXY_COOKIE_SAMESITE=lax
+
+# Email and Groups
+OAUTH2_PROXY_EMAIL_DOMAINS=*
+OAUTH2_PROXY_SKIP_PROVIDER_BUTTON=true
+
+# Upstream (not used in forward-auth mode, but required)
+OAUTH2_PROXY_UPSTREAMS=static://202
+
+# HTTP Settings
+OAUTH2_PROXY_HTTP_ADDRESS=0.0.0.0:4180
+OAUTH2_PROXY_REVERSE_PROXY=true
+
+# Set to true to allow access to all authenticated users
+# Set to false and configure allowed groups/emails for restrictions
+OAUTH2_PROXY_SKIP_AUTH_ROUTES=^/ping$
+
+# Session Settings
+OAUTH2_PROXY_SESSION_STORE_TYPE=cookie
+OAUTH2_PROXY_COOKIE_EXPIRE=24h
+OAUTH2_PROXY_COOKIE_REFRESH=1h
+
+# Logging
+OAUTH2_PROXY_REQUEST_LOGGING=true
+OAUTH2_PROXY_AUTH_LOGGING=true
+OAUTH2_PROXY_STANDARD_LOGGING=true
+
+# Whitelist (optional - restrict by email domain or group)
+# OAUTH2_PROXY_ALLOWED_GROUPS=admin,editor

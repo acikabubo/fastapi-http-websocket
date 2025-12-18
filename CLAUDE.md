@@ -846,6 +846,45 @@ return ResponseModel.success(
 - Use `RRedis()` singleton from `app/storage/redis.py`
 - Subscribe in startup handler: `await r.subscribe("channel", callback)`
 
+### OAuth2 Proxy for Service Authentication
+
+Services that don't natively support OAuth/OIDC (Prometheus, Loki, Alloy) are protected using **OAuth2 Proxy** with Keycloak via Traefik's ForwardAuth middleware.
+
+**Architecture:**
+```
+User → Traefik → OAuth2 Proxy (ForwardAuth) → Keycloak → Protected Service
+```
+
+**Protected Services:**
+- Prometheus: http://prometheus.localhost
+- Loki: http://loki.localhost
+- Grafana Alloy: http://alloy.localhost
+
+**Configuration Files:**
+- OAuth2 Proxy config: `docker/.oauth2_proxy_env`
+- Keycloak client: `db/keycloak/realm-export.json` (client ID: `oauth2-proxy`)
+- Traefik middleware: `docker/traefik/dynamic/middleware.yml` (`oauth2-auth` middleware)
+
+**How it Works:**
+1. Traefik intercepts requests to protected services
+2. `oauth2-auth@file` middleware forwards auth check to OAuth2 Proxy
+3. OAuth2 Proxy validates session or redirects to Keycloak login
+4. Session cookie (`_oauth2_proxy`) is shared across all `.localhost` domains
+5. User headers forwarded: `X-Auth-Request-User`, `X-Auth-Request-Email`, `X-Auth-Request-Access-Token`
+
+**Usage:**
+```bash
+# Access protected service
+open http://prometheus.localhost
+
+# Redirects to Keycloak login, then back to Prometheus
+
+# Logout from all protected services
+open http://oauth.localhost/oauth2/sign_out
+```
+
+**Documentation:** See `docker/OAUTH2_PROXY_SETUP.md` for detailed setup, troubleshooting, and production recommendations.
+
 ### Monitoring with Prometheus
 
 **Accessing Metrics:**
