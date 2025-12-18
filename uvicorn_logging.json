@@ -23,15 +23,13 @@
     "loggers": {
         "uvicorn.access": {
             "level": "INFO",
-            "handlers": [
-                "access"
-            ],
-            "propagate": false
+            "handlers": [],
+            "propagate": true
         },
         "uvicorn.error": {
             "level": "INFO",
             "handlers": [],
-            "propagate": false
+            "propagate": true
         }
     }
 }

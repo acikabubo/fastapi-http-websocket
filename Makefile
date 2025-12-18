@@ -27,6 +27,17 @@ shell:
 	- docker compose -f docker/docker-compose.yml down
 	- docker system prune -f
 
+# Start hw-server service in background (for log collection via Alloy → Loki → Grafana)
+start-server:
+	@echo "Starting hw-server service in background..."
+	docker compose -f docker/docker-compose.yml up -d hw-server
+
+# Stop hw-server service
+stop-server:
+	@echo "Stopping hw-server service..."
+	docker compose -f docker/docker-compose.yml stop hw-server
+	docker compose -f docker/docker-compose.yml rm -f hw-server
+
 # @fastapi run app
 serve:
 	@echo "Staring DHC Scada Backend Server..."

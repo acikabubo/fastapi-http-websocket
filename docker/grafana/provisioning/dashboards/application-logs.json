@@ -232,7 +232,7 @@
         "type": "loki",
         "uid": "loki"
       },
-      "description": "Application error logs from FastAPI service. LogQL: {service=\"shell\"} | json | level=\"ERROR\"",
+      "description": "Application error logs from FastAPI service. LogQL: {service=~\"shell|hw-server\"} | json | level=\"ERROR\"",
       "gridPos": {
         "h": 10,
         "w": 24,
@@ -257,7 +257,7 @@
             "uid": "loki"
           },
           "editorMode": "code",
-          "expr": "{service=\"shell\"} | json | level=\"ERROR\"",
+          "expr": "{service=~\"shell|hw-server\"} | json | level=\"ERROR\"",
           "queryType": "range",
           "refId": "A"
         }
@@ -525,7 +525,7 @@
         "type": "loki",
         "uid": "loki"
       },
-      "description": "HTTP requests with status codes, methods, and endpoints. Filter by endpoint and user. LogQL: {service=\"shell\"} | json | endpoint!=\"\" | method=~\"$method\" | endpoint=~\".*$endpoint.*\" | status_code=~\"$status_code\"",
+      "description": "HTTP requests with status codes, methods, and endpoints. Filter by endpoint and user. LogQL: {service=~\"shell|hw-server\"} | json | endpoint!=\"\" | method=~\"$method\" | endpoint=~\".*$endpoint.*\" | status_code=~\"$status_code\"",
       "gridPos": {
         "h": 10,
         "w": 24,
@@ -550,7 +550,7 @@
             "uid": "loki"
           },
           "editorMode": "code",
-          "expr": "{service=\"shell\"} | json | endpoint!=\"\" | method=~\"$method\" | endpoint=~\".*$endpoint.*\" | status_code=~\"$status_code\" | user_id=~\"$user_id\"",
+          "expr": "{service=~\"shell|hw-server\"} | json | endpoint!=\"\" | method=~\"$method\" | endpoint=~\".*$endpoint.*\" | status_code=~\"$status_code\" | user_id=~\"$user_id\"",
           "queryType": "range",
           "refId": "A"
         }
@@ -563,7 +563,7 @@
         "type": "loki",
         "uid": "loki"
       },
-      "description": "WebSocket connection and message logs. Filter by pkg_id and user. LogQL: {service=\"shell\"} | json | logger=~\"app.api.ws.*\" | user_id=~\"$user_id\"",
+      "description": "WebSocket connection and message logs. Filter by pkg_id and user. LogQL: {service=~\"shell|hw-server\"} | json | logger=~\"app.api.ws.*\" | user_id=~\"$user_id\"",
       "gridPos": {
         "h": 10,
         "w": 24,
@@ -588,7 +588,7 @@
             "uid": "loki"
           },
           "editorMode": "code",
-          "expr": "{service=\"shell\"} | json | logger=~\"app.api.ws.*\" | user_id=~\"$user_id\"",
+          "expr": "{service=~\"shell|hw-server\"} | json | logger=~\"app.api.ws.*\" | user_id=~\"$user_id\"",
           "queryType": "range",
           "refId": "A"
         }
@@ -601,7 +601,7 @@
         "type": "loki",
         "uid": "loki"
       },
-      "description": "Rate limit violations and warnings. Shows when users hit rate limits. LogQL: {service=\"shell\"} | json |~ \"(?i)(rate limit|too many requests)\"",
+      "description": "Rate limit violations and warnings. Shows when users hit rate limits. LogQL: {service=~\"shell|hw-server\"} | json |~ \"(?i)(rate limit|too many requests)\"",
       "gridPos": {
         "h": 8,
         "w": 12,
@@ -626,7 +626,7 @@
             "uid": "loki"
           },
           "editorMode": "code",
-          "expr": "{service=\"shell\"} | json |~ \"(?i)(rate limit|too many requests)\"",
+          "expr": "{service=~\"shell|hw-server\"} | json |~ \"(?i)(rate limit|too many requests)\"",
           "queryType": "range",
           "refId": "A"
         }
@@ -639,7 +639,7 @@
         "type": "loki",
         "uid": "loki"
       },
-      "description": "Authentication failures and token errors. LogQL: {service=\"shell\"} | json | logger=~\"app.auth.*\" |~ \"(?i)(error|failed|invalid)\"",
+      "description": "Authentication failures and token errors. LogQL: {service=~\"shell|hw-server\"} | json | logger=~\"app.auth.*\" |~ \"(?i)(error|failed|invalid)\"",
       "gridPos": {
         "h": 8,
         "w": 12,
@@ -664,7 +664,7 @@
             "uid": "loki"
           },
           "editorMode": "code",
-          "expr": "{service=\"shell\"} | json | logger=~\"app.auth.*\" |~ \"(?i)(error|failed|invalid)\"",
+          "expr": "{service=~\"shell|hw-server\"} | json | logger=~\"app.auth.*\" |~ \"(?i)(error|failed|invalid)\"",
           "queryType": "range",
           "refId": "A"
         }
@@ -677,7 +677,7 @@
         "type": "loki",
         "uid": "loki"
       },
-      "description": "Slow database queries taking more than 100ms. Requires duration_ms field in logs. LogQL: {service=\"shell\"} | json | logger=~\"app.storage.*\" | duration_ms > 100",
+      "description": "Slow database queries taking more than 100ms. Requires duration_ms field in logs. LogQL: {service=~\"shell|hw-server\"} | json | logger=~\"app.storage.*\" | duration_ms > 100",
       "gridPos": {
         "h": 8,
         "w": 12,
@@ -702,7 +702,7 @@
             "uid": "loki"
           },
           "editorMode": "code",
-          "expr": "{service=\"shell\"} | json | logger=~\"app.storage.*\" |~ \"(?i)(slow|duration|query)\"",
+          "expr": "{service=~\"shell|hw-server\"} | json | logger=~\"app.storage.*\" |~ \"(?i)(slow|duration|query)\"",
           "queryType": "range",
           "refId": "A"
         }
@@ -715,7 +715,7 @@
         "type": "loki",
         "uid": "loki"
       },
-      "description": "Permission denied events from RBAC checks. LogQL: {service=\"shell\"} | json |~ \"(?i)(permission denied|unauthorized|forbidden)\"",
+      "description": "Permission denied events from RBAC checks. LogQL: {service=~\"shell|hw-server\"} | json |~ \"(?i)(permission denied|unauthorized|forbidden)\"",
       "gridPos": {
         "h": 8,
         "w": 12,
@@ -740,7 +740,7 @@
             "uid": "loki"
           },
           "editorMode": "code",
-          "expr": "{service=\"shell\"} | json |~ \"(?i)(permission denied|unauthorized|forbidden)\"",
+          "expr": "{service=~\"shell|hw-server\"} | json |~ \"(?i)(permission denied|unauthorized|forbidden)\"",
           "queryType": "range",
           "refId": "A"
         }

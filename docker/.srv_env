@@ -17,4 +17,4 @@ DB_PASSWORD=hw-pass
 
 # Logging settings
 # LOG_CONSOLE_FORMAT: 'json' for production (Grafana Alloy), 'human' for development
-LOG_CONSOLE_FORMAT='human'
+LOG_CONSOLE_FORMAT='json'
