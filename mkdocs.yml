@@ -1,0 +1,187 @@
+site_name: FastAPI HTTP/WebSocket Template
+site_description: Production-ready FastAPI template with HTTP and WebSocket support, authentication, RBAC, rate limiting, and comprehensive monitoring
+site_author: Your Name
+site_url: https://yourusername.github.io/fastapi-http-websocket/
+
+repo_name: yourusername/fastapi-http-websocket
+repo_url: https://github.com/yourusername/fastapi-http-websocket
+edit_uri: edit/main/docs_site/
+
+# Specify docs directory
+docs_dir: docs_site
+site_dir: site
+
+theme:
+  name: material
+  language: en
+  icon:
+    repo: fontawesome/brands/github
+  palette:
+    # Light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    # Dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - announce.dismiss
+    - content.action.edit
+    - content.action.view
+    - content.code.annotate
+    - content.code.copy
+    - content.tabs.link
+    - content.tooltips
+    - header.autohide
+    - navigation.expand
+    - navigation.footer
+    - navigation.indexes
+    - navigation.instant
+    - navigation.instant.prefetch
+    - navigation.instant.progress
+    - navigation.path
+    - navigation.prune
+    - navigation.sections
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.top
+    - navigation.tracking
+    - search.highlight
+    - search.share
+    - search.suggest
+    - toc.follow
+
+plugins:
+  - search:
+      separator: '[\s\u200b\-_,:!=\[\]()"`/]+|\.(?!\d)|&[lg]t;|(?!\b)(?=[A-Z][a-z])'
+  - minify:
+      minify_html: true
+      minify_js: true
+      minify_css: true
+      htmlmin_opts:
+        remove_comments: true
+      cache_safe: true
+  - git-revision-date-localized:
+      enable_creation_date: true
+      type: timeago
+
+markdown_extensions:
+  # Python Markdown
+  - abbr
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - toc:
+      permalink: true
+      title: On this page
+      toc_depth: 3
+
+  # Python Markdown Extensions
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.betterem:
+      smart_enable: all
+  - pymdownx.caret
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.mark
+  - pymdownx.smartsymbols
+  - pymdownx.snippets:
+      auto_append:
+        - includes/abbreviations.md
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+      combine_header_slug: true
+      slugify: !!python/object/apply:pymdownx.slugs.slugify
+        kwds:
+          case: lower
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
+
+extra:
+  version:
+    provider: mike
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/yourusername/fastapi-http-websocket
+    - icon: fontawesome/brands/python
+      link: https://pypi.org/project/fastapi/
+  generator: false
+
+extra_css:
+  - stylesheets/extra.css
+
+# Page tree
+nav:
+  - Home: index.md
+  - Getting Started:
+      - getting-started/index.md
+      - Installation: getting-started/installation.md
+      - Quick Start: getting-started/quickstart.md
+      - Configuration: getting-started/configuration.md
+  - Architecture:
+      - architecture/index.md
+      - Overview: architecture/overview.md
+      - Design Patterns: architecture/design-patterns.md
+      - Request Flow: architecture/request-flow.md
+      - RBAC System: architecture/rbac.md
+  - User Guides:
+      - guides/index.md
+      - Authentication: guides/authentication.md
+      - HTTP Endpoints: guides/http-endpoints.md
+      - WebSocket Handlers: guides/websocket-handlers.md
+      - Rate Limiting: guides/rate-limiting.md
+      - Audit Logging: guides/audit-logging.md
+      - Database Operations: guides/database.md
+      - Monitoring: guides/monitoring.md
+  - API Reference:
+      - api-reference/index.md
+      - HTTP API: api-reference/http-api.md
+      - WebSocket API: api-reference/websocket-api.md
+      - Response Models: api-reference/response-models.md
+      - Exceptions: api-reference/exceptions.md
+  - Development:
+      - development/index.md
+      - Setup: development/setup.md
+      - Testing: development/testing.md
+      - Database Migrations: development/migrations.md
+      - Code Quality: development/code-quality.md
+      - Contributing: development/contributing.md
+  - Deployment:
+      - deployment/index.md
+      - Docker Deployment: deployment/docker.md
+      - Production Setup: deployment/production.md
+      - Security Guide: deployment/security.md
+      - Monitoring & Observability: deployment/monitoring.md
+      - Troubleshooting: deployment/troubleshooting.md
+      - Backup & Recovery: deployment/backup-recovery.md
+  - Cookiecutter Template:
+      - cookiecutter/index.md
+      - Overview: cookiecutter/overview.md
+      - Customization: cookiecutter/customization.md
+      - Examples: cookiecutter/examples.md

@@ -5,3 +5,7 @@
 .worktree
 *.pyc
 logs/*
+
+# MkDocs build output
+site/
+.cache/

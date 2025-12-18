@@ -113,3 +113,20 @@ migration-stamp:
 test-migrations:
 	@echo "Testing database migrations (upgrade/downgrade)..."
 	@uv run python scripts/test_migrations.py
+
+# Documentation commands
+docs-serve:
+	@echo "Serving documentation at http://127.0.0.1:8000"
+	@uv run --group docs mkdocs serve
+
+docs-build:
+	@echo "Building documentation static site..."
+	@uv run --group docs mkdocs build
+
+docs-deploy:
+	@echo "Deploying documentation to GitHub Pages..."
+	@uv run --group docs mkdocs gh-deploy --force
+
+docs-install:
+	@echo "Installing documentation dependencies..."
+	@uv sync --group docs

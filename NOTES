@@ -8,4 +8,4 @@
   later development (.worktree)
 
 - use traefik paths in prometheus.yml
-- is there a need to update /etc/hosts
+- somekind of diagram of how docker services are connected (with traefik proxy)
