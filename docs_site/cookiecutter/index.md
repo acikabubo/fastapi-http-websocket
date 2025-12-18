@@ -15,7 +15,7 @@ This project can be used as a Cookiecutter template to generate new projects.
 pip install cookiecutter
 
 # Generate new project
-cookiecutter gh:yourusername/fastapi-http-websocket
+cookiecutter gh:acikabubo/fastapi-http-websocket
 
 # Follow the prompts to customize your project
 \`\`\`

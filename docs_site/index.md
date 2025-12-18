@@ -208,6 +208,6 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## Support
 
-- 📖 [Documentation](https://yourusername.github.io/fastapi-http-websocket/)
-- 🐛 [Issue Tracker](https://github.com/yourusername/fastapi-http-websocket/issues)
-- 💬 [Discussions](https://github.com/yourusername/fastapi-http-websocket/discussions)
+- 📖 [Documentation](https://acikabubo.github.io/fastapi-http-websocket/)
+- 🐛 [Issue Tracker](https://github.com/acikabubo/fastapi-http-websocket/issues)
+- 💬 [Discussions](https://github.com/acikabubo/fastapi-http-websocket/discussions)

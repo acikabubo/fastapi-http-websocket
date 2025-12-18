@@ -28,11 +28,11 @@ uv --version
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/fastapi-http-websocket.git
+git clone https://github.com/acikabubo/fastapi-http-websocket.git
 cd fastapi-http-websocket
 
 # Or if using as a template
-cookiecutter gh:yourusername/fastapi-http-websocket
+cookiecutter gh:acikabubo/fastapi-http-websocket
 ```
 
 ## Install Python Dependencies
