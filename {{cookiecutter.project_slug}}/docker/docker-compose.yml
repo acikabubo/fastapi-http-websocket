@@ -80,8 +80,18 @@ services:
         condition: service_healthy
       {{cookiecutter.project_slug}}-keycloak:
         condition: service_healthy
+{% if cookiecutter.include_monitoring == "yes" %}
+      prometheus:
+        condition: service_started
+      grafana:
+        condition: service_started
+      loki:
+        condition: service_started
+      alloy:
+        condition: service_started
+{% endif %}
 
-    # command: sh -c "uvicorn app:application --host 0.0.0.0 --port 8000"
+    # command: sh -c "uvicorn {{cookiecutter.module_name}}:application --host 0.0.0.0 --port 8000"
 
   {{cookiecutter.project_slug}}-keycloak:
     image: keycloak/keycloak:25.0
@@ -92,6 +102,9 @@ services:
 
     ports:
       - 8080:8080
+{% if cookiecutter.include_monitoring == "yes" %}
+      - 9999:9000  # Keycloak metrics endpoint
+{% endif %}
 
     volumes:
       - ../db/keycloak:/opt/keycloak/data/import
@@ -134,9 +147,120 @@ services:
         condition: service_healthy
       {{cookiecutter.project_slug}}-keycloak:
         condition: service_healthy
+{% if cookiecutter.include_monitoring == "yes" %}
+      prometheus:
+        condition: service_started
+      grafana:
+        condition: service_started
+      loki:
+        condition: service_started
+      alloy:
+        condition: service_started
+{% endif %}
+
+{% if cookiecutter.include_monitoring == "yes" %}
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: {{cookiecutter.project_slug}}-prometheus
+    hostname: prometheus
+
+    networks:
+      - {{cookiecutter.project_slug}}-network
+
+    ports:
+      - "9090:9090"
+
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: {{cookiecutter.project_slug}}-grafana
+    hostname: grafana
+
+    networks:
+      - {{cookiecutter.project_slug}}-network
+
+    ports:
+      - "3000:3000"
+
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+
+    depends_on:
+      - prometheus
+      - loki
+
+    restart: unless-stopped
+
+  loki:
+    image: grafana/loki:latest
+    container_name: {{cookiecutter.project_slug}}-loki
+    hostname: loki
+
+    networks:
+      - {{cookiecutter.project_slug}}-network
+
+    ports:
+      - "3100:3100"
+
+    volumes:
+      - ./loki/loki-config.yml:/etc/loki/local-config.yaml:ro
+      - loki-data:/loki
+
+    command: -config.file=/etc/loki/local-config.yaml
+
+    restart: unless-stopped
+
+  alloy:
+    image: grafana/alloy:latest
+    container_name: {{cookiecutter.project_slug}}-alloy
+    hostname: alloy
+
+    networks:
+      - {{cookiecutter.project_slug}}-network
+
+    ports:
+      - "12345:12345"  # Alloy UI
+
+    volumes:
+      - ./alloy/config.alloy:/etc/alloy/config.alloy:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+
+    command:
+      - run
+      - /etc/alloy/config.alloy
+      - --server.http.listen-addr=0.0.0.0:12345
+
+    depends_on:
+      - loki
+
+    restart: unless-stopped
+{% endif %}
 
 volumes:
   postgres-{{cookiecutter.project_slug}}-data:
+{% if cookiecutter.include_monitoring == "yes" %}
+  prometheus-data:
+  grafana-data:
+  loki-data:
+{% endif %}
 
 networks:
   {{cookiecutter.project_slug}}-network:

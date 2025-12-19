@@ -3,5 +3,10 @@
     "project_description": "",
     "project_slug": "{{ cookiecutter.project_name.lower().replace(' ', '_') }}",
     "module_name": "src",
-    "enable_audit_logging": ["yes", "no"]
+    "enable_audit_logging": ["yes", "no"],
+    "include_monitoring": ["yes", "no"],
+    "_copy_without_render": [
+        "*.json",
+        "*.alloy"
+    ]
 }

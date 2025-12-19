@@ -1,0 +1,138 @@
+// Grafana Alloy configuration for log collection
+// Migrated from Promtail to Alloy (Promtail deprecated as of Feb 2025)
+// Collects logs from Docker containers and sends to Loki
+
+// Loki write endpoint
+loki.write "loki" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}
+
+// Docker service discovery
+discovery.docker "docker" {
+  host = "unix:///var/run/docker.sock"
+  refresh_interval = "5s"
+
+  filter {
+    name   = "label"
+    values = ["com.docker.compose.project=docker"]
+  }
+}
+
+// Relabel Docker containers to extract metadata
+discovery.relabel "docker" {
+  targets = discovery.docker.docker.targets
+
+  // Extract container name
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex         = "/(.*)"
+    target_label  = "container"
+  }
+
+  // Extract container ID (short version)
+  rule {
+    source_labels = ["__meta_docker_container_id"]
+    regex         = "(.{12})"
+    target_label  = "container_id"
+  }
+
+  // Extract log stream (stdout/stderr)
+  rule {
+    source_labels = ["__meta_docker_container_log_stream"]
+    target_label  = "stream"
+  }
+
+  // Extract docker compose service name
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+    target_label  = "service"
+  }
+
+  // Extract image name
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_image"]
+    target_label  = "image"
+  }
+
+  // Add static labels
+  rule {
+    target_label = "environment"
+    replacement  = "development"
+  }
+
+  rule {
+    target_label = "job"
+    replacement  = "docker"
+  }
+}
+
+// Scrape Docker container logs
+loki.source.docker "docker" {
+  host    = "unix:///var/run/docker.sock"
+  targets = discovery.relabel.docker.output
+
+  forward_to = [loki.process.docker.receiver]
+}
+
+// Process logs with pipeline stages
+loki.process "docker" {
+  forward_to = [loki.write.loki.receiver]
+
+  // Strip ANSI escape codes (basic cleanup for any remaining escape sequences)
+  stage.replace {
+    expression = "\\x1b\\[[0-9;?]*[a-zA-Z]"
+    replace    = ""
+  }
+
+  // Parse JSON logs if present
+  stage.json {
+    expressions = {
+      level     = "level",
+      timestamp = "timestamp",
+      logger    = "logger",
+      message   = "message",
+      error     = "error",
+    }
+  }
+
+  // Extract log level from text logs (fallback if not JSON)
+  stage.regex {
+    expression = "^(?P<time>\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}[,\\.]\\d{3}) (?P<level>\\w+) "
+  }
+
+  // Set log level as label
+  stage.labels {
+    values = {
+      level  = "",
+      logger = "",
+    }
+  }
+
+  // Parse timestamp
+  stage.timestamp {
+    source = "timestamp"
+    format = "RFC3339"
+    fallback_formats = [
+      "2006-01-02 15:04:05.000",
+      "2006-01-02 15:04:05,000",
+    ]
+  }
+
+  // Drop health check logs to reduce noise
+  stage.drop {
+    expression  = ".*GET /health.*"
+    drop_counter_reason = "health_check"
+  }
+
+  // Drop empty lines
+  stage.match {
+    selector = "{job=\"docker\"}"
+
+    stage.drop {
+      expression  = "^$"
+      drop_counter_reason = "empty_line"
+    }
+  }
+}
