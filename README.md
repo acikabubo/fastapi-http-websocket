@@ -2,6 +2,8 @@
 
 A production-ready FastAPI application implementing both HTTP REST API and WebSocket handlers with role-based access control (RBAC), Keycloak authentication, and PostgreSQL database integration.
 
+📚 **[View Full Documentation](https://acikabubo.github.io/fastapi-http-websocket/)** | 🚀 **[Quick Start Guide](https://acikabubo.github.io/fastapi-http-websocket/getting-started/quickstart/)**
+
 ## Table of Contents
 
 - [Features](#features)
