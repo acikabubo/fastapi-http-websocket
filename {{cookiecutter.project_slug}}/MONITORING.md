@@ -408,7 +408,7 @@ Docker Containers → Promtail → Loki → Grafana
 {container="hw-shell"}
 
 # Logs from multiple services
-{service=~"shell|hw-db|hw-keycloak"}
+{service=~"shell|hw-db|{{cookiecutter.project_slug}}-keycloak"}
 ```
 
 **Filtering by Content:**
