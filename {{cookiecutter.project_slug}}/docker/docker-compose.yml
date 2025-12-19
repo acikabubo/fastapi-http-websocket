@@ -1,4 +1,48 @@
 services:
+  # Traefik Reverse Proxy
+  traefik:
+    image: traefik:v3.0
+    container_name: {{cookiecutter.project_slug}}-traefik
+    hostname: traefik
+
+    networks:
+      - {{cookiecutter.project_slug}}-network
+
+    ports:
+      - "80:80"      # HTTP
+      - "443:443"    # HTTPS
+      - "8090:8080"  # Traefik Dashboard
+
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik/traefik.yml:/etc/traefik/traefik.yml:ro
+      - ./traefik/dynamic:/etc/traefik/dynamic:ro
+      - traefik-certificates:/letsencrypt
+      - traefik-logs:/var/log/traefik
+
+    labels:
+      # Enable Traefik for itself (dashboard)
+      - "traefik.enable=true"
+
+      # Dashboard router
+      - "traefik.http.routers.traefik-dashboard.rule=Host(`traefik.localhost`)"
+      - "traefik.http.routers.traefik-dashboard.entrypoints=web"
+      - "traefik.http.routers.traefik-dashboard.service=api@internal"
+
+      # Metrics endpoint for Prometheus
+      - "traefik.http.routers.traefik-metrics.rule=Host(`traefik.localhost`) && PathPrefix(`/metrics`)"
+      - "traefik.http.routers.traefik-metrics.entrypoints=traefik"
+      - "traefik.http.routers.traefik-metrics.service=prometheus@internal"
+
+    restart: unless-stopped
+
+    healthcheck:
+      test: ["CMD", "traefik", "healthcheck", "--ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
   {{cookiecutter.project_slug}}-db:
     image: postgres:13
     hostname: {{cookiecutter.project_slug}}-db
@@ -66,6 +110,30 @@ services:
       # - ../.env
       - .srv_env
 
+    labels:
+      # Enable Traefik
+      - "traefik.enable=true"
+
+      # HTTP Router for FastAPI
+      - "traefik.http.routers.fastapi.rule=Host(`api.localhost`)"
+      - "traefik.http.routers.fastapi.entrypoints=web"
+      - "traefik.http.routers.fastapi.service=fastapi"
+
+      # Load Balancer Configuration
+      - "traefik.http.services.fastapi.loadbalancer.server.port=8000"
+
+      # Health Check Configuration
+      - "traefik.http.services.fastapi.loadbalancer.healthcheck.path=/health"
+      - "traefik.http.services.fastapi.loadbalancer.healthcheck.interval=30s"
+
+      # Middleware
+      - "traefik.http.routers.fastapi.middlewares=secure-headers@file,gzip-compress@file"
+
+      # WebSocket Router (explicit routing for /web)
+      - "traefik.http.routers.fastapi-ws.rule=Host(`api.localhost`) && PathPrefix(`/web`)"
+      - "traefik.http.routers.fastapi-ws.entrypoints=web"
+      - "traefik.http.routers.fastapi-ws.service=fastapi"
+
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
@@ -79,6 +147,8 @@ services:
       {{cookiecutter.project_slug}}-redis:
         condition: service_healthy
       {{cookiecutter.project_slug}}-keycloak:
+        condition: service_healthy
+      traefik:
         condition: service_healthy
 {% if cookiecutter.include_monitoring == "yes" %}
       prometheus:
@@ -112,6 +182,28 @@ services:
     env_file:
       - .kc_env
 
+    labels:
+      # Enable Traefik
+      - "traefik.enable=true"
+
+      # HTTP Router for Keycloak
+      - "traefik.http.routers.keycloak.rule=Host(`auth.localhost`)"
+      - "traefik.http.routers.keycloak.entrypoints=web"
+      - "traefik.http.routers.keycloak.service=keycloak"
+
+      # Load Balancer Configuration
+      - "traefik.http.services.keycloak.loadbalancer.server.port=8080"
+
+      # Middleware
+      - "traefik.http.routers.keycloak.middlewares=secure-headers@file"
+{% if cookiecutter.include_monitoring == "yes" %}
+      # Metrics endpoint for Prometheus (port 9000)
+      - "traefik.http.routers.keycloak-metrics.rule=Host(`auth.localhost`) && PathPrefix(`/metrics`)"
+      - "traefik.http.routers.keycloak-metrics.entrypoints=web"
+      - "traefik.http.routers.keycloak-metrics.service=keycloak-metrics"
+      - "traefik.http.services.keycloak-metrics.loadbalancer.server.port=9000"
+{% endif %}
+
     command: -v start-dev --import-realm
 
     healthcheck:
@@ -122,7 +214,10 @@ services:
       start_period: 60s
 
     depends_on:
-      - {{cookiecutter.project_slug}}-db
+      {{cookiecutter.project_slug}}-db:
+        condition: service_healthy
+      traefik:
+        condition: service_healthy
 
   shell:
     extends: {{cookiecutter.project_slug}}-server
@@ -146,6 +241,8 @@ services:
       {{cookiecutter.project_slug}}-redis:
         condition: service_healthy
       {{cookiecutter.project_slug}}-keycloak:
+        condition: service_healthy
+      traefik:
         condition: service_healthy
 {% if cookiecutter.include_monitoring == "yes" %}
       prometheus:
@@ -173,6 +270,21 @@ services:
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus-data:/prometheus
+
+    labels:
+      # Enable Traefik
+      - "traefik.enable=true"
+
+      # HTTP Router for Prometheus
+      - "traefik.http.routers.prometheus.rule=Host(`prometheus.localhost`)"
+      - "traefik.http.routers.prometheus.entrypoints=web"
+      - "traefik.http.routers.prometheus.service=prometheus"
+
+      # Load Balancer Configuration
+      - "traefik.http.services.prometheus.loadbalancer.server.port=9090"
+
+      # Middleware
+      - "traefik.http.routers.prometheus.middlewares=secure-headers@file"
 
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
@@ -203,9 +315,28 @@ services:
       - grafana-data:/var/lib/grafana
       - ./grafana/provisioning:/etc/grafana/provisioning
 
+    labels:
+      # Enable Traefik
+      - "traefik.enable=true"
+
+      # HTTP Router for Grafana
+      - "traefik.http.routers.grafana.rule=Host(`grafana.localhost`)"
+      - "traefik.http.routers.grafana.entrypoints=web"
+      - "traefik.http.routers.grafana.service=grafana"
+
+      # Load Balancer Configuration
+      - "traefik.http.services.grafana.loadbalancer.server.port=3000"
+
+      # Middleware
+      - "traefik.http.routers.grafana.middlewares=secure-headers@file"
+
     depends_on:
-      - prometheus
-      - loki
+      prometheus:
+        condition: service_started
+      loki:
+        condition: service_started
+      traefik:
+        condition: service_healthy
 
     restart: unless-stopped
 
@@ -223,6 +354,21 @@ services:
     volumes:
       - ./loki/loki-config.yml:/etc/loki/local-config.yaml:ro
       - loki-data:/loki
+
+    labels:
+      # Enable Traefik
+      - "traefik.enable=true"
+
+      # HTTP Router for Loki
+      - "traefik.http.routers.loki.rule=Host(`loki.localhost`)"
+      - "traefik.http.routers.loki.entrypoints=web"
+      - "traefik.http.routers.loki.service=loki"
+
+      # Load Balancer Configuration
+      - "traefik.http.services.loki.loadbalancer.server.port=3100"
+
+      # Middleware
+      - "traefik.http.routers.loki.middlewares=secure-headers@file"
 
     command: -config.file=/etc/loki/local-config.yaml
 
@@ -243,6 +389,21 @@ services:
       - ./alloy/config.alloy:/etc/alloy/config.alloy:ro
       - /var/run/docker.sock:/var/run/docker.sock
 
+    labels:
+      # Enable Traefik
+      - "traefik.enable=true"
+
+      # HTTP Router for Alloy
+      - "traefik.http.routers.alloy.rule=Host(`alloy.localhost`)"
+      - "traefik.http.routers.alloy.entrypoints=web"
+      - "traefik.http.routers.alloy.service=alloy"
+
+      # Load Balancer Configuration
+      - "traefik.http.services.alloy.loadbalancer.server.port=12345"
+
+      # Middleware
+      - "traefik.http.routers.alloy.middlewares=secure-headers@file"
+
     command:
       - run
       - /etc/alloy/config.alloy
@@ -256,6 +417,8 @@ services:
 
 volumes:
   postgres-{{cookiecutter.project_slug}}-data:
+  traefik-certificates:
+  traefik-logs:
 {% if cookiecutter.include_monitoring == "yes" %}
   prometheus-data:
   grafana-data:

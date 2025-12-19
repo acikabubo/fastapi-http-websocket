@@ -44,12 +44,38 @@ def create_env_file() -> None:
         )
 
 
+def remove_monitoring_files() -> None:
+    """Remove monitoring-related files if monitoring is disabled."""
+    include_monitoring = "{{ cookiecutter.include_monitoring }}"
+
+    if include_monitoring == "no":
+        project_root = Path.cwd()
+        docker_dir = project_root / "docker"
+
+        # List of monitoring directories to remove
+        monitoring_dirs = [
+            docker_dir / "prometheus",
+            docker_dir / "grafana",
+            docker_dir / "loki",
+            docker_dir / "alloy",
+        ]
+
+        for directory in monitoring_dirs:
+            if directory.exists():
+                shutil.rmtree(directory)
+                logger.info(
+                    "✓ Removed %s (monitoring disabled)",
+                    directory.relative_to(project_root),
+                )
+
+
 if __name__ == "__main__":
     logger.info("")
     logger.info("Running post-generation setup...")
     logger.info("")
 
     create_env_file()
+    remove_monitoring_files()
 
     logger.info("")
     logger.info("✓ Project setup complete!")

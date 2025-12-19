@@ -1,0 +1,107 @@
+# Traefik Dynamic Configuration - Middleware
+# This file defines reusable middleware components
+
+http:
+  middlewares:
+    # Security Headers Middleware
+    secure-headers:
+      headers:
+        browserXssFilter: true
+        contentTypeNosniff: true
+        forceSTSHeader: true
+        frameDeny: true
+        stsIncludeSubdomains: true
+        stsPreload: true
+        stsSeconds: 31536000
+        customFrameOptionsValue: "SAMEORIGIN"
+        customResponseHeaders:
+          X-Robots-Tag: "none,noarchive,nosnippet,notranslate,noimageindex"
+          server: ""  # Hide server header
+
+    # CORS Middleware for API
+    api-cors:
+      headers:
+        accessControlAllowMethods:
+          - "GET"
+          - "POST"
+          - "PUT"
+          - "PATCH"
+          - "DELETE"
+          - "OPTIONS"
+        accessControlAllowHeaders:
+          - "Authorization"
+          - "Content-Type"
+          - "X-Requested-With"
+        accessControlAllowOriginList:
+          - "http://localhost:3000"
+          - "http://grafana.localhost"
+          - "https://grafana.localhost"
+        accessControlAllowCredentials: true
+        accessControlMaxAge: 100
+        addVaryHeader: true
+
+    # Rate Limiting Middleware
+    rate-limit:
+      rateLimit:
+        average: 100  # 100 requests
+        period: 1m    # per minute
+        burst: 50     # Allow burst of 50
+
+    # Rate Limiting for API (stricter)
+    api-rate-limit:
+      rateLimit:
+        average: 60
+        period: 1m
+        burst: 20
+
+    # Compression Middleware
+    gzip-compress:
+      compress:
+        excludedContentTypes:
+          - "text/event-stream"
+
+    # Retry Middleware
+    retry:
+      retry:
+        attempts: 3
+        initialInterval: 100ms
+
+    # IP Whitelist (for sensitive endpoints)
+    # admin-whitelist:
+    #   ipWhiteList:
+    #     sourceRange:
+    #       - "127.0.0.1/32"
+    #       - "192.168.0.0/16"
+    #       - "172.16.0.0/12"
+
+    # Redirect to HTTPS
+    redirect-to-https:
+      redirectScheme:
+        scheme: https
+        permanent: true
+
+    # Strip Prefix Middleware (for path-based routing)
+    # strip-api-prefix:
+    #   stripPrefix:
+    #     prefixes:
+    #       - "/api"
+
+    # Add Prefix Middleware
+    # add-api-prefix:
+    #   addPrefix:
+    #     prefix: "/api"
+
+    # Circuit Breaker
+    circuit-breaker:
+      circuitBreaker:
+        expression: "NetworkErrorRatio() > 0.3 || ResponseCodeRatio(500, 600, 0, 600) > 0.25"
+        checkPeriod: 10s
+        fallbackDuration: 30s
+        recoveryDuration: 30s
+
+    # Basic Auth (example - use for Traefik dashboard)
+    # Generate password: echo $(htpasswd -nB admin) | sed -e s/\\$/\\$\\$/g
+    # dashboard-auth:
+    #   basicAuth:
+    #     users:
+    #       - "admin:$$apr1$$..."  # admin:password (hashed)
