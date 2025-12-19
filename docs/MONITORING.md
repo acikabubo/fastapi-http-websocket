@@ -130,23 +130,38 @@ rate(ws_message_processing_duration_seconds_sum[5m]) / rate(ws_message_processin
 5. Set URL to `http://prometheus:9090`
 6. Click "Save & Test"
 
-### 2. Import Dashboard
+### 2. Pre-configured Dashboards
 
-A pre-configured dashboard (`grafana-dashboard.json`) is included with panels for:
-- HTTP request rate
-- HTTP request duration (95th percentile)
-- Active WebSocket connections
-- WebSocket connection rate
-- WebSocket message rate
-- Rate limit hits
-- HTTP requests in progress
-- Application info
+The project includes comprehensive pre-configured dashboards that are automatically provisioned when you start Grafana:
 
-To import:
-1. Go to Dashboards → Import
-2. Upload `grafana-dashboard.json`
-3. Select the Prometheus data source
-4. Click "Import"
+**Available Dashboards:**
+
+1. **FastAPI Metrics** (`docker/grafana/provisioning/dashboards/fastapi-metrics.json`)
+   - HTTP request rate and duration
+   - WebSocket connections and message rate
+   - Rate limit metrics
+   - Application info and errors
+   - Auto-provisioned on Grafana startup
+
+2. **Application Logs** (`docker/grafana/provisioning/dashboards/application-logs.json`)
+   - Log volume by service
+   - Error logs and trends
+   - Service-specific log panels
+   - Auto-provisioned on Grafana startup
+
+3. **Keycloak Metrics** (`docker/grafana/provisioning/dashboards/keycloak-metrics.json`)
+   - Authentication metrics
+   - JVM and performance stats
+   - Auto-provisioned on Grafana startup
+
+4. **Traefik Metrics** (`docker/grafana/provisioning/dashboards/traefik-metrics.json`)
+   - Reverse proxy metrics
+   - Request routing stats
+   - Auto-provisioned on Grafana startup
+
+**Accessing Dashboards:**
+After starting the stack with `docker-compose up -d`, dashboards are automatically available at:
+- http://localhost:3000/dashboards (Browse all dashboards)
 
 ### 3. Create Custom Panels
 
