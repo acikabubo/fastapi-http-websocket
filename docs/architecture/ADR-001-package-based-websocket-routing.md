@@ -47,7 +47,7 @@ The application needs to support multiple WebSocket message types and operations
 * Strong typing via PkgID enum (IDE autocomplete, type checking)
 * Request/response correlation via UUID req_id
 * Easy to add new handlers without changing transport layer
-* RBAC permissions configured per PkgID in actions.json
+* RBAC permissions configured per PkgID via decorator `roles` parameter
 * JSON schema validation integrated into routing
 
 ### Negative Consequences

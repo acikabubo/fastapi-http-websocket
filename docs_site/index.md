@@ -47,7 +47,7 @@ A production-ready FastAPI template with comprehensive HTTP and WebSocket suppor
 
 ### Authentication & Authorization
 - ✅ **Keycloak Integration** - Enterprise-grade authentication with JWT tokens
-- ✅ **RBAC System** - Flexible role-based access control via `actions.json`
+- ✅ **RBAC System** - Decorator-based role access control co-located with handlers
 - ✅ **Token Validation** - Automatic token verification and user extraction
 - ✅ **Session Management** - Redis-backed session tracking
 

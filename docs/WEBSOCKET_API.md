@@ -346,12 +346,26 @@ Response:
 
 ## Role-Based Access Control (RBAC)
 
-Each handler requires specific roles defined in `actions.json`. Users must have the required role in their Keycloak token to access handlers.
+Each handler requires specific roles defined in its `@pkg_router.register()` decorator. Users must have the required role in their Keycloak token to access handlers.
+
+**Implementation:**
+```python
+@pkg_router.register(
+    PkgID.GET_AUTHORS,
+    json_schema=GetAuthorsModel,
+    roles=["get-authors"]  # Required roles
+)
+async def get_authors_handler(request: RequestModel) -> ResponseModel:
+    ...
+```
 
 **Common Roles:**
-- `user`: Basic authenticated user
+- `get-authors`: View author list
+- `create-author`: Create new authors
 - `admin`: Administrative privileges
-- `developer`: Development and debugging access
+
+**Finding Role Requirements:**
+Check the handler code in `app/api/ws/handlers/` to see which roles are required for each `PkgID`.
 
 ## Best Practices
 
@@ -534,5 +548,5 @@ For large result sets:
 For issues or questions:
 - Check application logs for detailed error messages
 - Review Keycloak configuration for authentication issues
-- Consult `actions.json` for RBAC requirements
+- Check handler decorator for RBAC requirements (e.g., `@pkg_router.register(roles=[...])`)
 - Enable debug logging: Set `LOG_LEVEL=DEBUG` in environment

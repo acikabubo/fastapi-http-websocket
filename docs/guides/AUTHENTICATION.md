@@ -359,10 +359,20 @@ Roles determine what endpoints a user can access. Roles are:
 
 ### Current Roles
 
-See `actions.json` for current role mappings:
+Roles are defined in handler decorators throughout the codebase. Common roles include:
 - `get-authors` - View author list
 - `create-author` - Create new authors
 - `admin` - Administrative access
+
+**Finding Role Requirements:**
+Check the handler code to see required roles:
+```python
+# WebSocket handler example
+@pkg_router.register(PkgID.GET_AUTHORS, roles=["get-authors"])
+
+# HTTP endpoint example
+@router.get("/authors", dependencies=[Depends(require_roles("get-authors"))])
+```
 
 ### Checking User Roles
 
@@ -409,7 +419,7 @@ client_roles = decoded["resource_access"]["your-client"]["roles"]
 
 **Solutions**:
 1. Check user has required role in Keycloak
-2. Verify role mapping in `actions.json`
+2. Verify handler's required roles in decorator (e.g., `@pkg_router.register(roles=["admin"])`)
 3. Check RBAC logs: `logger.info("Permission denied...")`
 
 ### "Token Expired"

@@ -338,11 +338,14 @@ open http://localhost:8080
 ### Permission Denied
 **Error:** `No permission for pkg_id X`
 
-**Solution:** Check user roles in `actions.json` and ensure user has required role:
+**Solution:** Check handler's `roles` parameter in `@pkg_router.register()` decorator and ensure user has required role:
 ```bash
 # See your roles
 python scripts/get_token.py acika 12345
 # Output shows: Roles: ['admin', 'get-authors', ...]
+
+# Check handler code for required roles
+# Example: @pkg_router.register(PkgID.GET_AUTHORS, roles=["get-authors"])
 ```
 
 ---

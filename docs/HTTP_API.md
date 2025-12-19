@@ -419,15 +419,24 @@ Pydantic validation errors include detailed field-level information:
 
 ## Role-Based Access Control (RBAC)
 
-Endpoints are protected by role-based access control defined in `actions.json`.
+Endpoints are protected by role-based access control defined in handler decorators using the `require_roles()` dependency.
+
+**Implementation:**
+```python
+from app.dependencies.permissions import require_roles
+
+@router.get("/authors", dependencies=[Depends(require_roles("get-authors"))])
+async def get_authors():
+    ...
+```
 
 **Common Roles:**
 
-| Role | Description | Endpoints Access |
-|------|-------------|------------------|
-| `user` | Basic authenticated user | All author endpoints, health |
-| `admin` | Administrative privileges | All endpoints + admin operations |
-| `developer` | Development access | All endpoints + debug features |
+| Role | Description | Example Usage |
+|------|-------------|---------------|
+| `get-authors` | View author list | GET /api/authors |
+| `create-author` | Create new authors | POST /api/authors |
+| `admin` | Administrative privileges | DELETE operations, admin endpoints |
 
 **Permission Denied Response:** `403 Forbidden`
 

@@ -97,42 +97,43 @@ Proof Key for Code Exchange Code Challenge Method: S256  # Enable PKCE
 
 #### Role-Based Access Control (RBAC)
 
-**`actions.json` Configuration**:
+**Decorator-Based RBAC Configuration**:
 
-```json
-{
-  "roles": ["admin", "user", "viewer", "service"],
-  "ws": {
-    "1": "user",
-    "2": "admin",
-    "3": "user",
-    "4": "admin",
-    "5": "admin",
-    "6": "viewer"
-  },
-  "http": {
-    "/authors": {
-      "GET": "viewer",
-      "POST": "admin",
-      "PUT": "admin",
-      "DELETE": "admin"
-    },
-    "/books": {
-      "GET": "viewer",
-      "POST": "user",
-      "PUT": "user",
-      "DELETE": "admin"
-    },
-    "/users": {
-      "GET": "admin",
-      "POST": "admin",
-      "PUT": "admin",
-      "DELETE": "admin"
-    },
-    "/metrics": "admin",
-    "/health": "*"  # Public endpoint
-  }
-}
+Roles are defined directly in handler code using decorators:
+
+**WebSocket Handlers**:
+```python
+@pkg_router.register(
+    PkgID.GET_AUTHORS,
+    json_schema=GetAuthorsModel,
+    roles=["viewer"]  # Read-only access
+)
+async def get_authors_handler(request: RequestModel) -> ResponseModel:
+    ...
+
+@pkg_router.register(
+    PkgID.DELETE_AUTHOR,
+    roles=["admin"]  # Admin only
+)
+async def delete_author_handler(request: RequestModel) -> ResponseModel:
+    ...
+```
+
+**HTTP Endpoints**:
+```python
+from app.dependencies.permissions import require_roles
+
+@router.get("/authors", dependencies=[Depends(require_roles("viewer"))])
+async def get_authors():
+    ...
+
+@router.delete("/authors/{id}", dependencies=[Depends(require_roles("admin"))])
+async def delete_author(id: int):
+    ...
+
+@router.get("/health")  # No require_roles = public endpoint
+async def health_check():
+    ...
 ```
 
 **Best Practices**:

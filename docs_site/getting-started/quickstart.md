@@ -201,27 +201,44 @@ wscat -c "ws://localhost:8000/web?access_token=YOUR_TOKEN"
 
 ## Add RBAC Permissions
 
-Update `actions.json` to add permissions for book endpoints:
+Add role requirements directly to your handler decorators:
 
-```json
-{
-  "roles": ["admin", "user", "viewer"],
-  "ws": {
-    "100": "viewer",
-    "101": "user"
-  },
-  "http": {
-    "/books": {
-      "GET": "viewer",
-      "POST": "user"
-    },
-    "/books/{book_id}": {
-      "GET": "viewer",
-      "PUT": "user",
-      "DELETE": "admin"
-    }
-  }
-}
+**WebSocket Handler** (`app/api/ws/handlers/book_handler.py`):
+```python
+@pkg_router.register(
+    PkgID.GET_BOOKS,
+    json_schema=GetBooksModel,
+    roles=["get-books"]  # Define required roles
+)
+async def get_books_handler(request: RequestModel) -> ResponseModel:
+    ...
+
+@pkg_router.register(
+    PkgID.CREATE_BOOK,
+    json_schema=CreateBookModel,
+    roles=["create-book", "admin"]  # Multiple roles = user must have ALL
+)
+async def create_book_handler(request: RequestModel) -> ResponseModel:
+    ...
+```
+
+**HTTP Endpoint** (`app/api/http/book.py`):
+```python
+from app.dependencies.permissions import require_roles
+
+@router.get(
+    "/books",
+    dependencies=[Depends(require_roles("get-books"))]
+)
+async def get_books():
+    ...
+
+@router.post(
+    "/books",
+    dependencies=[Depends(require_roles("create-book", "admin"))]
+)
+async def create_book(book: Book):
+    ...
 ```
 
 Now only users with appropriate roles can access these endpoints!

@@ -234,26 +234,32 @@ CORS_ORIGINS=["https://app.example.com"]
 
 ## RBAC Configuration
 
-Edit `actions.json` to configure role-based access control:
+Role-based access control is configured directly in handler code using decorators:
 
-```json
-{
-  "roles": ["admin", "user", "viewer"],
-  "ws": {
-    "1": "viewer",
-    "2": "user",
-    "3": "admin"
-  },
-  "http": {
-    "/authors": {
-      "GET": "viewer",
-      "POST": "user",
-      "PUT": "user",
-      "DELETE": "admin"
-    }
-  }
-}
+**WebSocket Handlers** (`app/api/ws/handlers/`):
+```python
+@pkg_router.register(
+    PkgID.GET_AUTHORS,
+    json_schema=GetAuthorsModel,
+    roles=["get-authors"]  # Define required roles here
+)
+async def get_authors_handler(request: RequestModel) -> ResponseModel:
+    ...
 ```
+
+**HTTP Endpoints** (`app/api/http/`):
+```python
+from app.dependencies.permissions import require_roles
+
+@router.get(
+    "/authors",
+    dependencies=[Depends(require_roles("get-authors"))]
+)
+async def get_authors():
+    ...
+```
+
+No external configuration file needed - permissions are co-located with handler code.
 
 ## Docker Compose Configuration
 

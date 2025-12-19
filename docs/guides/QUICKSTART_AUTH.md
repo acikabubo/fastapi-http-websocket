@@ -94,7 +94,7 @@ wscat -c "ws://localhost:8000/web?Authorization=Bearer $TOKEN"
 **403 Forbidden**
 - User lacks required role
 - Check roles: `python scripts/get_token.py acika 12345`
-- Check `actions.json` for required role
+- Check handler decorator for required roles (e.g., `@pkg_router.register(roles=["get-authors"])`)
 
 **Connection Refused**
 - Keycloak not running: `make start`

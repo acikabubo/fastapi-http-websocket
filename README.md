@@ -129,33 +129,37 @@ MAIN_REDIS_DB=0
 AUTH_REDIS_DB=1
 
 # Application Configuration
-ACTIONS_FILE_PATH=actions.json  # RBAC permissions file
 LOG_LEVEL=INFO
 ```
 
 ### RBAC Configuration
 
-Define role-based permissions in `actions.json`:
+Role-based permissions are defined directly in code using decorators:
 
-```json
-{
-    "roles": [
-        "admin",
-        "user",
-        "guest"
-    ],
-    "ws": {
-        "1": "user",
-        "2": "admin"
-    },
-    "http": {
-        "/api/authors": {
-            "GET": "user",
-            "POST": "admin"
-        }
-    }
-}
+**WebSocket handlers** (`app/api/ws/handlers/`):
+```python
+@pkg_router.register(
+    PkgID.GET_AUTHORS,
+    json_schema=GetAuthorsModel,
+    roles=["get-authors"]  # Required roles
+)
+async def get_authors_handler(request: RequestModel) -> ResponseModel:
+    ...
 ```
+
+**HTTP endpoints** (`app/api/http/`):
+```python
+from app.dependencies.permissions import require_roles
+
+@router.get(
+    "/authors",
+    dependencies=[Depends(require_roles("get-authors"))]
+)
+async def get_authors():
+    ...
+```
+
+No external configuration file needed - all permissions are co-located with handler code.
 
 ## Usage
 
@@ -283,7 +287,7 @@ sequenceDiagram
 **HTTP Requests:**
 1. Request hits FastAPI endpoint
 2. `AuthenticationMiddleware` authenticates user via Keycloak token
-3. `PermAuthHTTPMiddleware` checks RBAC permissions against `actions.json`
+3. `require_roles()` FastAPI dependency checks RBAC permissions (defined in decorator)
 4. Request reaches endpoint handler in [app/api/http/](app/api/http/)
 
 **WebSocket Requests:**
@@ -323,9 +327,9 @@ async def get_authors_handler(request: RequestModel) -> ResponseModel:
 #### RBAC Manager
 
 [app/managers/rbac_manager.py](app/managers/rbac_manager.py) - Singleton permission manager:
-- Loads role definitions from `actions.json`
-- `check_ws_permission(pkg_id, user)` - Validates WebSocket permissions
-- `check_http_permission(request)` - Validates HTTP permissions
+- `check_ws_permission(pkg_id, user)` - Validates WebSocket permissions from `pkg_router.permissions_registry`
+- `require_roles(*roles)` - FastAPI dependency for HTTP permission checking
+- Permissions defined in code via decorators, not external config files
 
 #### Keycloak Manager
 
@@ -528,7 +532,7 @@ uv run alembic upgrade head
 
 **Solutions**:
 1. Check token validity in query parameters
-2. Verify user has permissions for requested `pkg_id` in `actions.json`
+2. Verify user has required roles defined in handler's `@pkg_router.register(roles=[...])` decorator
 3. Check server logs for permission denied errors
 4. Ensure Redis is running for session management
 

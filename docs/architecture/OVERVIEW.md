@@ -29,7 +29,7 @@ This FastAPI application implements a dual-protocol API server supporting both H
 │                    Middleware Layer                             │
 ├─────────────────────────────────────────────────────────────────┤
 │  1. AuthenticationMiddleware (Keycloak JWT validation)         │
-│  2. PermAuthHTTPMiddleware (RBAC permission checking)           │
+│  2. require_roles() dependency (RBAC permission checking)       │
 └────────────┬────────────────────────────────────────────────────┘
              │
              v
@@ -72,7 +72,7 @@ Client Request
     ↓
 AuthenticationMiddleware (validates JWT)
     ↓
-PermAuthHTTPMiddleware (checks RBAC permissions)
+require_roles() FastAPI dependency (checks RBAC permissions)
     ↓
 HTTP Handler (app/api/http/)
     ↓
@@ -131,34 +131,42 @@ Send to client via WebSocket
 
 ### 3. Authorization (RBAC)
 
-**Current Implementation**: `actions.json` file (see [RBAC Alternatives](RBAC_ALTERNATIVES.md) for proposed improvements)
+**Current Implementation**: Decorator-based roles defined in code
 
 **Components**:
 - `app/managers/rbac_manager.py` - Permission checking logic
-- `actions.json` - Role-to-endpoint mappings
-- `app/middlewares/action.py` - HTTP permission middleware
+- `app/dependencies/permissions.py` - FastAPI dependency for HTTP endpoints
+- `app/routing.py` - PackageRouter with permissions registry
 
-**Permission Model**:
-```json
-{
-    "roles": ["get-authors", "create-author", "admin"],
-    "ws": {
-        "1": "get-authors",
-        "2": "get-authors"
-    },
-    "http": {
-        "/authors": {
-            "GET": "get-authors",
-            "POST": "create-author"
-        }
-    }
-}
+**Permission Definition**:
+
+**WebSocket Handlers**:
+```python
+@pkg_router.register(
+    PkgID.GET_AUTHORS,
+    json_schema=GetAuthorsModel,
+    roles=["get-authors"]  # Permissions defined here
+)
+async def get_authors_handler(request: RequestModel) -> ResponseModel:
+    ...
+```
+
+**HTTP Endpoints**:
+```python
+from app.dependencies.permissions import require_roles
+
+@router.get(
+    "/authors",
+    dependencies=[Depends(require_roles("get-authors"))]
+)
+async def get_authors():
+    ...
 ```
 
 **Permission Checking**:
-- WebSocket: `RBACManager.check_ws_permission(pkg_id, user)`
-- HTTP: `RBACManager.check_http_permission(request)`
-- Default policy: If no role configured = public access
+- WebSocket: `RBACManager.check_ws_permission(pkg_id, user)` - reads from `pkg_router.permissions_registry`
+- HTTP: `require_roles(*roles)` FastAPI dependency
+- Default policy: If no roles specified = public access
 
 ### 4. WebSocket Package Router
 
@@ -174,7 +182,8 @@ Send to client via WebSocket
 @pkg_router.register(
     PkgID.GET_AUTHORS,
     json_schema=GetAuthorsModel,
-    validator_callback=validator
+    validator_callback=validator,
+    roles=["get-authors"]  # Permission specification
 )
 async def get_authors_handler(request: RequestModel) -> ResponseModel:
     # Handler implementation
@@ -388,7 +397,7 @@ Models encapsulate data access:
 1. Define models in `app/models/`
 2. Create schemas in `app/schemas/`
 3. Implement handlers in `app/api/http/` or `app/api/ws/handlers/`
-4. Add permissions to `actions.json` (or decorator when migrated)
+4. Specify required roles in handler decorators (WebSocket: `roles=[]`, HTTP: `require_roles()`)
 5. Write tests in `tests/`
 6. Update documentation
 

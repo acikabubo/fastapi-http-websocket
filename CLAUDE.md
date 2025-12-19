@@ -20,7 +20,7 @@ When working on GitHub issues, follow this workflow:
    git log --oneline -- path/to/relevant/file.py -5
    ```
 4. **Verify current architecture** - Patterns may have evolved since issue was created:
-   - Check if RBAC uses `actions.json` or decorator-based `roles` parameter
+   - Check current RBAC implementation (decorator-based `roles` parameter)
    - Verify error handling approach (unified vs individual)
    - Check middleware stack and configuration
    - Look for refactored or renamed components
@@ -98,7 +98,7 @@ This ensures new projects generated from the cookiecutter template include all b
    ```
 
 5. **Configuration patterns** - Template may have evolved (check before syncing):
-   - RBAC: `actions.json` → `roles` parameter in decorator
+   - RBAC: Uses decorator-based `roles` parameter (no external config file)
    - Error handling: Check for unified patterns
    - Middleware: Verify middleware stack matches template
 
@@ -274,7 +274,7 @@ make new-ws-handlers
 **HTTP Requests:**
 1. Request hits FastAPI endpoint
 2. `AuthenticationMiddleware` (Starlette) authenticates user via `AuthBackend` using Keycloak token
-3. `PermAuthHTTPMiddleware` checks RBAC permissions against `actions.json`
+3. `require_roles()` FastAPI dependency checks RBAC permissions (defined in endpoint decorators)
 4. Request reaches endpoint handler in `app/api/http/`
 
 **WebSocket Requests:**
@@ -289,8 +289,9 @@ make new-ws-handlers
 
 **PackageRouter (`app/routing.py`):**
 - Central routing system for WebSocket requests
-- Handlers register using `@pkg_router.register(PkgID.*, json_schema=...)`
+- Handlers register using `@pkg_router.register(PkgID.*, json_schema=..., roles=[...])`
 - Provides validation, permission checking, and dispatch
+- RBAC roles defined directly in the decorator's `roles` parameter
 - See `PkgID` enum in `app/api/ws/constants.py` for available package IDs
 
 **Authentication (`app/auth.py`):**
@@ -299,10 +300,11 @@ make new-ws-handlers
 - Excluded paths configured via `EXCLUDED_PATHS` regex in settings
 
 **RBAC (`app/managers/rbac_manager.py`):**
-- Singleton manager loading role definitions from `actions.json`
-- `check_ws_permission(pkg_id, user)`: Validates WebSocket request permissions
-- `check_http_permission(request)`: Validates HTTP request permissions
-- Permission map structure: `{"roles": [...], "ws": {<pkg_id>: <role>}, "http": {<path>: {<method>: <role>}}}`
+- Singleton manager for role-based access control
+- `check_ws_permission(pkg_id, user)`: Validates WebSocket permissions using roles from `pkg_router.permissions_registry`
+- `require_roles(*roles)`: FastAPI dependency for HTTP endpoint permission checking
+- Permissions defined in code via decorators (WebSocket: `@pkg_router.register(roles=[...])`, HTTP: `dependencies=[Depends(require_roles(...))]`)
+- No external configuration file - all permissions co-located with handler code
 
 **Keycloak Integration (`app/managers/keycloak_manager.py`):**
 - Singleton managing `KeycloakAdmin` and `KeycloakOpenID` clients
@@ -378,7 +380,7 @@ make new-ws-handlers
 - `app/api/ws/consumers/`: WebSocket endpoint classes (e.g., `Web`)
 - `app/api/ws/constants.py`: `PkgID` and `RSPCode` enums
 - `app/managers/`: Singleton managers (RBAC, Keycloak, WebSocket connections)
-- `app/middlewares/`: Custom middleware (`PermAuthHTTPMiddleware`, `RateLimitMiddleware`, `PrometheusMiddleware`)
+- `app/middlewares/`: Custom middleware (`RateLimitMiddleware`, `PrometheusMiddleware`)
 - `app/models/`: SQLModel database models
 - `app/utils/`: Utility modules (`rate_limiter.py`, `metrics.py`)
 - `app/schemas/`: Pydantic models for request/response validation
@@ -392,15 +394,40 @@ make new-ws-handlers
    ```bash
    make new-ws-handlers  # Uses Jinja2 template
    ```
-3. Register handler with decorator:
+3. Register handler with decorator and specify required roles:
    ```python
-   @pkg_router.register(PkgID.MY_NEW_HANDLER, json_schema=MySchema)
+   @pkg_router.register(
+       PkgID.MY_NEW_HANDLER,
+       json_schema=MySchema,
+       roles=["required-role"]  # Define permissions here
+   )
    async def my_handler(request: RequestModel) -> ResponseModel:
        # Handler logic
        return ResponseModel.success(request.pkg_id, request.req_id, data={...})
    ```
-4. Update `actions.json` with required role for the PkgID
-5. Verify registration: `make ws-handlers`
+4. Verify registration: `make ws-handlers`
+
+**Example with multiple roles:**
+```python
+@pkg_router.register(
+    PkgID.DELETE_AUTHOR,
+    roles=["delete-author", "admin"]  # User must have ALL roles
+)
+async def delete_author_handler(request: RequestModel) -> ResponseModel:
+    # Only users with both 'delete-author' AND 'admin' roles can access
+    pass
+```
+
+**Public endpoint (no authentication required):**
+```python
+@pkg_router.register(
+    PkgID.PUBLIC_DATA,
+    json_schema=PublicDataSchema
+    # No roles parameter = public access
+)
+async def public_handler(request: RequestModel) -> ResponseModel:
+    pass
+```
 
 ### Response Models
 
@@ -440,7 +467,6 @@ Environment variables in `app/settings.py` (loaded via pydantic-settings) use co
 - `RATE_LIMIT_PER_MINUTE` (default: `DEFAULT_RATE_LIMIT_PER_MINUTE`)
 - `WS_MAX_CONNECTIONS_PER_USER` (default: `DEFAULT_WS_MAX_CONNECTIONS_PER_USER`)
 - `AUDIT_QUEUE_MAX_SIZE` (default: `AUDIT_QUEUE_MAX_SIZE`)
-- `ACTIONS_FILE_PATH` (default: `actions.json`)
 
 **Adding New Constants:**
 1. Add to appropriate category in `app/constants.py`
@@ -835,7 +861,38 @@ return ResponseModel.success(
 **Adding HTTP endpoint:**
 - Create router in `app/api/http/<module>.py`
 - Define `router = APIRouter()` and endpoints
+- Use `require_roles()` dependency for RBAC protection
 - Will be auto-discovered by `collect_subrouters()`
+
+**Example HTTP endpoint with RBAC:**
+```python
+from fastapi import APIRouter, Depends
+from app.dependencies.permissions import require_roles
+from app.schemas.author import Author
+
+router = APIRouter(prefix="/api", tags=["authors"])
+
+@router.get(
+    "/authors",
+    dependencies=[Depends(require_roles("get-authors"))]
+)
+async def get_authors() -> list[Author]:
+    """Get all authors - requires 'get-authors' role."""
+    pass
+
+@router.post(
+    "/authors",
+    dependencies=[Depends(require_roles("create-author", "admin"))]
+)
+async def create_author(author: Author) -> Author:
+    """Create author - requires BOTH 'create-author' AND 'admin' roles."""
+    pass
+
+@router.get("/public")
+async def public_endpoint():
+    """Public endpoint - no require_roles() = no authentication required."""
+    pass
+```
 
 **Background tasks:**
 - Add task functions to `app/tasks/`

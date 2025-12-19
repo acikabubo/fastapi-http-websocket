@@ -64,8 +64,8 @@ sequenceDiagram
     participant PrometheusMiddleware
     participant RateLimitMiddleware
     participant AuthMiddleware
-    participant PermAuthMiddleware
     participant Handler
+    participant RBACDependency as require_roles()
     participant Database
 
     Client->>PrometheusMiddleware: GET /authors?name=John
@@ -87,20 +87,20 @@ sequenceDiagram
         alt Invalid token
             AuthMiddleware-->>Client: 401 Unauthorized
         else Valid token
-            AuthMiddleware->>PermAuthMiddleware: Forward request
+            AuthMiddleware->>RBACDependency: Check permissions (FastAPI dependency)
 
-            PermAuthMiddleware->>PermAuthMiddleware: Check RBAC (actions.json)
+            RBACDependency->>RBACDependency: Verify user has required roles
 
             alt Permission denied
-                PermAuthMiddleware-->>Client: 403 Forbidden
+                RBACDependency-->>Client: 403 Forbidden
             else Permission granted
-                PermAuthMiddleware->>Handler: Forward to endpoint
+                RBACDependency->>Handler: Forward to endpoint
 
                 Handler->>Handler: Validate query params
                 Handler->>Database: SELECT * FROM author WHERE name ILIKE '%John%'
                 Database-->>Handler: [Author rows]
-                Handler-->>PermAuthMiddleware: [Author list]
-                PermAuthMiddleware-->>AuthMiddleware: Response
+                Handler-->>RBACDependency: [Author list]
+                RBACDependency-->>AuthMiddleware: Response
                 AuthMiddleware-->>RateLimitMiddleware: Response
                 RateLimitMiddleware->>RateLimitMiddleware: Add X-RateLimit headers
                 RateLimitMiddleware-->>PrometheusMiddleware: Response

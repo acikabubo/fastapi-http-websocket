@@ -355,8 +355,9 @@ docker logs hw-server | grep -i "auth\|token\|keycloak"
 # Check user roles in Keycloak
 # Admin Console → Users → <user> → Role Mappings
 
-# Check actions.json for required roles
-cat actions.json | jq '.roles'
+# Check handler code for required roles
+# WebSocket: @pkg_router.register(PkgID.*, roles=["role-name"])
+# HTTP: dependencies=[Depends(require_roles("role-name"))]
 
 # Check application logs
 docker logs hw-server | grep -i "permission\|rbac"
@@ -374,20 +375,21 @@ docker logs hw-server | grep -i "permission\|rbac"
      add-roles -r production --uusername user@example.com --rolename admin
    ```
 
-2. **Wrong Role in actions.json:**
-   ```json
-   // Check actions.json
-   {
-     "roles": ["admin", "user", "guest"],
-     "http": {
-       "/api/authors": {
-         "POST": "admin"  // Requires admin role
-       }
-     }
-   }
+2. **Check Handler Role Requirements:**
+   ```python
+   # Example WebSocket handler
+   @pkg_router.register(
+       PkgID.CREATE_AUTHOR,
+       roles=["create-author", "admin"]  # Requires BOTH roles
+   )
 
-   // Update if needed and restart
-   docker-compose restart hw-server
+   # Example HTTP endpoint
+   @router.post(
+       "/authors",
+       dependencies=[Depends(require_roles("create-author", "admin"))]
+   )
+
+   # User must have ALL specified roles to access the endpoint
    ```
 
 3. **Token Not Decoded Properly:**

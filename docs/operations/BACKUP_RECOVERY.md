@@ -429,7 +429,6 @@ tar -czf "$BACKUP_DIR/config_${DATE}.tar.gz" \
   "$PROJECT_DIR/docker/prometheus/" \
   "$PROJECT_DIR/docker/grafana/" \
   "$PROJECT_DIR/docker/loki/" \
-  "$PROJECT_DIR/actions.json" \
   "$PROJECT_DIR/uvicorn_logging.json"
 
 echo "Configuration backed up: config_${DATE}.tar.gz"
