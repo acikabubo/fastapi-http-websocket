@@ -263,8 +263,23 @@ make outdated-pkgs-scan
 # Show table of PkgIDs and their handlers
 make ws-handlers
 
-# Generate a new WebSocket handler from template
+# Generate a new WebSocket handler (uses f-string code generator)
 make new-ws-handlers
+
+# Or use the generator directly with options:
+python generate_ws_handler.py handler_name PKG_ID_NAME [options]
+
+# With JSON schema validation
+python generate_ws_handler.py create_author CREATE_AUTHOR --schema
+
+# With pagination
+python generate_ws_handler.py get_authors GET_AUTHORS --paginated
+
+# With RBAC roles
+python generate_ws_handler.py delete_author DELETE_AUTHOR --roles admin delete-author
+
+# Overwrite existing file
+python generate_ws_handler.py handler_name PKG_ID --overwrite
 ```
 
 ## Architecture
@@ -389,23 +404,71 @@ make new-ws-handlers
 
 ### Creating New WebSocket Handlers
 
+The project uses an **f-string-based code generator** for creating WebSocket handlers with AST validation and automatic formatting.
+
+**Benefits of the new generator:**
+- ✅ No template files to maintain
+- ✅ Full IDE support with syntax highlighting
+- ✅ AST validation catches syntax errors before file creation
+- ✅ Auto-formatting with Black (79-char line length)
+- ✅ Type-safe with proper type hints
+- ✅ Passes all pre-commit hooks automatically
+
+**Steps to create a handler:**
+
 1. Add new `PkgID` to `app/api/ws/constants.py` enum
-2. Create handler in `app/api/ws/handlers/` or use CLI:
+2. Generate handler using CLI:
    ```bash
-   make new-ws-handlers  # Uses Jinja2 template
+   make new-ws-handlers  # Interactive prompts
+
+   # Or use the generator directly:
+   python generate_ws_handler.py handler_name PKG_ID_NAME [options]
    ```
-3. Register handler with decorator and specify required roles:
-   ```python
-   @pkg_router.register(
-       PkgID.MY_NEW_HANDLER,
-       json_schema=MySchema,
-       roles=["required-role"]  # Define permissions here
-   )
-   async def my_handler(request: RequestModel) -> ResponseModel:
-       # Handler logic
-       return ResponseModel.success(request.pkg_id, request.req_id, data={...})
-   ```
+3. Implement the TODO sections in the generated file
 4. Verify registration: `make ws-handlers`
+
+**Generator options:**
+```bash
+# Simple handler
+python generate_ws_handler.py get_status GET_STATUS
+
+# With JSON schema validation
+python generate_ws_handler.py create_author CREATE_AUTHOR --schema
+
+# With pagination
+python generate_ws_handler.py get_authors GET_AUTHORS --paginated
+
+# With RBAC roles
+python generate_ws_handler.py delete_author DELETE_AUTHOR --roles admin delete-author
+
+# Combine options
+python generate_ws_handler.py get_users GET_USERS --schema --paginated --roles view-users
+
+# Overwrite existing file
+python generate_ws_handler.py handler_name PKG_ID --overwrite
+```
+
+**Generated code structure:**
+```python
+@pkg_router.register(
+    PkgID.MY_NEW_HANDLER,
+    json_schema=MySchema,  # If --schema flag used
+    roles=["required-role"]  # If --roles flag used
+)
+async def my_handler(request: RequestModel) -> ResponseModel:
+    """
+    Comprehensive docstring with examples automatically generated.
+    """
+    try:
+        # TODO: Implement your handler logic here
+        return ResponseModel.success(request.pkg_id, request.req_id, data={...})
+    except ValueError as e:
+        logger.error(f"Validation error: {e}")
+        return ResponseModel.err_msg(...)
+    except Exception as e:
+        logger.error(f"Error in my_handler: {e}", exc_info=True)
+        return ResponseModel.err_msg(...)
+```
 
 **Example with multiple roles:**
 ```python

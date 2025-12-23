@@ -1,10 +1,10 @@
 import typer
-from jinja2 import Template
 from rich.console import Console
 from rich.table import Table
 
 from app.api.ws.constants import PkgID
 from app.routing import pkg_router
+from generate_ws_handler import HandlerGenerator
 
 typer_app = typer.Typer()
 console = Console()
@@ -75,38 +75,87 @@ def __pkg_id_input() -> str:
 
 
 @typer_app.command()
-def generate_new_ws_handler():
+def generate_new_ws_handler(
+    schema: bool = typer.Option(
+        False, "--schema", help="Include JSON schema validation"
+    ),
+    paginated: bool = typer.Option(
+        False, "--paginated", help="Include pagination logic"
+    ),
+    roles: list[str] = typer.Option(
+        None, "--role", help="Required RBAC roles (can specify multiple)"
+    ),
+    overwrite: bool = typer.Option(
+        False, "--overwrite", help="Overwrite existing file if it exists"
+    ),
+):
     """
-    This function generates a new WebSocket handler module based on user input.
+    Generate a new WebSocket handler module using f-string code generation.
 
-    The function prompts the user to enter the module name, handler name, and PkgID.
-    It then uses a Jinja2 template to render the WebSocket handler module code with the provided inputs.
-    The rendered module code is written to a file with the specified module name.
+    This command prompts for module name, handler name, and PkgID,
+    then generates a properly formatted Python file with comprehensive
+    docstrings, error handling, and type hints.
 
-    Parameters:
-    None
-
-    Returns:
-    None
+    The generated code is validated using AST and automatically formatted
+    with Black (if available) to match project standards.
     """
+    console.print(
+        "\n[bold cyan]WebSocket Handler Generator[/bold cyan]\n"
+    )
+
     module_name: str = input("Please write module name: ")
     handler_name: str = input("Please write handler name: ")
     pkg_id = __pkg_id_input()
 
-    with open("templates/ws_handler.jinja") as f:
-        module_code = Template(f.read()).render(
+    try:
+        generator = HandlerGenerator()
+        output_path = generator.create_handler_file(
+            module_name=module_name,
             pkg_id=pkg_id,
             handler_name=handler_name,
+            has_schema=schema,
+            has_pagination=paginated,
+            roles=roles if roles else None,
+            overwrite=overwrite,
         )
 
-        # Write the rendered module to a file
-        output_path = f"app/api/ws/handlers/{module_name}.py"
-        with open(output_path, "w") as f:
-            f.write(module_code)
+        console.print()
+        console.print(
+            f"[green]✓[/green] Handler successfully generated at: "
+            f"[yellow]{output_path}[/yellow]"
+        )
+        console.print()
 
-        print()
-        print(
-            f"Module is successfully generated at: {output_path}"
+        # Show next steps
+        console.print("[bold]Next steps:[/bold]")
+        console.print(
+            "  1. Implement the TODO sections in the generated file"
+        )
+        console.print(
+            "  2. Test the handler: [cyan]make ws-handlers[/cyan]"
+        )
+        console.print(
+            "  3. Run tests: [cyan]make test[/cyan]"
+        )
+        console.print()
+
+    except FileExistsError as e:
+        console.print(
+            f"\n[red]✗[/red] Error: {e}\n",
+            style="red"
+        )
+        console.print(
+            "Use [cyan]--overwrite[/cyan] flag to replace the existing file.\n"
+        )
+    except SyntaxError as e:
+        console.print(
+            f"\n[red]✗[/red] Syntax error in generated code: {e}\n",
+            style="red"
+        )
+    except Exception as e:
+        console.print(
+            f"\n[red]✗[/red] Unexpected error: {e}\n",
+            style="red"
         )
 
 
