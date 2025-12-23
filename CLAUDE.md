@@ -942,74 +942,42 @@ uv sync --group profiling
 pip install scalene
 ```
 
-**Makefile Commands:**
+**Makefile Commands (Scalene 2.0+):**
 
 ```bash
-# Full profiling (default)
+# Run application with profiling
 make profile
 
-# Low-overhead profiling (recommended for production)
-make profile-reduced
+# View profiling report in browser (after stopping profiler)
+make profile-view
 
-# Profile WebSocket handlers only
-make profile-ws
+# View profiling report in terminal
+make profile-view-cli
 
-# Memory-only profiling
-make profile-memory
-
-# CPU-only profiling (fastest)
-make profile-cpu
-
-# List available profiling reports
-make profile-list
-
-# Clean all profiling reports
+# Clean profiling data
 make profile-clean
-```
-
-**Configuration:**
-
-Enable profiling via environment variables in `docker/.srv_env`:
-
-```bash
-# Enable profiling (default: False)
-PROFILING_ENABLED=true
-
-# Output directory for profiling reports (default: profiling_reports)
-PROFILING_OUTPUT_DIR=profiling_reports
-
-# Profiling snapshot interval in seconds (default: 30)
-PROFILING_INTERVAL_SECONDS=30
 ```
 
 **Running with Scalene:**
 
-Scalene is designed to run as a command-line wrapper around your application:
+Scalene 2.0+ uses a new command structure with `run` and `view` subcommands:
 
 ```bash
-# Basic profiling with HTML report
-scalene --html --outfile report.html -- uvicorn app:application --host 0.0.0.0
+# Basic profiling - saves to scalene-profile.json
+scalene run -- uvicorn app:application --host 0.0.0.0
 
-# Profile with specific options
-scalene \
-  --html \
-  --outfile profiling_reports/ws_profile.html \
-  --cpu-percent-threshold 1 \
-  --reduced-profile \
-  -- uvicorn app:application --host 0.0.0.0 --port 8000
+# View report in browser
+scalene view
 
-# Profile only specific modules
-scalene \
-  --html \
-  --outfile report.html \
-  --profile-only app/api/ws/ \
-  -- uvicorn app:application
+# View report in terminal
+scalene view --cli
 
 # Profile in Docker container
 docker exec -it hw-server-shell \
-  scalene --html --outfile /app/profiling_reports/profile.html \
-  -- uvicorn app:application --host 0.0.0.0
+  scalene run -- uvicorn app:application --host 0.0.0.0
 ```
+
+**Note**: Scalene 2.0 generates profiles in JSON format (`scalene-profile.json`) instead of HTML. Use `scalene view` to open an interactive browser-based viewer, or `scalene view --cli` for terminal output.
 
 **Scalene CLI Options:**
 
