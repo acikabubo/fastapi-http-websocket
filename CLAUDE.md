@@ -1298,3 +1298,174 @@ async def process_request(request: RequestModel, user_id: str) -> ResponseModel:
 - Loki config: `docker/loki/loki-config.yml`
 - Promtail config: `docker/promtail/promtail-config.yml`
 - Loki URL: `LOKI_URL` in `app/settings.py` (default: http://loki:3100)
+
+### Audit Logs Dashboard
+
+**Overview:**
+The Audit Logs Dashboard provides comprehensive visibility into user activities and security events by querying the `user_actions` table directly from PostgreSQL. This dashboard surfaces Keycloak usernames alongside detailed audit information.
+
+**Accessing the Dashboard:**
+- Dashboard location: `docker/grafana/provisioning/dashboards/audit-logs.json`
+- Auto-provisioned on Grafana startup
+- Access at: http://localhost:3000/d/audit-logs
+- Datasource: PostgreSQL (configured in `docker/grafana/provisioning/datasources/prometheus.yml`)
+
+**Dashboard Panels:**
+
+1. **Audit Events Over Time** (Time Series)
+   - Shows event volume grouped by outcome (success, error, permission_denied)
+   - Color-coded: green (success), red (error), orange (permission_denied)
+   - Stacked visualization with sum totals in legend
+   - Query: Aggregates events by minute with outcome grouping
+
+2. **Actions by Type** (Bar Chart)
+   - Horizontal bar chart showing top 20 action types
+   - Helps identify most common operations (GET, POST, WS:*, etc.)
+   - Sorted by event count descending
+   - Query: Groups by action_type with count
+
+3. **Top Users by Activity** (Bar Chart)
+   - Shows top 15 most active users by event count
+   - Displays Keycloak usernames (from JWT `preferred_username` claim)
+   - Useful for identifying power users or suspicious activity
+   - Query: Groups by username with count
+
+4. **Recent Audit Events** (Table)
+   - Paginated table of last 100 events
+   - Columns: timestamp, username, action_type, resource, outcome, response_status, duration_ms, ip_address
+   - Color-coded cells:
+     - outcome: green (success), red (error), orange (permission_denied)
+     - response_status: green (<300), yellow (300-399), red (≥400)
+     - duration_ms: green (<500ms), yellow (500-999ms), red (≥1000ms)
+   - Sorted by timestamp descending
+
+5. **Failed/Denied Actions** (Table)
+   - Filtered view showing only errors and permission denials
+   - Columns: timestamp, username, action_type, resource, outcome, error_message, ip_address
+   - Critical for security monitoring and debugging
+   - Limited to last 50 events
+   - Query: WHERE outcome IN ('error', 'permission_denied')
+
+6. **Average Response Time by Action** (Time Series)
+   - Line chart showing avg duration_ms per action type over time
+   - Only includes successful operations
+   - Multiple series for different action types
+   - Legend shows mean and max values
+   - Helps identify performance regressions
+
+**Dashboard Variables (Filters):**
+
+All panels support dynamic filtering via these variables:
+
+- **Username**: Multi-select dropdown of all usernames in audit log
+  - Allows filtering by specific user(s)
+  - "All" option to show all users
+
+- **Action Type**: Multi-select filter for action types
+  - Filter by GET, POST, WS:GET_AUTHORS, etc.
+  - "All" option to show all action types
+
+- **Outcome**: Multi-select filter for operation outcomes
+  - Filter by success, error, or permission_denied
+  - "All" option to show all outcomes
+
+**Time Range:**
+- Default: Last 6 hours
+- Configurable via Grafana time picker (top-right)
+- All queries use `$__timeFilter(timestamp)` for proper time filtering
+
+**Database Schema:**
+
+The dashboard queries the `user_actions` table with this structure:
+
+```sql
+Table: user_actions
+- id (PRIMARY KEY)
+- timestamp (indexed)
+- user_id (indexed) - Keycloak user ID (sub claim)
+- username (indexed) - Keycloak username (preferred_username claim)
+- user_roles (JSON) - User roles at time of action
+- action_type (indexed) - Type of action (GET, POST, WS:*, etc.)
+- resource - Resource being accessed
+- outcome (indexed) - success, error, permission_denied
+- ip_address - Client IP address
+- user_agent - Client user agent
+- request_id (indexed) - Correlation ID for tracing
+- request_data (JSON) - Request payload
+- response_status - HTTP status code
+- error_message - Error details (if applicable)
+- duration_ms - Request duration in milliseconds
+```
+
+**Use Cases:**
+
+1. **Security Monitoring:**
+   - Identify unauthorized access attempts (permission_denied panel)
+   - Track failed operations by user
+   - Monitor IP addresses for suspicious patterns
+   - Detect brute force attempts
+
+2. **Compliance and Auditing:**
+   - Export audit trails for compliance reports
+   - Track who performed what actions and when
+   - Correlate actions with outcomes
+   - Maintain immutable audit log
+
+3. **Performance Analysis:**
+   - Identify slow operations by action type
+   - Track response time trends
+   - Find performance bottlenecks per user or action
+
+4. **Troubleshooting:**
+   - Filter by username to debug user-specific issues
+   - Use request_id to trace requests across services
+   - Correlate errors with specific actions and timestamps
+   - Analyze error messages for root cause
+
+**Example Queries:**
+
+```sql
+-- Find all failed logins for specific user
+SELECT timestamp, action_type, outcome, error_message, ip_address
+FROM user_actions
+WHERE username = 'acika'
+  AND outcome IN ('error', 'permission_denied')
+  AND timestamp > NOW() - INTERVAL '24 hours'
+ORDER BY timestamp DESC;
+
+-- Identify most common errors
+SELECT error_message, COUNT(*) as count
+FROM user_actions
+WHERE outcome = 'error'
+  AND timestamp > NOW() - INTERVAL '7 days'
+GROUP BY error_message
+ORDER BY count DESC
+LIMIT 10;
+
+-- Track user activity patterns
+SELECT
+  DATE_TRUNC('hour', timestamp) AS hour,
+  username,
+  COUNT(*) AS events
+FROM user_actions
+WHERE timestamp > NOW() - INTERVAL '24 hours'
+GROUP BY hour, username
+ORDER BY hour, events DESC;
+```
+
+**Integration with Other Dashboards:**
+
+- **Application Logs**: Cross-reference request_id between audit logs and application logs
+- **FastAPI Metrics**: Correlate audit events with HTTP request metrics
+- **Keycloak Metrics**: Compare authentication events with user actions
+
+**Best Practices:**
+
+1. **Regular Review**: Monitor failed/denied actions panel daily for security anomalies
+2. **Set Alerts**: Configure Grafana alerts for:
+   - High rate of permission_denied events
+   - Unusual user activity patterns
+   - Error rate spikes
+3. **Export Reports**: Use Grafana's export features for compliance reports
+4. **Retention Policy**: Configure PostgreSQL retention for audit_logs table based on compliance needs
+5. **Correlate with Logs**: Use request_id to trace between audit logs and application logs

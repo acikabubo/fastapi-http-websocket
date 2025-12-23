@@ -18,3 +18,19 @@ datasources:
     editable: false
     jsonData:
       maxLines: 1000
+
+  - name: PostgreSQL
+    type: postgres
+    uid: postgres
+    access: proxy
+    url: hw-db:5432
+    database: hw-db
+    user: hw-user
+    isDefault: false
+    editable: false
+    secureJsonData:
+      password: hw-pass
+    jsonData:
+      sslmode: disable
+      postgresVersion: 1300
+      timescaledb: false
