@@ -934,11 +934,37 @@ The application includes optional integration with Scalene, a high-performance C
 **Installation:**
 
 ```bash
-# Install profiling dependencies
-uv sync --group profiling
+# Install profiling dependencies (recommended)
+make profile-install
 
 # Or manually
+uv sync --group profiling
 pip install scalene
+```
+
+**Makefile Commands:**
+
+```bash
+# Full profiling (default)
+make profile
+
+# Low-overhead profiling (recommended for production)
+make profile-reduced
+
+# Profile WebSocket handlers only
+make profile-ws
+
+# Memory-only profiling
+make profile-memory
+
+# CPU-only profiling (fastest)
+make profile-cpu
+
+# List available profiling reports
+make profile-list
+
+# Clean all profiling reports
+make profile-clean
 ```
 
 **Configuration:**

@@ -139,3 +139,97 @@ docs-deploy:
 docs-install:
 	@echo "Installing documentation dependencies..."
 	@uv sync --group docs
+
+# Profiling commands
+profile-install:
+	@echo "Installing profiling dependencies (Scalene)..."
+	@uv sync --group profiling
+
+profile:
+	@echo "========================================="
+	@echo "Starting application with Scalene profiling..."
+	@echo "========================================="
+	@echo ""
+	@echo "📊 Profiling mode enabled"
+	@echo "   → Report will be saved to: profiling_reports/profile_$(shell date +%Y%m%d_%H%M%S).html"
+	@echo "   → Press Ctrl+C to stop and generate report"
+	@echo ""
+	@mkdir -p profiling_reports
+	@uv run --group profiling scalene \
+		--html \
+		--outfile profiling_reports/profile_$(shell date +%Y%m%d_%H%M%S).html \
+		--cpu-percent-threshold 1 \
+		-- uvicorn app:application --host 0.0.0.0 --port 8000
+
+profile-reduced:
+	@echo "========================================="
+	@echo "Starting application with reduced-overhead profiling..."
+	@echo "========================================="
+	@echo ""
+	@echo "📊 Low-overhead profiling mode"
+	@echo "   → Report: profiling_reports/profile_reduced_$(shell date +%Y%m%d_%H%M%S).html"
+	@echo ""
+	@mkdir -p profiling_reports
+	@uv run --group profiling scalene \
+		--html \
+		--outfile profiling_reports/profile_reduced_$(shell date +%Y%m%d_%H%M%S).html \
+		--reduced-profile \
+		--cpu-percent-threshold 2 \
+		-- uvicorn app:application --host 0.0.0.0 --port 8000
+
+profile-ws:
+	@echo "========================================="
+	@echo "Profiling WebSocket handlers only..."
+	@echo "========================================="
+	@echo ""
+	@echo "📊 Profiling WebSocket code"
+	@echo "   → Focusing on: app/api/ws/"
+	@echo "   → Report: profiling_reports/profile_ws_$(shell date +%Y%m%d_%H%M%S).html"
+	@echo ""
+	@mkdir -p profiling_reports
+	@uv run --group profiling scalene \
+		--html \
+		--outfile profiling_reports/profile_ws_$(shell date +%Y%m%d_%H%M%S).html \
+		--profile-only app/api/ws/ \
+		--cpu-percent-threshold 1 \
+		-- uvicorn app:application --host 0.0.0.0 --port 8000
+
+profile-memory:
+	@echo "========================================="
+	@echo "Memory profiling mode..."
+	@echo "========================================="
+	@echo ""
+	@echo "📊 Memory-only profiling"
+	@echo "   → Report: profiling_reports/profile_memory_$(shell date +%Y%m%d_%H%M%S).html"
+	@echo ""
+	@mkdir -p profiling_reports
+	@uv run --group profiling scalene \
+		--html \
+		--outfile profiling_reports/profile_memory_$(shell date +%Y%m%d_%H%M%S).html \
+		--memory-only \
+		-- uvicorn app:application --host 0.0.0.0 --port 8000
+
+profile-cpu:
+	@echo "========================================="
+	@echo "CPU profiling mode (fastest)..."
+	@echo "========================================="
+	@echo ""
+	@echo "📊 CPU-only profiling"
+	@echo "   → Report: profiling_reports/profile_cpu_$(shell date +%Y%m%d_%H%M%S).html"
+	@echo ""
+	@mkdir -p profiling_reports
+	@uv run --group profiling scalene \
+		--html \
+		--outfile profiling_reports/profile_cpu_$(shell date +%Y%m%d_%H%M%S).html \
+		--cpu-only \
+		-- uvicorn app:application --host 0.0.0.0 --port 8000
+
+profile-list:
+	@echo "Available profiling reports:"
+	@echo ""
+	@ls -lh profiling_reports/*.html 2>/dev/null || echo "No reports found. Run 'make profile' to generate one."
+
+profile-clean:
+	@echo "Cleaning profiling reports..."
+	@rm -rf profiling_reports/*.html
+	@echo "✓ All profiling reports deleted"
