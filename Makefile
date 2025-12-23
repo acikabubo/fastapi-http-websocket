@@ -116,8 +116,17 @@ test-migrations:
 
 # Documentation commands
 docs-serve:
-	@echo "Serving documentation at http://127.0.0.1:8000"
-	@uv run --group docs mkdocs serve
+	@echo "========================================="
+	@echo "Starting MkDocs documentation server..."
+	@echo "========================================="
+	@echo ""
+	@echo "📚 Access documentation at:"
+	@echo "   → http://localhost:8001 (direct)"
+	@echo "   → http://docs.localhost (via Traefik)"
+	@echo ""
+	@echo "Press Ctrl+C to stop the server"
+	@echo ""
+	@uv run --group docs mkdocs serve --dev-addr=0.0.0.0:8001
 
 docs-build:
 	@echo "Building documentation static site..."

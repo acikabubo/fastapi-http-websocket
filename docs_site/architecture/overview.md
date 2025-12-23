@@ -335,7 +335,7 @@ Models encapsulate data access:
 - Mock-based authentication tests
 - Real Keycloak authentication tests
 
-**See**: [Testing Guide](../guides/TESTING.md)
+**See**: [Testing Guide](../guides/testing.md)
 
 ## Deployment
 
@@ -361,11 +361,11 @@ Models encapsulate data access:
 
 ## Related Documentation
 
-- [RBAC Alternatives](RBAC_ALTERNATIVES.md) - Proposed RBAC improvements
-- [Codebase Improvements](../improvements/CODEBASE_IMPROVEMENTS.md) - Comprehensive improvement report
-- [Testing Guide](../guides/TESTING.md) - How to test the application
-- [Authentication Guide](../guides/AUTHENTICATION.md) - Working with Keycloak
-- [CLAUDE.md](../../CLAUDE.md) - Development guidelines for AI assistant
+- [RBAC System](rbac.md) - Role-based access control implementation
+- [Design Patterns](design-patterns.md) - Repository + Command + DI patterns
+- [Request Flow](request-flow.md) - Detailed sequence diagrams
+- [Testing Guide](../guides/testing.md) - How to test the application
+- [Authentication Guide](../guides/authentication.md) - Working with Keycloak
 
 ## Diagrams
 
@@ -400,5 +400,3 @@ Models encapsulate data access:
 4. Specify required roles in handler decorators (WebSocket: `roles=[]`, HTTP: `require_roles()`)
 5. Write tests in `tests/`
 6. Update documentation
-
-**See**: [CLAUDE.md](../../CLAUDE.md) for detailed development guidelines

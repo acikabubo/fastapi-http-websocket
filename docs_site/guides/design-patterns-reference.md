@@ -388,8 +388,8 @@ app.dependency_overrides[get_author_repository] = lambda: MockRepo()
 
 ## 📚 See Also
 
-- [Full Design Patterns Guide](./DESIGN_PATTERNS_GUIDE.md)
-- [Testing Guide](../guides/TESTING.md)
+- [Full Design Patterns Guide](../architecture/design-patterns.md)
+- [Testing Guide](testing.md)
 - [Example: Author Implementation](../../app/api/http/author.py)
 - Issue [#29](https://github.com/acikabubo/fastapi-http-websocket/issues/29)
 

@@ -100,6 +100,7 @@ services:
 
     ports:
       - "8000:8000"
+      - "8001:8001"  # used for docs
 
     volumes:
       - ..:/project
@@ -133,6 +134,13 @@ services:
       - "traefik.http.routers.fastapi-ws.rule=Host(`api.localhost`) && PathPrefix(`/web`)"
       - "traefik.http.routers.fastapi-ws.entrypoints=web"
       - "traefik.http.routers.fastapi-ws.service=fastapi"
+
+      # MkDocs documentation router
+      - "traefik.http.routers.docs.rule=Host(`docs.localhost`)"
+      - "traefik.http.routers.docs.entrypoints=web"
+      - "traefik.http.routers.docs.service=docs"
+      - "traefik.http.services.docs.loadbalancer.server.port=8001"
+      - "traefik.http.routers.docs.middlewares=secure-headers@file"
 
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
