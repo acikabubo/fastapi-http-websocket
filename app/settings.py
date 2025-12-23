@@ -109,5 +109,10 @@ class Settings(BaseSettings):
     AUDIT_BATCH_SIZE: int = 100
     AUDIT_BATCH_TIMEOUT: float = 1.0
 
+    # Profiling settings (Scalene integration)
+    PROFILING_ENABLED: bool = False
+    PROFILING_OUTPUT_DIR: str = "profiling_reports"
+    PROFILING_INTERVAL_SECONDS: int = 30  # Profiling snapshot interval
+
 
 app_settings = Settings()

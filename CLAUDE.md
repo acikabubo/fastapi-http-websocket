@@ -919,6 +919,252 @@ return ResponseModel.success(
 - Mock Keycloak interactions where appropriate (`pytest-mock`)
 - Database tests should use test fixtures with isolated sessions
 
+### Performance Profiling with Scalene
+
+**Overview:**
+The application includes optional integration with Scalene, a high-performance CPU, GPU, and memory profiler specifically designed for async Python applications. Scalene provides line-level profiling without significant performance impact, making it ideal for identifying bottlenecks in WebSocket handlers, connection managers, and broadcast operations.
+
+**Why Scalene?**
+- Zero-overhead profiling for async/await code
+- Line-level visibility into CPU, memory, and GPU usage
+- Identifies inefficient list comprehensions, Pydantic serialization, and async bottlenecks
+- Ideal for real-time workloads with 1000+ WebSocket connections
+- HTML reports with interactive visualizations
+
+**Installation:**
+
+```bash
+# Install profiling dependencies
+uv sync --group profiling
+
+# Or manually
+pip install scalene
+```
+
+**Configuration:**
+
+Enable profiling via environment variables in `docker/.srv_env`:
+
+```bash
+# Enable profiling (default: False)
+PROFILING_ENABLED=true
+
+# Output directory for profiling reports (default: profiling_reports)
+PROFILING_OUTPUT_DIR=profiling_reports
+
+# Profiling snapshot interval in seconds (default: 30)
+PROFILING_INTERVAL_SECONDS=30
+```
+
+**Running with Scalene:**
+
+Scalene is designed to run as a command-line wrapper around your application:
+
+```bash
+# Basic profiling with HTML report
+scalene --html --outfile report.html -- uvicorn app:application --host 0.0.0.0
+
+# Profile with specific options
+scalene \
+  --html \
+  --outfile profiling_reports/ws_profile.html \
+  --cpu-percent-threshold 1 \
+  --reduced-profile \
+  -- uvicorn app:application --host 0.0.0.0 --port 8000
+
+# Profile only specific modules
+scalene \
+  --html \
+  --outfile report.html \
+  --profile-only app/api/ws/ \
+  -- uvicorn app:application
+
+# Profile in Docker container
+docker exec -it hw-server-shell \
+  scalene --html --outfile /app/profiling_reports/profile.html \
+  -- uvicorn app:application --host 0.0.0.0
+```
+
+**Scalene CLI Options:**
+
+```bash
+--html                      # Generate HTML report instead of terminal output
+--outfile <path>            # Specify output file path
+--cpu-percent-threshold N   # Only show lines using >N% CPU (default: 1)
+--reduced-profile           # Lower overhead profiling mode
+--profile-only <path>       # Only profile files matching path
+--profile-exclude <path>    # Exclude files matching path
+--cpu-only                  # Profile CPU usage only (skip memory)
+--memory-only               # Profile memory usage only (skip CPU)
+--use-virtual-time          # Use virtual time for more accurate async profiling
+```
+
+**Profiling API Endpoints:**
+
+The application provides HTTP endpoints for managing profiling reports:
+
+```bash
+# Check profiling status and configuration
+GET /api/profiling/status
+
+Response:
+{
+  "enabled": true,
+  "scalene_installed": true,
+  "output_directory": "profiling_reports",
+  "interval_seconds": 30,
+  "python_version": "3.13.0",
+  "command": "scalene --html --outfile report.html -- uvicorn ..."
+}
+
+# List all available profiling reports
+GET /api/profiling/reports
+
+Response:
+{
+  "reports": [
+    {
+      "filename": "websocket_profile_20250123_143000.html",
+      "path": "profiling_reports/websocket_profile_20250123_143000.html",
+      "size_bytes": 125000,
+      "created_at": 1706019000
+    }
+  ],
+  "total_count": 1
+}
+
+# Download specific profiling report
+GET /api/profiling/reports/websocket_profile_20250123_143000.html
+
+# Delete profiling report
+DELETE /api/profiling/reports/websocket_profile_20250123_143000.html
+```
+
+**Profiling Context Manager:**
+
+Use the `profile_context` helper for lightweight profiling of specific operations:
+
+```python
+from app.utils.profiling import profile_context
+
+async def my_handler(request: RequestModel) -> ResponseModel:
+    async with profile_context("my_handler_operation"):
+        # Your code here
+        result = await expensive_operation()
+
+    return ResponseModel.success(...)
+```
+
+**What to Profile:**
+
+1. **WebSocket Connection Lifecycle:**
+   - Connection setup and authentication overhead
+   - Message receive/send performance
+   - Disconnect cleanup time
+
+2. **Broadcast Operations:**
+   - Time spent iterating over connections
+   - JSON serialization overhead
+   - Network I/O bottlenecks
+
+3. **Handler Performance:**
+   - Database query execution time
+   - Pydantic model validation overhead
+   - RBAC permission checking
+
+4. **Memory Leaks:**
+   - Unclosed WebSocket connections
+   - Growing connection registries
+   - Cached data accumulation
+
+**Reading Scalene Reports:**
+
+Scalene HTML reports show:
+- **CPU %**: Percentage of time spent on each line (Python + native code)
+- **Memory**: Memory allocated/freed per line
+- **Copy Volume**: Data copying overhead
+- **Timeline**: Interactive timeline of resource usage
+
+Key metrics to watch:
+- Lines with >5% CPU usage
+- Memory allocations in loops
+- High copy volumes (inefficient data handling)
+- Async/await overhead
+
+**Example Workflow:**
+
+```bash
+# 1. Enable profiling
+export PROFILING_ENABLED=true
+
+# 2. Start application with Scalene
+scalene --html --outfile profiling_reports/ws_profile.html \
+  --cpu-percent-threshold 1 \
+  -- uvicorn app:application --host 0.0.0.0
+
+# 3. Generate load (e.g., connect 1000 WebSocket clients)
+# Use tools like locust, websocket-bench, or custom scripts
+
+# 4. Stop application (Ctrl+C)
+# Scalene generates report automatically
+
+# 5. View report
+open profiling_reports/ws_profile.html
+
+# Or access via API
+curl http://localhost:8000/api/profiling/reports/ws_profile.html > report.html
+```
+
+**Best Practices:**
+
+1. **Profile Under Load**: Scalene is most useful under realistic load conditions
+2. **Use Reduced Profile Mode**: Enable `--reduced-profile` for lower overhead
+3. **Filter Output**: Use `--cpu-percent-threshold` to focus on hot spots
+4. **Profile Specific Modules**: Use `--profile-only app/api/ws/` to focus on WebSocket code
+5. **Combine with Metrics**: Cross-reference Scalene reports with Prometheus metrics
+6. **Regular Profiling**: Run profiling sessions after major changes
+7. **Save Reports**: Keep historical reports to track performance over time
+
+**Common Bottlenecks Identified:**
+
+- **Pydantic Validation**: Use `model_validate()` instead of manual dict conversion
+- **JSON Serialization**: Consider `orjson` for faster JSON encoding
+- **List Comprehensions in Broadcast**: Use async generators for large connection lists
+- **Database Queries**: Missing indexes, N+1 queries
+- **Sync Code in Async**: Blocking calls in async functions (use `run_in_executor`)
+
+**Integration with Existing Monitoring:**
+
+Scalene profiling complements existing monitoring tools:
+- **Prometheus Metrics**: High-level trends (request rates, error rates)
+- **Grafana Dashboards**: Real-time monitoring
+- **Application Logs**: Error tracking and debugging
+- **Scalene Reports**: Deep dive into performance bottlenecks
+
+Use Prometheus to identify when performance degrades, then use Scalene to pinpoint the exact lines causing the issue.
+
+**Troubleshooting:**
+
+**Q: Scalene not found**
+A: Install with `uv sync --group profiling` or `pip install scalene`
+
+**Q: Permission denied on report file**
+A: Ensure `PROFILING_OUTPUT_DIR` has write permissions
+
+**Q: High overhead during profiling**
+A: Use `--reduced-profile` mode or `--cpu-only` flag
+
+**Q: Report shows no data**
+A: Ensure application runs long enough to collect samples (at least 10-30 seconds)
+
+**Q: Can't access /api/profiling endpoints**
+A: Ensure profiling router is registered in `app/__init__.py`
+
+**Configuration Files:**
+- Profiling settings: `app/settings.py` (lines 112-115)
+- Profiling utilities: `app/utils/profiling.py`
+- Profiling API endpoints: `app/api/http/profiling.py`
+
 ### Common Patterns
 
 **Adding HTTP endpoint:**
