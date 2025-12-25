@@ -12,15 +12,6 @@
 
 
 -------------------------------------------------------------------------------
-
-- Metrics for WebSocket
-  Track:
-    active connections
-    messages per second
-    error rates
-
-- Health-Check Endpoint for WebSockets
-
 - Graceful Disconnect Handling
   Ensure WebSocket handlers always clean up connections:
     try:
@@ -34,5 +25,3 @@
     on incoming message rates
     with clear policy defaults and configurable parameters.
   Rate limiting should be efficient and avoid false positives under load.
-
-- support and use of protobuffs
