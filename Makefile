@@ -169,3 +169,23 @@ profile-clean:
 	@echo "Cleaning profiling data..."
 	@rm -f scalene-profile.json
 	@echo "✓ Profile data deleted"
+
+# Protobuf commands
+protobuf-install:
+	@echo "Installing protobuf dependencies..."
+	@uv sync --group protobuf
+
+protobuf-generate:
+	@echo "Generating Python code from .proto files..."
+	@mkdir -p app/schemas/proto
+	@uv run --group protobuf python -m grpc_tools.protoc \
+		-I=proto \
+		--python_out=app/schemas/proto \
+		--pyi_out=app/schemas/proto \
+		proto/websocket.proto
+	@echo "✓ Protobuf code generated in app/schemas/proto/"
+
+protobuf-clean:
+	@echo "Cleaning generated protobuf code..."
+	@rm -rf app/schemas/proto
+	@echo "✓ Protobuf code cleaned"

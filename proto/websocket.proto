@@ -1,0 +1,76 @@
+syntax = "proto3";
+
+package websocket;
+
+// Request message for WebSocket communication
+message Request {
+  // Package ID identifying the handler to route to
+  int32 pkg_id = 1;
+
+  // Unique request identifier (UUID as string)
+  string req_id = 2;
+
+  // Optional method name for the request
+  string method = 3;
+
+  // Request payload as JSON string (flexible schema)
+  // Alternative: use google.protobuf.Struct for dynamic data
+  string data_json = 4;
+}
+
+// Response message for WebSocket communication
+message Response {
+  // Package ID (same as request)
+  int32 pkg_id = 1;
+
+  // Request identifier (same as request)
+  string req_id = 2;
+
+  // Status code (0 = OK, non-zero = error)
+  int32 status_code = 3;
+
+  // Response payload as JSON string
+  string data_json = 4;
+
+  // Optional metadata (pagination, etc.)
+  Metadata meta = 5;
+}
+
+// Broadcast message for server-to-client push
+message Broadcast {
+  // Package ID identifying the message type
+  int32 pkg_id = 1;
+
+  // Request identifier (default 0 for broadcasts)
+  string req_id = 2;
+
+  // Broadcast payload as JSON string
+  string data_json = 3;
+}
+
+// Pagination metadata
+message Metadata {
+  // Current page number (1-indexed)
+  int32 page = 1;
+
+  // Items per page
+  int32 per_page = 2;
+
+  // Total number of items
+  int32 total = 3;
+
+  // Total number of pages
+  int32 pages = 4;
+}
+
+// Paginated request parameters
+message PaginatedRequest {
+  // Page number to retrieve (starts from 1)
+  int32 page = 1;
+
+  // Number of items per page
+  int32 per_page = 2;
+
+  // Additional filters as JSON string
+  string filters_json = 3;
+}

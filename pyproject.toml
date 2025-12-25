@@ -51,6 +51,11 @@ docs = [
 profiling = [
     "scalene>=1.5.0",
 ]
+protobuf = [
+    "protobuf>=5.29.0",
+    "grpcio-tools>=1.68.0",
+    "betterproto[compiler]>=2.0.0",
+]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
