@@ -136,10 +136,14 @@ def get_profiling_status() -> dict:
         "output_directory": str(profiling_manager.output_dir),
         "interval_seconds": profiling_manager.interval_seconds,
         "python_version": sys.version,
-        "command": (
-            "scalene --html --outfile report.html -- "
-            "uvicorn app:application --host 0.0.0.0 --port 8000"
-        ),
+        "command": "scalene run run_server.py",
+        "view_command": "scalene view",
+        "makefile_commands": {
+            "profile": "make profile",
+            "view": "make profile-view",
+            "view_cli": "make profile-view-cli",
+            "clean": "make profile-clean",
+        },
     }
 
 
