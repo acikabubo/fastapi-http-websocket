@@ -39,7 +39,7 @@ ENV UV_SYSTEM_PYTHON=1
 COPY pyproject.toml /tmp/pyproject.toml
 
 # Install dependencies and include development dependencies
-RUN cd /tmp && uv pip install -r pyproject.toml --group dev --group protobuf
+RUN cd /tmp && uv pip install -r pyproject.toml --group dev
 
 # Install fixuid
 RUN USER=devel && \

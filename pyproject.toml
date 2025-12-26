@@ -8,16 +8,18 @@ requires-python = ">=3.13"
 dependencies = [
     "alembic>=1.13.0",
     "asyncpg>=0.30.0",
-    "fastapi>=0.121.3",
-    "greenlet>=3.2.4",
+    "fastapi>=0.127.1",
+    "greenlet>=3.3.0",
+    "grpcio-tools>=1.68.0",
     "jsonschema>=4.25.1",
     "prometheus-client>=0.21.1",
+    "protobuf>=5.29.0",
     "pydantic-settings>=2.12.0",
     "python-keycloak>=5.8.1",
     "redis>=7.1.0",
-    "sqlmodel>=0.0.27",
-    "urllib3>=2.0",
-    "uvicorn>=0.38.0",
+    "sqlmodel>=0.0.30",
+    "urllib3>=2.6.2",
+    "uvicorn>=0.40.0",
     "websockets>=15.0.1",
 ]
 
@@ -26,18 +28,18 @@ dev = [
     "bandit>=1.9.1",
     "black>=24.0.0",
     "interrogate>=1.7.0",
-    "ipython>=8.31.0",
+    "ipython>=9.8.0",
     "jinja2>=3.1.6",
-    "mypy>=1.18.2",
-    "pre-commit>=4.4.0",
-    "pytest>=9.0.1",
+    "mypy>=1.19.1",
+    "pre-commit>=4.5.1",
+    "pytest>=9.0.2",
     "pytest-asyncio>=1.3.0",
     "pytest-cov>=7.0.0",
     "pytest-mock>=3.15.1",
     "rich>=13.0.0",
-    "ruff>=0.14.5",
+    "ruff>=0.14.10",
     "skjold>=0.6.2",
-    "typer>=0.20.0",
+    "typer>=0.21.0",
     "typos>=1.39.2",
     "vulture>=2.14",
 ]
@@ -50,10 +52,6 @@ docs = [
 ]
 profiling = [
     "scalene>=1.5.0",
-]
-protobuf = [
-    "protobuf>=5.29.0",
-    "grpcio-tools>=1.68.0",
 ]
 
 [tool.pytest.ini_options]
