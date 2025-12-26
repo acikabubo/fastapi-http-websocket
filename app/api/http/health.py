@@ -11,8 +11,16 @@ from app.logging import logger
 from app.settings import app_settings
 from app.storage.db import engine
 from app.storage.redis import get_redis_connection
+from app.utils.metrics import get_websocket_health_info
 
 router = APIRouter()
+
+
+class WebSocketHealthInfo(BaseModel):
+    """WebSocket health information."""
+
+    status: str
+    active_connections: int
 
 
 class HealthResponse(BaseModel):
@@ -21,6 +29,7 @@ class HealthResponse(BaseModel):
     status: str
     database: str
     redis: str
+    websocket: WebSocketHealthInfo
 
 
 @router.get(
@@ -37,6 +46,7 @@ async def health_check(response: Response) -> HealthResponse:
     This endpoint verifies:
     - Database connectivity (PostgreSQL)
     - Redis connectivity
+    - WebSocket system health (active connections, metrics)
 
     Returns:
         HealthResponse: Health status of the service and dependencies.
@@ -72,9 +82,15 @@ async def health_check(response: Response) -> HealthResponse:
         logger.error(f"Unexpected Redis health check error: {e}")
         redis_status = "unhealthy"
 
+    # Get WebSocket health information
+    ws_health_data = get_websocket_health_info()
+    ws_health = WebSocketHealthInfo(**ws_health_data)
+
     overall_status = (
         "healthy"
-        if db_status == "healthy" and redis_status == "healthy"
+        if db_status == "healthy"
+        and redis_status == "healthy"
+        and ws_health.status == "healthy"
         else "unhealthy"
     )
 
@@ -82,5 +98,8 @@ async def health_check(response: Response) -> HealthResponse:
         response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
 
     return HealthResponse(
-        status=overall_status, database=db_status, redis=redis_status
+        status=overall_status,
+        database=db_status,
+        redis=redis_status,
+        websocket=ws_health,
     )

@@ -53,11 +53,18 @@ async def test_health_endpoint_all_services_healthy(client):
     mock_redis = AsyncMock()
     mock_redis.ping.return_value = True
 
+    # Mock WebSocket health info
+    mock_ws_health = {"status": "healthy", "active_connections": 5}
+
     with (
         patch("app.api.http.health.engine", mock_engine),
         patch(
             "app.api.http.health.get_redis_connection",
             return_value=mock_redis,
+        ),
+        patch(
+            "app.api.http.health.get_websocket_health_info",
+            return_value=mock_ws_health,
         ),
     ):
         response = client.get("/health")
@@ -67,6 +74,8 @@ async def test_health_endpoint_all_services_healthy(client):
     assert data["status"] == "healthy"
     assert data["database"] == "healthy"
     assert data["redis"] == "healthy"
+    assert data["websocket"]["status"] == "healthy"
+    assert data["websocket"]["active_connections"] == 5
 
 
 @pytest.mark.asyncio
@@ -85,11 +94,18 @@ async def test_health_endpoint_database_unhealthy(client):
     mock_redis = AsyncMock()
     mock_redis.ping.return_value = True
 
+    # Mock WebSocket health info
+    mock_ws_health = {"status": "healthy", "active_connections": 3}
+
     with (
         patch("app.api.http.health.engine", mock_engine),
         patch(
             "app.api.http.health.get_redis_connection",
             return_value=mock_redis,
+        ),
+        patch(
+            "app.api.http.health.get_websocket_health_info",
+            return_value=mock_ws_health,
         ),
     ):
         response = client.get("/health")
@@ -99,6 +115,7 @@ async def test_health_endpoint_database_unhealthy(client):
     assert data["status"] == "unhealthy"
     assert data["database"] == "unhealthy"
     assert data["redis"] == "healthy"
+    assert data["websocket"]["status"] == "healthy"
 
 
 @pytest.mark.asyncio
@@ -118,11 +135,18 @@ async def test_health_endpoint_redis_unhealthy(client):
     mock_redis = AsyncMock()
     mock_redis.ping.side_effect = Exception("Redis connection error")
 
+    # Mock WebSocket health info
+    mock_ws_health = {"status": "healthy", "active_connections": 2}
+
     with (
         patch("app.api.http.health.engine", mock_engine),
         patch(
             "app.api.http.health.get_redis_connection",
             return_value=mock_redis,
+        ),
+        patch(
+            "app.api.http.health.get_websocket_health_info",
+            return_value=mock_ws_health,
         ),
     ):
         response = client.get("/health")
@@ -132,6 +156,7 @@ async def test_health_endpoint_redis_unhealthy(client):
     assert data["status"] == "unhealthy"
     assert data["database"] == "healthy"
     assert data["redis"] == "unhealthy"
+    assert data["websocket"]["status"] == "healthy"
 
 
 @pytest.mark.asyncio
@@ -150,11 +175,18 @@ async def test_health_endpoint_all_services_unhealthy(client):
     mock_redis = AsyncMock()
     mock_redis.ping.side_effect = Exception("Redis connection error")
 
+    # Mock WebSocket health info
+    mock_ws_health = {"status": "healthy", "active_connections": 1}
+
     with (
         patch("app.api.http.health.engine", mock_engine),
         patch(
             "app.api.http.health.get_redis_connection",
             return_value=mock_redis,
+        ),
+        patch(
+            "app.api.http.health.get_websocket_health_info",
+            return_value=mock_ws_health,
         ),
     ):
         response = client.get("/health")
@@ -164,6 +196,7 @@ async def test_health_endpoint_all_services_unhealthy(client):
     assert data["status"] == "unhealthy"
     assert data["database"] == "unhealthy"
     assert data["redis"] == "unhealthy"
+    assert data["websocket"]["status"] == "healthy"
 
 
 @pytest.mark.asyncio
@@ -180,12 +213,17 @@ async def test_health_endpoint_no_authentication_required(client):
     mock_engine.connect.return_value.__aenter__.return_value = mock_conn
     mock_redis = AsyncMock()
     mock_redis.ping.return_value = True
+    mock_ws_health = {"status": "healthy", "active_connections": 0}
 
     with (
         patch("app.api.http.health.engine", mock_engine),
         patch(
             "app.api.http.health.get_redis_connection",
             return_value=mock_redis,
+        ),
+        patch(
+            "app.api.http.health.get_websocket_health_info",
+            return_value=mock_ws_health,
         ),
     ):
         # Request without authentication headers
