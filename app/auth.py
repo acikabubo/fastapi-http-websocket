@@ -114,8 +114,18 @@ class AuthBackend(AuthenticationBackend):
                 )
                 access_token = token["access_token"]
 
+            from pprint import pprint
+            print()
+            pprint(access_token)
+            print()
+
             # Decode access token and get user data
             user_data = kc_manager.openid.decode_token(access_token)
+
+            from pprint import pprint
+            print()
+            pprint(user_data)
+            print()
 
             # Make logged in user object
             user: UserModel = UserModel(**user_data)

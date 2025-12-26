@@ -9,6 +9,7 @@ from app.api.ws.handlers import load_handlers
 from app.api.ws.websocket import PackageAuthWebSocketEndpoint
 from app.logging import logger
 from app.routing import pkg_router
+from app.schemas.proto import Request as ProtoRequest
 from app.schemas.request import RequestModel
 from app.settings import app_settings
 from app.utils.audit_logger import log_user_action
@@ -16,6 +17,10 @@ from app.utils.metrics import (
     ws_message_processing_duration_seconds,
     ws_messages_received_total,
     ws_messages_sent_total,
+)
+from app.utils.protobuf_converter import (
+    proto_to_pydantic_request,
+    serialize_response,
 )
 from app.utils.rate_limiter import rate_limiter
 
@@ -34,20 +39,23 @@ class Web(PackageAuthWebSocketEndpoint):
     - `on_receive`: Called when data is received on the WebSocket connection. Logs the received data, creates a `RequestModel` instance from the data, handles the request using the `pkg_router`, and sends the response back to the client.
     """
 
-    async def on_receive(self, websocket, data: dict[str, Any]):
+    async def on_receive(self, websocket, data: dict[str, Any] | bytes):
         """
         Handles incoming WebSocket messages by processing the request and sending back a response.
 
+        Supports both JSON and Protocol Buffers formats based on connection negotiation.
+
         This method performs the following steps:
         1. Checks message rate limit for the user
-        2. Validates and converts the received data into a RequestModel
-        3. Routes the request through pkg_router with user authentication
-        4. Sends the response back through the WebSocket
-        5. Closes the connection if validation or rate limiting fails
+        2. Detects message format (JSON dict or Protobuf bytes)
+        3. Validates and converts the received data into a RequestModel
+        4. Routes the request through pkg_router with user authentication
+        5. Sends the response back in the same format
+        6. Closes the connection if validation or rate limiting fails
 
         Args:
             websocket: The WebSocket connection instance
-            data (dict[str, Any]): The received message data as a dictionary
+            data: The received message data (dict for JSON, bytes for Protobuf)
 
         Raises:
             ValidationError: If the received data cannot be parsed into a valid RequestModel.
@@ -59,7 +67,7 @@ class Web(PackageAuthWebSocketEndpoint):
         """
         # Check message rate limit
         rate_limit_key = f"ws_msg:user:{self.user.username}"
-        is_allowed, remaining = await rate_limiter.check_rate_limit(
+        is_allowed, _ = await rate_limiter.check_rate_limit(
             key=rate_limit_key,
             limit=app_settings.WS_MESSAGE_RATE_LIMIT,
             window_seconds=60,
@@ -79,8 +87,19 @@ class Web(PackageAuthWebSocketEndpoint):
         ws_messages_received_total.inc()
 
         try:
-            request = RequestModel(**data)
-            logger.debug(f"Received data: {data}")
+            # Parse request based on message format
+            if isinstance(data, bytes):
+                # Protobuf format
+                proto_request = ProtoRequest()
+                proto_request.ParseFromString(data)
+                request = proto_to_pydantic_request(proto_request)
+                logger.debug(f"Received protobuf request: pkg_id={request.pkg_id}")
+                message_format = "protobuf"
+            else:
+                # JSON format
+                request = RequestModel(**data)
+                logger.debug(f"Received JSON request: {data}")
+                message_format = "json"
 
             # Track message processing duration
             start_time = time.time()
@@ -95,9 +114,17 @@ class Web(PackageAuthWebSocketEndpoint):
                 pkg_id=str(request.pkg_id)
             ).observe(duration)
 
-            await websocket.send_response(response)
+            # Send response in the same format as request
+            if message_format == "protobuf":
+                response_data = serialize_response(response, "protobuf")
+                await websocket.send_bytes(response_data)
+            else:
+                await websocket.send_response(response)
+
             ws_messages_sent_total.inc()
-            logger.debug(f"Successfully sent response for {request.pkg_id}")
+            logger.debug(
+                f"Successfully sent {message_format} response for {request.pkg_id}"
+            )
 
             # Log successful WebSocket action
             await log_user_action(

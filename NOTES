@@ -25,3 +25,5 @@
     on incoming message rates
     with clear policy defaults and configurable parameters.
   Rate limiting should be efficient and avoid false positives under load.
+
+Consider using lifestap in fastapi

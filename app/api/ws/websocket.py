@@ -62,9 +62,10 @@ class PackageAuthWebSocketEndpoint(WebSocketEndpoint):
 
     Handles WebSocket connections with Keycloak authentication and manages
     the connection lifecycle including authorization and session management.
+    Supports both JSON and Protocol Buffers message formats.
     """
 
-    encoding = "json"
+    encoding = None  # Handle both JSON and binary (protobuf) formats
     websocket_class: Type[WebSocket] = PackagedWebSocket
 
     async def dispatch(self) -> None:
@@ -113,6 +114,32 @@ class PackageAuthWebSocketEndpoint(WebSocketEndpoint):
         finally:
             await self.on_disconnect(websocket, close_code)
 
+    async def decode(self, websocket: WebSocket, message: dict) -> dict | bytes:
+        """
+        Decode incoming WebSocket message.
+
+        Supports both JSON (text) and Protobuf (binary) formats.
+        Returns the raw data without decoding to allow format-specific
+        handling in on_receive().
+
+        Args:
+            websocket: WebSocket connection instance
+            message: Raw message dict from WebSocket
+
+        Returns:
+            Decoded message data (dict for JSON, bytes for protobuf)
+        """
+        if "text" in message:
+            # JSON format - parse as JSON
+            text = message["text"]
+            return json.loads(text)
+        elif "bytes" in message:
+            # Protobuf format - return raw bytes
+            return message["bytes"]
+        else:
+            # Fallback for other message types
+            return message.get("text", message.get("bytes", b""))
+
     async def on_connect(self, websocket):
         """
         Handles WebSocket client connection with authentication and rate limiting.
@@ -136,6 +163,21 @@ class PackageAuthWebSocketEndpoint(WebSocketEndpoint):
         self.r = await get_auth_redis_connection()
 
         self.user: UserModel = self.scope["user"]
+
+        # Detect message format from query parameters (default: json)
+        query_params = dict(websocket.query_params)
+        self.message_format = query_params.get("format", "json").lower()
+
+        # Validate format
+        if self.message_format not in ("json", "protobuf"):
+            logger.warning(
+                f"Invalid format '{self.message_format}' specified, defaulting to json"
+            )
+            self.message_format = "json"
+
+        logger.debug(
+            f"WebSocket connection using format: {self.message_format}"
+        )
 
         # Reject unauthenticated connections
         if isinstance(self.user, UnauthenticatedUser) or self.user is None:
