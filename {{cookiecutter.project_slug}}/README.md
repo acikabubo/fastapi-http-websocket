@@ -160,6 +160,13 @@ Environment variables in [settings.py]({{cookiecutter.module_name}}/settings.py)
 **Database:**
 - `DB_USER`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT`, `DB_NAME`
 
+## Documentation
+
+For detailed guides and advanced topics, see:
+- **[Advanced Features](docs/guides/ADVANCED_FEATURES.md)** - Protocol Buffers, Performance Profiling
+- **[Monitoring & Observability](docs/guides/MONITORING.md)** - Prometheus, Grafana, Loki, Audit Logs
+{% if cookiecutter.enable_audit_logging == 'yes' %}- **[User Action Logging](docs/guides/USER_ACTION_LOGGING.md)** - Audit logging setup and usage{% endif %}
+
 ## Code Quality
 
 ```bash
