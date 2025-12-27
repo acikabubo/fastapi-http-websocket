@@ -241,10 +241,13 @@ class TestGetRateLimitKey:
         mock_request.user = None
         mock_request.client.host = "192.168.1.100"
 
-        middleware = RateLimitMiddleware(mock_app)
-        key = middleware._get_rate_limit_key(mock_request)
+        with patch("app.middlewares.rate_limit.get_client_ip") as mock_get_ip:
+            mock_get_ip.return_value = "192.168.1.100"
 
-        assert key == "ip:192.168.1.100"
+            middleware = RateLimitMiddleware(mock_app)
+            key = middleware._get_rate_limit_key(mock_request)
+
+            assert key == "ip:192.168.1.100"
 
     def test_get_rate_limit_key_no_client(self, mock_app, mock_request):
         """
@@ -257,10 +260,13 @@ class TestGetRateLimitKey:
         mock_request.user = None
         mock_request.client = None
 
-        middleware = RateLimitMiddleware(mock_app)
-        key = middleware._get_rate_limit_key(mock_request)
+        with patch("app.middlewares.rate_limit.get_client_ip") as mock_get_ip:
+            mock_get_ip.return_value = "unknown"
 
-        assert key == "ip:unknown"
+            middleware = RateLimitMiddleware(mock_app)
+            key = middleware._get_rate_limit_key(mock_request)
+
+            assert key == "ip:unknown"
 
     def test_get_rate_limit_key_user_without_username(
         self, mock_app, mock_request
@@ -277,7 +283,10 @@ class TestGetRateLimitKey:
         mock_request.user = user
         mock_request.client.host = "10.0.0.1"
 
-        middleware = RateLimitMiddleware(mock_app)
-        key = middleware._get_rate_limit_key(mock_request)
+        with patch("app.middlewares.rate_limit.get_client_ip") as mock_get_ip:
+            mock_get_ip.return_value = "10.0.0.1"
 
-        assert key == "ip:10.0.0.1"
+            middleware = RateLimitMiddleware(mock_app)
+            key = middleware._get_rate_limit_key(mock_request)
+
+            assert key == "ip:10.0.0.1"
