@@ -89,9 +89,14 @@ class RateLimiter:
 
         except (AsyncRedisError, SyncRedisError) as ex:
             logger.error(f"Redis error for rate limit key {key}: {ex}")
-            # On Redis failure, allow the request (fail open for HTTP)
-            # NOTE: This is acceptable for rate limiting to prevent service disruption
-            return True, limit
+            # Respect configured fail mode for rate limiting
+            if app_settings.RATE_LIMIT_FAIL_MODE == "closed":
+                logger.warning(
+                    f"Rate limiter failing closed due to Redis error for key {key}"
+                )
+                return False, 0  # Deny request
+            # Default: fail open to prevent service disruption
+            return True, limit  # Allow request
         except (ValueError, TypeError) as ex:
             logger.error(f"Invalid parameters for rate limit key {key}: {ex}")
             # Programming error - fail closed

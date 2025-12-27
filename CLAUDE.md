@@ -342,7 +342,9 @@ python generate_ws_handler.py handler_name PKG_ID --overwrite
 - `RateLimiter`: Tracks request counts per user/IP within configurable time windows
   - `check_rate_limit(key, limit, window_seconds, burst)` returns (is_allowed, remaining)
   - Supports burst limits for short-term traffic spikes
-  - Fails open on Redis errors (allows requests)
+  - Fail mode configurable via `RATE_LIMIT_FAIL_MODE` setting:
+    - "open" (default): Allows requests when Redis is unavailable
+    - "closed": Denies requests when Redis is unavailable
 - `ConnectionLimiter`: Manages WebSocket connection limits per user
   - `add_connection(user_id, connection_id)` enforces max connections
   - `remove_connection(user_id, connection_id)` cleanup on disconnect
@@ -359,6 +361,7 @@ python generate_ws_handler.py handler_name PKG_ID --overwrite
   - `RATE_LIMIT_ENABLED`: Enable/disable rate limiting (default: True)
   - `RATE_LIMIT_PER_MINUTE`: HTTP request limit per minute (default: 60)
   - `RATE_LIMIT_BURST`: Burst allowance for traffic spikes (default: 10)
+  - `RATE_LIMIT_FAIL_MODE`: Fail mode when Redis unavailable - "open" or "closed" (default: "open")
   - `WS_MAX_CONNECTIONS_PER_USER`: Max concurrent WebSocket connections (default: 5)
   - `WS_MESSAGE_RATE_LIMIT`: WebSocket messages per minute (default: 100)
 

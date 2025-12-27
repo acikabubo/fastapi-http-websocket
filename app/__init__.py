@@ -1,5 +1,6 @@
 # Uvicorn application factory <https://www.uvicorn.org/#application-factories>
 from asyncio import create_task, gather
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from starlette.middleware.authentication import AuthenticationMiddleware
@@ -15,102 +16,103 @@ from app.routing import collect_subrouters
 from app.storage.db import wait_and_init_db
 from app.tasks.kc_user_session import kc_user_session_task
 
-tasks = []
 
-
-def startup():
+@asynccontextmanager
+async def lifespan(app: FastAPI):
     """
-    Application startup handler
+    FastAPI lifespan context manager for startup and shutdown.
+
+    Handles:
+    - Database initialization with retries
+    - Background task startup (user session sync, audit log worker)
+    - Prometheus metrics initialization
+    - Graceful shutdown with audit log flushing and task cancellation
+
+    Startup operations:
+    - Sets up the database and tables
+    - Creates user session background task
+    - Starts audit log background worker
+    - Initializes Prometheus metrics
+
+    Shutdown operations:
+    - Flushes remaining audit logs
+    - Closes Redis connection pools
+    - Cancels and waits for background tasks
     """
+    # Startup
+    logger.info("Application startup: initializing resources")
 
-    async def wrapper():
-        """
-        Asynchronous initialization wrapper that:
-        - Sets up the database and tables
-        - Creates a user session background task
-        - Subscribes to Redis channels for real-time messaging
-        - Initializes Prometheus metrics
+    # Create the database and tables
+    await wait_and_init_db()
+    logger.info("Initialized database and tables")
 
-        This wrapper handles all startup operations that require async/await syntax.
-        """
-        # Create the database and tables
-        await wait_and_init_db()
-        logger.info("Initialized database and tables")
+    # Start background tasks
+    background_tasks = []
 
-        logger.info("Application startup initiated")
-        tasks.append(create_task(kc_user_session_task()))
-        logger.info("Created task for user session")
+    background_tasks.append(
+        create_task(kc_user_session_task(), name="kc_session_sync")
+    )
+    logger.info("Created task for user session")
 
-        # Start audit log background worker
-        from app.utils.audit_logger import audit_log_worker
+    # Start audit log background worker
+    from app.utils.audit_logger import audit_log_worker
 
-        tasks.append(create_task(audit_log_worker()))
-        logger.info("Started audit log background worker")
+    background_tasks.append(
+        create_task(audit_log_worker(), name="audit_worker")
+    )
+    logger.info("Started audit log background worker")
 
-        # Initialize app info metric
-        import sys
+    # Initialize app info metric
+    import sys
 
-        from app.utils.metrics import app_info
+    from app.utils.metrics import app_info
 
-        app_info.labels(
-            version="1.0.0",
-            python_version=f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}",
-            environment="production",
-        ).set(1)
-        logger.info("Initialized Prometheus metrics")
+    app_info.labels(
+        version="1.0.0",
+        python_version=f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}",
+        environment="production",
+    ).set(1)
+    logger.info("Initialized Prometheus metrics")
 
-    return wrapper
+    logger.info(f"Started {len(background_tasks)} background tasks")
 
+    yield  # Application runs here
 
-def shutdown():
-    """
-    Application shutdown handler
-    """
+    # Shutdown
+    logger.info("Application shutdown: cleaning up resources")
 
-    async def wrapper():
-        """
-        Asynchronous shutdown wrapper that performs graceful cleanup.
+    # Flush remaining audit logs
+    try:
+        from app.utils.audit_logger import flush_audit_queue
 
-        Cleanup order:
-        1. Flush remaining audit logs
-        2. Close Redis connection pools
-        3. Cancel and wait for background tasks
+        flushed_count = await flush_audit_queue()
+        if flushed_count > 0:
+            logger.info(
+                f"Flushed {flushed_count} audit logs during shutdown"
+            )
+    except Exception as ex:
+        logger.error(f"Error flushing audit logs: {ex}")
 
-        Uses gather() with return_exceptions=True to handle CancelledError
-        exceptions gracefully during the cancellation process.
-        """
-        logger.info("Application shutdown initiated")
+    # Close Redis connection pools
+    try:
+        from app.storage.redis import RedisPool
 
-        # Flush remaining audit logs
-        try:
-            from app.utils.audit_logger import flush_audit_queue
+        await RedisPool.close_all()
+        logger.info("Closed Redis connection pools")
+    except Exception as ex:
+        logger.error(f"Error closing Redis connection pools: {ex}")
 
-            flushed_count = await flush_audit_queue()
-            if flushed_count > 0:
-                logger.info(f"Flushed {flushed_count} audit logs during shutdown")
-        except Exception as ex:
-            logger.error(f"Error flushing audit logs: {ex}")
-
-        # Close Redis connection pools
-        try:
-            from app.storage.redis import RedisPool
-
-            await RedisPool.close_all()
-        except Exception as ex:
-            logger.error(f"Error closing Redis connection pools: {ex}")
-
-        # Cancel background tasks
-        if tasks:
-            logger.info(f"Cancelling {len(tasks)} background tasks")
-            for task in tasks:
+    # Cancel background tasks
+    if background_tasks:
+        logger.info(f"Cancelling {len(background_tasks)} background tasks")
+        for task in background_tasks:
+            if not task.done():
                 task.cancel()
-            logger.info("Waiting for background tasks to complete cleanup")
-            await gather(*tasks, return_exceptions=True)
-            logger.info("All background tasks completed")
+        logger.info("Waiting for background tasks to complete cleanup")
+        await gather(*background_tasks, return_exceptions=True)
+        logger.info("All background tasks completed")
 
-        logger.info("Application shutdown complete")
-
-    return wrapper
+    logger.info("Application shutdown complete")
 
 
 def application() -> FastAPI:
@@ -121,10 +123,11 @@ def application() -> FastAPI:
     - Title: "HTTP & WebSocket handlers"
     - Description: "HTTP & WebSocket handlers"
     - Version: "1.0.0"
+    - Lifespan: Modern context manager for startup/shutdown (replaces deprecated event handlers)
 
-    It also adds the following event handlers:
-    - Startup handler: Initializes the database and tables.
-    - Shutdown handler: Prints "SHUTDOWN" when the application is shutting down.
+    The lifespan context manager handles:
+    - Database initialization and background task startup
+    - Graceful shutdown with audit log flushing and task cancellation
 
     The function then includes the routers collected from the `app.routing.collect_subrouters()` function, and adds the following middleware:
     - `AuthenticationMiddleware`: Middleware for authentication, using the `AuthBackend` authentication backend.
@@ -136,16 +139,13 @@ def application() -> FastAPI:
 
     Finally, the function returns the configured FastAPI application.
     """
-    # Initialize application
+    # Initialize application with lifespan context manager
     app = FastAPI(
         title="HTTP & WebSocket handlers",
         description="HTTP & WebSocket handlers",
         version="1.0.0",
+        lifespan=lifespan,
     )
-
-    # Add event handlers
-    app.add_event_handler("startup", startup())
-    app.add_event_handler("shutdown", shutdown())
 
     # Collect routers
     app.include_router(collect_subrouters())

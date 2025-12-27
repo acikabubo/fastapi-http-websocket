@@ -1,5 +1,6 @@
 import os
 import re
+from typing import Literal
 
 from pydantic import SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -81,6 +82,8 @@ class Settings(BaseSettings):
     RATE_LIMIT_ENABLED: bool = True
     RATE_LIMIT_PER_MINUTE: int = 10
     RATE_LIMIT_BURST: int = 10
+    # Fail mode: "open" = allow requests when Redis unavailable, "closed" = deny requests
+    RATE_LIMIT_FAIL_MODE: Literal["open", "closed"] = "open"
 
     # WebSocket rate limiting settings
     WS_MAX_CONNECTIONS_PER_USER: int = 5
