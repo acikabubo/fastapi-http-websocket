@@ -390,6 +390,39 @@ python generate_ws_handler.py handler_name PKG_ID --overwrite
 - Metrics endpoint at `/metrics` (excluded from auth and rate limiting)
 - Compatible with Prometheus scraping
 
+**Security Middlewares (`app/middlewares/security_headers.py`, `app/middlewares/request_size_limit.py`):**
+- `SecurityHeadersMiddleware`: Adds security headers to all HTTP responses
+  - `X-Frame-Options: DENY` - Prevents clickjacking attacks
+  - `X-Content-Type-Options: nosniff` - Prevents MIME type sniffing
+  - `X-XSS-Protection: 1; mode=block` - Enables XSS filter in older browsers
+  - `Strict-Transport-Security: max-age=31536000; includeSubDomains` - Enforces HTTPS
+  - `Referrer-Policy: strict-origin-when-cross-origin` - Controls referrer information
+  - `Permissions-Policy: geolocation=(), microphone=(), camera=()` - Disables browser features
+- `RequestSizeLimitMiddleware`: Protects against large payload attacks
+  - Checks `Content-Length` header before processing request
+  - Returns 413 Payload Too Large if size exceeds limit
+  - Default limit: 1MB (configurable via `MAX_REQUEST_BODY_SIZE`)
+- `TrustedHostMiddleware`: Validates Host header against allowed hosts
+  - Prevents Host header injection attacks
+  - Configured via `ALLOWED_HOSTS` setting (default: `["*"]` for development)
+  - Set to specific domains in production: `["example.com", "*.example.com"]`
+- Configuration in `app/settings.py`:
+  - `ALLOWED_HOSTS`: List of allowed host values (default: `["*"]`)
+  - `MAX_REQUEST_BODY_SIZE`: Maximum request body size in bytes (default: 1MB)
+  - `TRUSTED_PROXIES`: List of trusted proxy IP addresses/networks for X-Forwarded-For validation
+
+**IP Address Spoofing Protection (`app/utils/ip_utils.py`):**
+- `get_client_ip(request)`: Safely extracts client IP with spoofing protection
+  - Validates X-Forwarded-For header against trusted proxy list
+  - Only trusts X-Forwarded-For from configured `TRUSTED_PROXIES`
+  - Supports IP addresses and CIDR notation (`10.0.0.0/8`)
+  - Logs warnings for untrusted X-Forwarded-For attempts
+- `is_trusted_proxy(ip)`: Checks if IP belongs to trusted proxy
+- Used by:
+  - Rate limiting middleware (for IP-based rate limits)
+  - Audit logging (for accurate IP tracking in audit logs)
+- Default trusted proxies: Docker networks (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`)
+
 ### Directory Structure
 
 - `app/__init__.py`: Application factory with startup/shutdown handlers

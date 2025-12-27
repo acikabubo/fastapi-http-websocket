@@ -11,6 +11,7 @@ from starlette.types import ASGIApp
 from app.logging import logger
 from app.schemas.user import UserModel
 from app.settings import app_settings
+from app.utils.ip_utils import get_client_ip
 from app.utils.rate_limiter import rate_limiter
 
 
@@ -96,7 +97,8 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         """
         Get the rate limit key from the request.
 
-        Prefers user ID from authentication, falls back to client IP.
+        Prefers user ID from authentication, falls back to safely extracted
+        client IP address (with protection against IP spoofing).
 
         Args:
             request: The HTTP request.
@@ -110,6 +112,6 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         if user and user.username:
             return f"user:{user.username}"
 
-        # Fallback to client IP
-        client_host = request.client.host if request.client else "unknown"
-        return f"ip:{client_host}"
+        # Fallback to client IP (safely extracted with spoofing protection)
+        client_ip = get_client_ip(request)
+        return f"ip:{client_ip}"

@@ -57,6 +57,17 @@ class Settings(BaseSettings):
         r"^(/docs|/openapi.json|/health|/metrics)$"
     )
 
+    # Security settings
+    ALLOWED_HOSTS: list[str] = ["*"]  # ["example.com", "*.example.com"] in production
+    MAX_REQUEST_BODY_SIZE: int = 1024 * 1024  # 1MB default
+    # Trusted proxies for X-Forwarded-For header validation
+    # Common private network ranges for Docker/Kubernetes environments
+    TRUSTED_PROXIES: list[str] = [
+        "10.0.0.0/8",      # Docker default network
+        "172.16.0.0/12",   # Docker custom networks
+        "192.168.0.0/16",  # Private networks
+    ]
+
     # Debug mode settings (for local development/testing)
     # Users should create a Keycloak account and put credentials here for testing
     DEBUG_AUTH: bool = False

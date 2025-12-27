@@ -202,7 +202,10 @@ def sanitize_data(data: dict[str, Any] | None) -> dict[str, Any] | None:
 
 def extract_ip_address(request: Request) -> str | None:
     """
-    Extract client IP address from request, handling proxies.
+    Extract client IP address from request with spoofing protection.
+
+    Uses the secure get_client_ip() function which validates X-Forwarded-For
+    headers against trusted proxy list to prevent IP spoofing.
 
     Args:
         request: Starlette request object.
@@ -210,22 +213,9 @@ def extract_ip_address(request: Request) -> str | None:
     Returns:
         Client IP address, or None if not available.
     """
-    # Check X-Forwarded-For header (set by proxies)
-    forwarded_for = request.headers.get("x-forwarded-for")
-    if forwarded_for:
-        # Take the first IP in the chain (original client)
-        return forwarded_for.split(",")[0].strip()
+    from app.utils.ip_utils import get_client_ip
 
-    # Check X-Real-IP header (set by some proxies)
-    real_ip = request.headers.get("x-real-ip")
-    if real_ip:
-        return real_ip.strip()
-
-    # Fall back to direct client IP
-    if request.client:
-        return request.client.host
-
-    return None
+    return get_client_ip(request)
 
 
 async def log_user_action(
