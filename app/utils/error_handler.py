@@ -114,11 +114,15 @@ def handle_ws_errors(func: Callable) -> Callable:
         ```python
         @pkg_router.register(PkgID.CREATE_AUTHOR, roles=["create-author"])
         @handle_ws_errors
-        async def create_author_handler(request: RequestModel) -> ResponseModel:
+        async def create_author_handler(
+            request: RequestModel,
+        ) -> ResponseModel:
             async with async_session() as session:
                 repo = AuthorRepository(session)
                 command = CreateAuthorCommand(repo)
-                author = await command.execute(CreateAuthorInput(**request.data))
+                author = await command.execute(
+                    CreateAuthorInput(**request.data)
+                )
                 return ResponseModel.success(
                     request.pkg_id, request.req_id, data=author.model_dump()
                 )

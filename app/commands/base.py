@@ -79,7 +79,9 @@ class BaseCommand(ABC, Generic[TInput, TOutput]):
             def __init__(self, repository: AuthorRepository):
                 self.repository = repository
 
-            async def execute(self, input_data: GetAuthorsInput) -> list[Author]:
+            async def execute(
+                self, input_data: GetAuthorsInput
+            ) -> list[Author]:
                 filters = {}
                 if input_data.name:
                     filters["name"] = input_data.name

@@ -26,7 +26,9 @@ def pydantic_to_proto_request(pydantic_req: RequestModel) -> Request:
         Protobuf Request message.
 
     Example:
-        >>> req = RequestModel(pkg_id=PkgID.GET_AUTHORS, req_id=UUID(...), data={})
+        >>> req = RequestModel(
+        ...     pkg_id=PkgID.GET_AUTHORS, req_id=UUID(...), data={}
+        ... )
         >>> proto_req = pydantic_to_proto_request(req)
         >>> proto_bytes = proto_req.SerializeToString()
     """
