@@ -128,6 +128,12 @@ db_query_errors_total = _get_or_create_counter(
     ["operation", "error_type"],
 )
 
+db_slow_queries_total = _get_or_create_counter(
+    "db_slow_queries_total",
+    "Total number of slow database queries (exceeding threshold)",
+    ["operation"],
+)
+
 # Redis Metrics
 redis_operations_total = _get_or_create_counter(
     "redis_operations_total",

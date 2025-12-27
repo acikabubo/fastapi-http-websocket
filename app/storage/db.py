@@ -17,6 +17,11 @@ from app.logging import logger
 from app.schemas.generic_typing import GenericSQLModelType
 from app.schemas.response import MetadataModel
 from app.settings import app_settings
+from app.utils.pagination_cache import get_cached_count, set_cached_count
+from app.utils.query_monitor import enable_query_monitoring
+
+# Enable database query performance monitoring
+enable_query_monitoring()
 
 engine: AsyncEngine = create_async_engine(
     app_settings.DATABASE_URL,
@@ -136,15 +141,27 @@ async def get_paginated_results(
         if skip_count:
             total = 0  # Skip count query for performance
         else:
-            # More efficient count on primary key instead of subquery
-            count_query = select(func.count(model.id))
-            if filters:
-                if apply_filters:
-                    count_query = apply_filters(count_query, model, filters)
-                else:
-                    count_query = default_apply_filters(count_query, model, filters)
-            total_result = await s.exec(count_query)
-            total = total_result.one()
+            # Try to get count from cache first
+            model_name = model.__name__
+            cached_total = await get_cached_count(model_name, filters)
+
+            if cached_total is not None:
+                total = cached_total
+            else:
+                # More efficient count on primary key instead of subquery
+                count_query = select(func.count(model.id))
+                if filters:
+                    if apply_filters:
+                        count_query = apply_filters(count_query, model, filters)
+                    else:
+                        count_query = default_apply_filters(
+                            count_query, model, filters
+                        )
+                total_result = await s.exec(count_query)
+                total = total_result.one()
+
+                # Cache the count result for future requests
+                await set_cached_count(model_name, total, filters)
 
         # Collect/format meta data
         meta_data = MetadataModel(
