@@ -6,8 +6,10 @@ Usage:
     python get_token.py
     python get_token.py USERNAME PASSWORD
 """
+
 import sys
 from app.managers.keycloak_manager import KeycloakManager
+
 
 def get_token(username: str = "acika", password: str = None):
     """Get access token from Keycloak."""
@@ -27,7 +29,9 @@ def get_token(username: str = "acika", password: str = None):
         print("\nTo test WebSocket:")
         print(f"  python test_protobuf_websocket.py both {access_token}")
         print("\nOr use in Postman URL:")
-        print(f"  ws://localhost:8000/web?Authorization=Bearer%20{access_token}")
+        print(
+            f"  ws://localhost:8000/web?Authorization=Bearer%20{access_token}"
+        )
         print("=" * 60)
 
         return access_token
@@ -39,6 +43,7 @@ def get_token(username: str = "acika", password: str = None):
         print("  2. Username and password are correct")
         print("  3. User exists in Keycloak realm 'HW-App'")
         sys.exit(1)
+
 
 if __name__ == "__main__":
     if len(sys.argv) == 3:

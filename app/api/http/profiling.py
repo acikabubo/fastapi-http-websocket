@@ -111,9 +111,7 @@ async def get_report(filename: str) -> FileResponse:
     """
     # Validate filename (security: prevent path traversal)
     if ".." in filename or "/" in filename or "\\" in filename:
-        raise HTTPException(
-            status_code=400, detail="Invalid filename"
-        )
+        raise HTTPException(status_code=400, detail="Invalid filename")
 
     report_path = profiling_manager.output_dir / filename
 
@@ -160,9 +158,7 @@ async def delete_report(filename: str) -> JSONResponse:
     """
     # Validate filename (security: prevent path traversal)
     if ".." in filename or "/" in filename or "\\" in filename:
-        raise HTTPException(
-            status_code=400, detail="Invalid filename"
-        )
+        raise HTTPException(status_code=400, detail="Invalid filename")
 
     report_path = profiling_manager.output_dir / filename
 

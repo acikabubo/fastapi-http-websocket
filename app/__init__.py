@@ -91,9 +91,7 @@ async def lifespan(app: FastAPI):
 
         flushed_count = await flush_audit_queue()
         if flushed_count > 0:
-            logger.info(
-                f"Flushed {flushed_count} audit logs during shutdown"
-            )
+            logger.info(f"Flushed {flushed_count} audit logs during shutdown")
     except Exception as ex:
         logger.error(f"Error flushing audit logs: {ex}")
 
@@ -168,8 +166,7 @@ def application() -> FastAPI:
     app.add_middleware(LoggingContextMiddleware)
     app.add_middleware(CorrelationIDMiddleware)
     app.add_middleware(
-        TrustedHostMiddleware,
-        allowed_hosts=app_settings.ALLOWED_HOSTS
+        TrustedHostMiddleware, allowed_hosts=app_settings.ALLOWED_HOSTS
     )
 
     return app

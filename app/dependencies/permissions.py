@@ -33,11 +33,17 @@ def require_roles(*roles: str):
 
         router = APIRouter()
 
-        @router.get("/authors", dependencies=[Depends(require_roles("get-authors"))])
+
+        @router.get(
+            "/authors", dependencies=[Depends(require_roles("get-authors"))]
+        )
         async def get_authors():
             return {"authors": []}
 
-        @router.post("/admin", dependencies=[Depends(require_roles("admin", "write"))])
+
+        @router.post(
+            "/admin", dependencies=[Depends(require_roles("admin", "write"))]
+        )
         async def admin_action():
             return {"status": "ok"}
         ```

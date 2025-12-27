@@ -9,9 +9,11 @@ Example:
     ```python
     from app.types import UserId, PkgId
 
+
     def get_user(user_id: UserId) -> User:
         # Type checker ensures only UserId is passed, not raw int
         ...
+
 
     def handle_package(pkg_id: PkgId) -> None:
         # Can't accidentally pass UserId here

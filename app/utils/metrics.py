@@ -9,7 +9,9 @@ and other application behavior.
 from prometheus_client import REGISTRY, Counter, Gauge, Histogram
 
 
-def _get_or_create_counter(name: str, doc: str, labels: list[str] | None = None):
+def _get_or_create_counter(
+    name: str, doc: str, labels: list[str] | None = None
+):
     """
     Get existing counter or create new one.
 
@@ -35,7 +37,9 @@ def _get_or_create_gauge(name: str, doc: str, labels: list[str] | None = None):
         return REGISTRY._names_to_collectors[name]
 
 
-def _get_or_create_histogram(name: str, doc: str, labels: list[str] | None = None, buckets=None):
+def _get_or_create_histogram(
+    name: str, doc: str, labels: list[str] | None = None, buckets=None
+):
     """
     Get existing histogram or create new one.
 
@@ -48,6 +52,7 @@ def _get_or_create_histogram(name: str, doc: str, labels: list[str] | None = Non
     except ValueError:
         # Metric already exists, retrieve it from registry
         return REGISTRY._names_to_collectors[name]
+
 
 # HTTP Request Metrics
 http_requests_total = _get_or_create_counter(
@@ -138,7 +143,10 @@ db_slow_queries_total = _get_or_create_counter(
 redis_operations_total = _get_or_create_counter(
     "redis_operations_total",
     "Total Redis operations",
-    ["operation", "status"],  # operation: get, set, delete, etc; status: success, error
+    [
+        "operation",
+        "status",
+    ],  # operation: get, set, delete, etc; status: success, error
 )
 
 redis_operation_duration_seconds = _get_or_create_histogram(
@@ -157,7 +165,14 @@ redis_pool_max_connections = _get_or_create_gauge(
 redis_pool_info = _get_or_create_gauge(
     "redis_pool_info",
     "Redis connection pool configuration info",
-    ["db", "host", "port", "socket_timeout", "connect_timeout", "health_check_interval"],
+    [
+        "db",
+        "host",
+        "port",
+        "socket_timeout",
+        "connect_timeout",
+        "health_check_interval",
+    ],
 )
 
 # Rate Limiting Metrics

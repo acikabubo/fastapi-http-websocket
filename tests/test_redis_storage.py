@@ -65,11 +65,12 @@ class TestRedisPool:
         """Test that get_instance creates new Redis instance."""
         mock_redis_instance = AsyncMock()
 
-        with patch(
-            "app.storage.redis.ConnectionPool.from_url"
-        ) as mock_pool, patch(
-            "app.storage.redis.Redis.from_pool",
-            new=AsyncMock(return_value=mock_redis_instance),
+        with (
+            patch("app.storage.redis.ConnectionPool.from_url") as mock_pool,
+            patch(
+                "app.storage.redis.Redis.from_pool",
+                new=AsyncMock(return_value=mock_redis_instance),
+            ),
         ):
             # Clear instances
             RedisPool._RedisPool__instances = {}
@@ -146,9 +147,10 @@ class TestGetRedisConnection:
         """Test get_auth_redis_connection uses correct DB."""
         mock_redis = AsyncMock()
 
-        with patch("app.storage.redis.get_redis_connection") as mock_get_conn, patch(
-            "app.storage.redis.app_settings"
-        ) as mock_settings:
+        with (
+            patch("app.storage.redis.get_redis_connection") as mock_get_conn,
+            patch("app.storage.redis.app_settings") as mock_settings,
+        ):
             mock_settings.AUTH_REDIS_DB = 5
             mock_get_conn.return_value = mock_redis
 
@@ -306,7 +308,9 @@ class TestRedisHandler:
 
         handler = RedisHandler()
 
-        with pytest.raises(ValueError, match="Callback argument must be a coroutine"):
+        with pytest.raises(
+            ValueError, match="Callback argument must be a coroutine"
+        ):
             await handler.subscribe("test_channel", sync_callback)
 
 

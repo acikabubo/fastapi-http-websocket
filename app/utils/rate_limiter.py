@@ -114,7 +114,9 @@ class RateLimiter:
             redis_key = f"rate_limit:{key}"
             await redis.delete(redis_key)
         except (AsyncRedisError, SyncRedisError) as ex:
-            logger.error(f"Redis error resetting rate limit for key {key}: {ex}")
+            logger.error(
+                f"Redis error resetting rate limit for key {key}: {ex}"
+            )
 
 
 class ConnectionLimiter:
@@ -179,9 +181,7 @@ class ConnectionLimiter:
             # SECURITY: Fail closed - deny connection on Redis errors
             return False
         except (ValueError, TypeError) as ex:
-            logger.error(
-                f"Invalid parameters for user {user_id}: {ex}"
-            )
+            logger.error(f"Invalid parameters for user {user_id}: {ex}")
             # Programming error - deny connection and investigate
             return False
 

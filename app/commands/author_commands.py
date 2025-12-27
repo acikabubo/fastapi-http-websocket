@@ -9,12 +9,14 @@ Example:
     from app.commands.author_commands import GetAuthorsCommand, GetAuthorsInput
     from app.repositories.author_repository import AuthorRepository
 
+
     # In HTTP handler
     @router.get("/authors")
     async def get_authors(repo: AuthorRepoDep) -> list[Author]:
         command = GetAuthorsCommand(repo)
         input_data = GetAuthorsInput(name=None)
         return await command.execute(input_data)
+
 
     # In WebSocket handler
     @pkg_router.register(PkgID.GET_AUTHORS)
@@ -27,7 +29,7 @@ Example:
             return ResponseModel(
                 pkg_id=request.pkg_id,
                 req_id=request.req_id,
-                data=[a.model_dump() for a in authors]
+                data=[a.model_dump() for a in authors],
             )
     ```
 """
@@ -49,9 +51,7 @@ class GetAuthorsInput(BaseModel):
     """Input model for getting authors."""
 
     id: int | None = Field(default=None, description="Filter by author ID")
-    name: str | None = Field(
-        default=None, description="Filter by author name"
-    )
+    name: str | None = Field(default=None, description="Filter by author name")
     search_term: str | None = Field(
         default=None,
         description="Search term for name (case-insensitive partial match)",
@@ -112,16 +112,12 @@ class GetAuthorsCommand(BaseCommand[GetAuthorsInput, list[Author]]):
             result = await command.execute(GetAuthorsInput(id=1))
 
             # Search by name pattern
-            result = await command.execute(
-                GetAuthorsInput(search_term="John")
-            )
+            result = await command.execute(GetAuthorsInput(search_term="John"))
             ```
         """
         # If search term provided, use search functionality
         if input_data.search_term:
-            return await self.repository.search_by_name(
-                input_data.search_term
-            )
+            return await self.repository.search_by_name(input_data.search_term)
 
         # Otherwise, use exact filters
         filters = {}

@@ -13,7 +13,6 @@ Key Benefits:
 - Consistent behavior across protocols
 """
 
-
 from app.api.ws.constants import PkgID
 from app.api.ws.validation import validator
 from app.commands.author_commands import (
@@ -227,5 +226,3 @@ async def create_author_handler(
                 req_id=request.req_id,
                 data=author.model_dump(),
             )
-
-

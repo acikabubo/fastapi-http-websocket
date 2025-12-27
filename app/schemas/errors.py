@@ -60,7 +60,7 @@ class ErrorEnvelope(BaseModel):
         error = ErrorEnvelope(
             code="author_not_found",
             msg="Author with ID 42 not found",
-            details={"author_id": 42, "available_ids": [1, 2, 3]}
+            details={"author_id": 42, "available_ids": [1, 2, 3]},
         )
         ```
     """
@@ -69,9 +69,7 @@ class ErrorEnvelope(BaseModel):
         ...,
         description="Machine-readable error code (e.g., 'validation_error', 'not_found')",
     )
-    msg: str = Field(
-        ..., description="Human-readable error message"
-    )
+    msg: str = Field(..., description="Human-readable error message")
     details: dict[str, Any] | None = Field(
         default=None,
         description="Optional additional error context and metadata",
@@ -98,15 +96,13 @@ class HTTPErrorResponse(BaseModel):
             "error": {
                 "code": "permission_denied",
                 "message": "User lacks create-author role",
-                "details": {"required_roles": ["create-author"]}
+                "details": {"required_roles": ["create-author"]},
             }
         }
         ```
     """
 
-    error: ErrorEnvelope = Field(
-        ..., description="Error details envelope"
-    )
+    error: ErrorEnvelope = Field(..., description="Error details envelope")
 
 
 class WebSocketErrorResponse(BaseModel):
@@ -134,8 +130,8 @@ class WebSocketErrorResponse(BaseModel):
             data=ErrorEnvelope(
                 code="permission_denied",
                 msg="User lacks create-author role",
-                details={"required_roles": ["create-author"]}
-            ).model_dump()
+                details={"required_roles": ["create-author"]},
+            ).model_dump(),
         )
         ```
     """

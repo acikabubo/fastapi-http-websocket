@@ -5,7 +5,6 @@ Provides utilities for profiling WebSocket endpoints, connection managers,
 and broadcast operations to identify performance bottlenecks.
 """
 
-import os
 import sys
 from contextlib import asynccontextmanager
 from datetime import datetime

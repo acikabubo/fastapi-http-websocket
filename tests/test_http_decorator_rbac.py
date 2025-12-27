@@ -46,7 +46,9 @@ class TestRequireRolesDependency:
 
         # Create mock request with authenticated user
         mock_request = MagicMock(spec=Request)
-        mock_request.user = create_test_user("test_user", roles=["get-authors"])
+        mock_request.user = create_test_user(
+            "test_user", roles=["get-authors"]
+        )
 
         # Should not raise exception
         await check_roles(mock_request)
@@ -114,7 +116,9 @@ class TestRequireRolesDependency:
 
         # Create mock request with user having only one role
         mock_request = MagicMock(spec=Request)
-        mock_request.user = create_test_user("test_user", roles=["get-authors"])
+        mock_request.user = create_test_user(
+            "test_user", roles=["get-authors"]
+        )
 
         # Should raise 403 Forbidden
         with pytest.raises(HTTPException) as exc_info:
@@ -146,7 +150,10 @@ class TestHTTPEndpointIntegration:
         """Test that endpoint can be configured with single role requirement."""
         app = FastAPI()
 
-        @app.get("/authors", dependencies=[Depends(rbac.require_roles("get-authors"))])
+        @app.get(
+            "/authors",
+            dependencies=[Depends(rbac.require_roles("get-authors"))],
+        )
         async def get_authors():
             return {"authors": []}
 
@@ -171,7 +178,9 @@ class TestHTTPEndpointIntegration:
 
         # Check that route was registered
         routes = [route for route in app.routes if hasattr(route, "path")]
-        admin_route = next((r for r in routes if r.path == "/admin/action"), None)
+        admin_route = next(
+            (r for r in routes if r.path == "/admin/action"), None
+        )
         assert admin_route is not None
 
         # Check that dependency is attached
@@ -198,11 +207,17 @@ class TestHTTPEndpointIntegration:
         """Test that different HTTP methods on same path can have different role requirements."""
         app = FastAPI()
 
-        @app.get("/authors", dependencies=[Depends(rbac.require_roles("get-authors"))])
+        @app.get(
+            "/authors",
+            dependencies=[Depends(rbac.require_roles("get-authors"))],
+        )
         async def get_authors():
             return {"authors": []}
 
-        @app.post("/authors", dependencies=[Depends(rbac.require_roles("create-author"))])
+        @app.post(
+            "/authors",
+            dependencies=[Depends(rbac.require_roles("create-author"))],
+        )
         async def create_author():
             return {"id": 1}
 

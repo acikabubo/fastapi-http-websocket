@@ -74,7 +74,12 @@ async def health_check(response: Response) -> HealthResponse:
     try:
         r = await get_redis_connection(db=app_settings.MAIN_REDIS_DB)
         await r.ping()
-    except (AsyncRedisError, SyncRedisError, ConnectionError, TimeoutError) as e:
+    except (
+        AsyncRedisError,
+        SyncRedisError,
+        ConnectionError,
+        TimeoutError,
+    ) as e:
         logger.error(f"Redis health check failed: {e}")
         redis_status = "unhealthy"
     except Exception as e:

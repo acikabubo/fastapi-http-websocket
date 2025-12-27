@@ -8,7 +8,7 @@ Tests verify that:
 - Error formatters produce valid error envelopes
 """
 
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 import pytest
 
@@ -62,7 +62,10 @@ class TestErrorEnvelopeModels:
 
         assert envelope.code == "validation_error"
         assert envelope.msg == "Invalid field"
-        assert envelope.details == {"field": "name", "constraint": "min_length"}
+        assert envelope.details == {
+            "field": "name",
+            "constraint": "min_length",
+        }
 
     def test_http_error_response(self):
         """Test HTTPErrorResponse structure."""
@@ -138,7 +141,10 @@ class TestErrorFormatters:
         assert isinstance(error, HTTPErrorResponse)
         assert error.error.code == ErrorCode.VALIDATION_ERROR
         assert error.error.msg == "Invalid author name"
-        assert error.error.details == {"field": "name", "constraint": "min_length"}
+        assert error.error.details == {
+            "field": "name",
+            "constraint": "min_length",
+        }
 
     def test_ws_error_response_formatter(self):
         """Test ws_error_response formatter."""
@@ -187,9 +193,7 @@ class TestExceptionMapping:
     def test_http_error_from_exception(self):
         """Test http_error_from_exception conversion."""
         exception = ValidationError("Invalid author name")
-        error = http_error_from_exception(
-            exception, details={"field": "name"}
-        )
+        error = http_error_from_exception(exception, details={"field": "name"})
 
         assert isinstance(error, HTTPErrorResponse)
         assert error.error.code == ErrorCode.VALIDATION_ERROR

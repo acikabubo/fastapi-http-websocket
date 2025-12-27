@@ -26,9 +26,7 @@ class TestAuthenticationError:
 
     def test_authentication_error_different_reasons(self):
         """Test AuthenticationError with different reason codes."""
-        error1 = AuthenticationError(
-            "invalid_credentials", "User not found"
-        )
+        error1 = AuthenticationError("invalid_credentials", "User not found")
         error2 = AuthenticationError(
             "token_decode_error", "Invalid token format"
         )
@@ -51,9 +49,7 @@ class TestAuthBackendErrorHandling:
         request.url.path = "/api/test"
         request.headers.get.return_value = "Bearer expired_token"
 
-        with patch(
-            "app.auth.KeycloakManager"
-        ) as mock_kc_manager_class:
+        with patch("app.auth.KeycloakManager") as mock_kc_manager_class:
             mock_kc_manager = MagicMock()
             mock_kc_manager_class.return_value = mock_kc_manager
 
@@ -78,9 +74,7 @@ class TestAuthBackendErrorHandling:
         request.url.path = "/api/test"
         request.headers.get.return_value = "Bearer invalid_token"
 
-        with patch(
-            "app.auth.KeycloakManager"
-        ) as mock_kc_manager_class:
+        with patch("app.auth.KeycloakManager") as mock_kc_manager_class:
             mock_kc_manager = MagicMock()
             mock_kc_manager_class.return_value = mock_kc_manager
 
@@ -105,9 +99,7 @@ class TestAuthBackendErrorHandling:
         request.url.path = "/api/test"
         request.headers.get.return_value = "Bearer malformed_token"
 
-        with patch(
-            "app.auth.KeycloakManager"
-        ) as mock_kc_manager_class:
+        with patch("app.auth.KeycloakManager") as mock_kc_manager_class:
             mock_kc_manager = MagicMock()
             mock_kc_manager_class.return_value = mock_kc_manager
 
@@ -136,9 +128,7 @@ class TestAuthBackendErrorHandling:
             "query_string": b"Authorization=Bearer%20expired_token",
         }
 
-        with patch(
-            "app.auth.KeycloakManager"
-        ) as mock_kc_manager_class:
+        with patch("app.auth.KeycloakManager") as mock_kc_manager_class:
             mock_kc_manager = MagicMock()
             mock_kc_manager_class.return_value = mock_kc_manager
 
@@ -161,9 +151,7 @@ class TestAuthBackendErrorHandling:
         request.url.path = "/api/test"
         request.headers.get.return_value = "Bearer valid_token"
 
-        with patch(
-            "app.auth.KeycloakManager"
-        ) as mock_kc_manager_class:
+        with patch("app.auth.KeycloakManager") as mock_kc_manager_class:
             mock_kc_manager = MagicMock()
             mock_kc_manager_class.return_value = mock_kc_manager
 
@@ -175,9 +163,7 @@ class TestAuthBackendErrorHandling:
                 "email": "test@example.com",
                 "realm_access": {"roles": ["admin"]},
                 "azp": "test-client",
-                "resource_access": {
-                    "test-client": {"roles": ["admin"]}
-                },
+                "resource_access": {"test-client": {"roles": ["admin"]}},
             }
 
             result = await auth_backend.authenticate(request)
@@ -217,9 +203,7 @@ class TestErrorHandlingIntegration:
         request.url.path = "/api/test"
         request.headers.get.return_value = "Bearer test_token"
 
-        with patch(
-            "app.auth.KeycloakManager"
-        ) as mock_kc_manager_class:
+        with patch("app.auth.KeycloakManager") as mock_kc_manager_class:
             mock_kc_manager = MagicMock()
             mock_kc_manager_class.return_value = mock_kc_manager
 
@@ -252,9 +236,7 @@ class TestErrorHandlingIntegration:
         errors_caught = []
 
         # Test expired token
-        with patch(
-            "app.auth.KeycloakManager"
-        ) as mock_kc_manager_class:
+        with patch("app.auth.KeycloakManager") as mock_kc_manager_class:
             mock_kc_manager = MagicMock()
             mock_kc_manager_class.return_value = mock_kc_manager
             mock_kc_manager.openid.decode_token.side_effect = JWTExpired(
@@ -267,9 +249,7 @@ class TestErrorHandlingIntegration:
                 errors_caught.append(e.reason)
 
         # Test invalid credentials
-        with patch(
-            "app.auth.KeycloakManager"
-        ) as mock_kc_manager_class:
+        with patch("app.auth.KeycloakManager") as mock_kc_manager_class:
             mock_kc_manager = MagicMock()
             mock_kc_manager_class.return_value = mock_kc_manager
             mock_kc_manager.openid.decode_token.side_effect = (
@@ -282,9 +262,7 @@ class TestErrorHandlingIntegration:
                 errors_caught.append(e.reason)
 
         # Test decode error
-        with patch(
-            "app.auth.KeycloakManager"
-        ) as mock_kc_manager_class:
+        with patch("app.auth.KeycloakManager") as mock_kc_manager_class:
             mock_kc_manager = MagicMock()
             mock_kc_manager_class.return_value = mock_kc_manager
             mock_kc_manager.openid.decode_token.side_effect = ValueError(

@@ -1,0 +1,13 @@
+# Typos configuration file
+# Documentation: https://github.com/crate-ci/typos
+
+[files]
+# Exclude auto-generated files that shouldn't be manually edited
+extend-exclude = ["db/keycloak/realm-export.json"]
+
+[default.extend-words]
+# The key must be lowercase for typos to match it
+rto = "RTO"
+rpo = "RPO"
+hashicorp = "HashiCorp"
+hashi = "Hashi"  # Part of HashiCorp company name

@@ -37,9 +37,7 @@ class PrometheusMiddleware(BaseHTTPMiddleware):
         """
         super().__init__(app)
 
-    async def dispatch(
-        self, request: Request, call_next: ASGIApp
-    ) -> Response:
+    async def dispatch(self, request: Request, call_next: ASGIApp) -> Response:
         """
         Process the request and track metrics.
 

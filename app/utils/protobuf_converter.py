@@ -10,7 +10,7 @@ from typing import Any
 from uuid import UUID
 
 from app.api.ws.constants import PkgID, RSPCode
-from app.schemas.proto import Metadata, Request, Response
+from app.schemas.proto import Request, Response
 from app.schemas.request import RequestModel
 from app.schemas.response import MetadataModel, ResponseModel
 

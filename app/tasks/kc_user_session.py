@@ -1,7 +1,10 @@
 from asyncio import CancelledError, TimeoutError, sleep
 
 from app.connection_registry import ws_clients
-from app.constants import REDIS_MESSAGE_TIMEOUT_SECONDS, TASK_SLEEP_INTERVAL_SECONDS
+from app.constants import (
+    REDIS_MESSAGE_TIMEOUT_SECONDS,
+    TASK_SLEEP_INTERVAL_SECONDS,
+)
 from app.logging import logger
 from app.settings import app_settings
 from app.storage.redis import get_auth_redis_connection

@@ -95,10 +95,11 @@ class TestRateLimiter:
         """
         mock_redis.zcard.return_value = 5
 
-        is_allowed, remaining = (
-            await rate_limiter_with_mock_redis.check_rate_limit(
-                key="test_user", limit=10, window_seconds=60
-            )
+        (
+            is_allowed,
+            remaining,
+        ) = await rate_limiter_with_mock_redis.check_rate_limit(
+            key="test_user", limit=10, window_seconds=60
         )
 
         assert is_allowed is True
@@ -119,10 +120,11 @@ class TestRateLimiter:
         """
         mock_redis.zcard.return_value = 10
 
-        is_allowed, remaining = (
-            await rate_limiter_with_mock_redis.check_rate_limit(
-                key="test_user", limit=10, window_seconds=60
-            )
+        (
+            is_allowed,
+            remaining,
+        ) = await rate_limiter_with_mock_redis.check_rate_limit(
+            key="test_user", limit=10, window_seconds=60
         )
 
         assert is_allowed is False
@@ -142,19 +144,18 @@ class TestRateLimiter:
         """
         mock_redis.zcard.return_value = 8
 
-        is_allowed, remaining = (
-            await rate_limiter_with_mock_redis.check_rate_limit(
-                key="test_user", limit=60, window_seconds=60, burst=10
-            )
+        (
+            is_allowed,
+            remaining,
+        ) = await rate_limiter_with_mock_redis.check_rate_limit(
+            key="test_user", limit=60, window_seconds=60, burst=10
         )
 
         assert is_allowed is True
         assert remaining == 1
 
     @pytest.mark.asyncio
-    async def test_reset_limit(
-        self, rate_limiter_with_mock_redis, mock_redis
-    ):
+    async def test_reset_limit(self, rate_limiter_with_mock_redis, mock_redis):
         """
         Test resetting rate limit for a key.
 

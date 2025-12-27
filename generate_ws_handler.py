@@ -11,10 +11,10 @@ type-safe approach.
 import ast
 import sys
 from pathlib import Path
-from typing import Any
 
 try:
     import black
+
     HAS_BLACK = True
 except ImportError:
     HAS_BLACK = False
@@ -66,9 +66,7 @@ class HandlerGenerator:
         imports = self._generate_imports(has_pagination)
 
         # Generate schema (if needed)
-        schema_code = (
-            self._generate_schema(handler_name) if has_schema else ""
-        )
+        schema_code = self._generate_schema(handler_name) if has_schema else ""
 
         # Generate decorator
         decorator = self._generate_decorator(
@@ -87,17 +85,12 @@ class HandlerGenerator:
         try:
             ast.parse(code)
         except SyntaxError as e:
-            raise SyntaxError(
-                f"Generated code has syntax errors: {e}"
-            ) from e
+            raise SyntaxError(f"Generated code has syntax errors: {e}") from e
 
         # Format with Black (if available)
         if HAS_BLACK:
             try:
-                code = black.format_str(
-                    code,
-                    mode=black.Mode(line_length=79)
-                )
+                code = black.format_str(code, mode=black.Mode(line_length=79))
             except Exception:
                 # If formatting fails, continue with unformatted code
                 pass
@@ -122,7 +115,7 @@ from app.schemas.response import ResponseModel"""
 
     def _generate_schema(self, handler_name: str) -> str:
         """Generate JSON schema example."""
-        return f'''# JSON Schema for request data validation
+        return f"""# JSON Schema for request data validation
 {handler_name}_schema = {{
     "$schema": "http://json-schema.org/draft-07/schema#",
     "type": "object",
@@ -140,36 +133,30 @@ from app.schemas.response import ResponseModel"""
 }}
 
 
-'''
+"""
 
     def _generate_decorator(
         self,
         pkg_id: str,
         handler_name: str,
         has_schema: bool,
-        roles: list[str] | None
+        roles: list[str] | None,
     ) -> str:
         """Generate @pkg_router.register decorator."""
-        schema_arg = (
-            f"{handler_name}_schema"
-            if has_schema else "None"
-        )
+        schema_arg = f"{handler_name}_schema" if has_schema else "None"
 
         roles_arg = ""
         if roles:
             roles_str = ", ".join(f'"{role}"' for role in roles)
             roles_arg = f",\n    roles=[{roles_str}]"
 
-        return f'''@pkg_router.register(
+        return f"""@pkg_router.register(
     PkgID.{pkg_id},
     json_schema={schema_arg}{roles_arg}
-)'''
+)"""
 
     def _generate_handler_function(
-        self,
-        handler_name: str,
-        pkg_id: str,
-        has_pagination: bool
+        self, handler_name: str, pkg_id: str, has_pagination: bool
     ) -> str:
         """Generate handler function with docstring and error handling."""
         # Generate docstring
@@ -208,7 +195,7 @@ from app.schemas.response import ResponseModel"""
 
         # Generate handler body
         if has_pagination:
-            body = '''    try:
+            body = """    try:
         # Extract pagination parameters
         page = request.data.get("page", 1)
         per_page = request.data.get("per_page", 20)
@@ -246,9 +233,9 @@ from app.schemas.response import ResponseModel"""
             request.req_id,
             msg="An error occurred while processing the request",
             status_code=RSPCode.ERROR
-        )'''
+        )"""
         else:
-            body = '''    try:
+            body = """    try:
         # TODO: Implement your handler logic here
         # Example: Get data from request
         # data = request.data.get("key")
@@ -276,12 +263,12 @@ from app.schemas.response import ResponseModel"""
             request.req_id,
             msg="An error occurred while processing the request",
             status_code=RSPCode.ERROR
-        )'''
+        )"""
 
-        return f'''async def {handler_name}(request: RequestModel) -> ResponseModel:
+        return f"""async def {handler_name}(request: RequestModel) -> ResponseModel:
 {docstring}
 {body}
-'''
+"""
 
     def create_handler_file(
         self,
@@ -349,37 +336,25 @@ def main() -> int:
         description="Generate WebSocket handler code"
     )
     parser.add_argument(
-        "handler_name",
-        help="Handler function name (e.g., get_authors)"
+        "handler_name", help="Handler function name (e.g., get_authors)"
     )
-    parser.add_argument(
-        "pkg_id",
-        help="PkgID enum name (e.g., GET_AUTHORS)"
-    )
+    parser.add_argument("pkg_id", help="PkgID enum name (e.g., GET_AUTHORS)")
     parser.add_argument(
         "--module",
         default=None,
-        help="Module name (default: same as handler_name)"
+        help="Module name (default: same as handler_name)",
     )
     parser.add_argument(
-        "--schema",
-        action="store_true",
-        help="Include JSON schema validation"
+        "--schema", action="store_true", help="Include JSON schema validation"
     )
     parser.add_argument(
-        "--paginated",
-        action="store_true",
-        help="Include pagination logic"
+        "--paginated", action="store_true", help="Include pagination logic"
     )
     parser.add_argument(
-        "--roles",
-        nargs="+",
-        help="Required RBAC roles (space-separated)"
+        "--roles", nargs="+", help="Required RBAC roles (space-separated)"
     )
     parser.add_argument(
-        "--overwrite",
-        action="store_true",
-        help="Overwrite existing file"
+        "--overwrite", action="store_true", help="Overwrite existing file"
     )
 
     args = parser.parse_args()

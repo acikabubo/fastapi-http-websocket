@@ -5,8 +5,6 @@ This module tests the new decorator-based approach for WebSocket permissions,
 where roles are defined directly in the @pkg_router.register() decorator.
 """
 
-
-
 from app.api.ws.constants import PkgID
 from app.routing import PackageRouter
 from app.schemas.request import RequestModel
@@ -53,9 +51,7 @@ class TestDecoratorBasedRBAC:
         """Test that get_permissions() returns the correct roles."""
         router = PackageRouter()
 
-        @router.register(
-            PkgID.GET_AUTHORS, roles=["get-authors", "admin"]
-        )
+        @router.register(PkgID.GET_AUTHORS, roles=["get-authors", "admin"])
         async def test_handler(request: RequestModel):
             return ResponseModel.success(
                 request.pkg_id, request.req_id, data={}
@@ -113,9 +109,7 @@ class TestDecoratorBasedRBAC:
         """Test that user must have ALL required roles."""
         router = PackageRouter()
 
-        @router.register(
-            PkgID.GET_AUTHORS, roles=["get-authors", "admin"]
-        )
+        @router.register(PkgID.GET_AUTHORS, roles=["get-authors", "admin"])
         async def test_handler(request: RequestModel):
             return ResponseModel.success(
                 request.pkg_id, request.req_id, data={}
@@ -237,6 +231,7 @@ class TestRolesLogging:
     def test_registration_logs_roles(self, caplog):
         """Test that handler registration logs the roles."""
         import logging
+
         caplog.set_level(logging.INFO)
 
         router = PackageRouter()

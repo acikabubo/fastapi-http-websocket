@@ -3,7 +3,7 @@ Comprehensive database migration tests.
 
 Tests verify that:
 - Migration IDs are unique
-- Migrations have proper documentation  
+- Migrations have proper documentation
 - No conflicting migration branches exist
 - Migrations have down_revision linkage
 
@@ -47,13 +47,11 @@ class TestMigrationStructure:
         """Test all migration revision IDs are unique."""
         revisions = [rev.revision for rev in alembic_script.walk_revisions()]
 
-        assert len(revisions) == len(set(revisions)), (
-            "Duplicate revision IDs found in migrations"
-        )
+        assert len(revisions) == len(
+            set(revisions)
+        ), "Duplicate revision IDs found in migrations"
 
-    def test_migrations_have_docstrings(
-        self, alembic_script: ScriptDirectory
-    ):
+    def test_migrations_have_docstrings(self, alembic_script: ScriptDirectory):
         """Test all migrations have descriptive docstrings."""
         for revision in alembic_script.walk_revisions():
             assert revision.doc, (
@@ -82,6 +80,6 @@ class TestMigrationStructure:
 
         # All revisions except the last (oldest) should have down_revision
         for revision in revisions[:-1]:
-            assert revision.down_revision, (
-                f"Migration {revision.revision} is missing down_revision"
-            )
+            assert (
+                revision.down_revision
+            ), f"Migration {revision.revision} is missing down_revision"

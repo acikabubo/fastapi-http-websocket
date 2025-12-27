@@ -11,7 +11,6 @@ from sqlalchemy import event
 from sqlalchemy.engine import Engine
 
 from app.logging import logger
-from app.settings import app_settings
 from app.utils.metrics import db_query_duration_seconds, db_slow_queries_total
 
 # Slow query threshold in seconds (default: 100ms)

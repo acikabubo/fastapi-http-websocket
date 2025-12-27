@@ -16,7 +16,9 @@ class RBACManager(metaclass=SingletonMeta):
     """
 
     @staticmethod
-    def check_user_has_roles(user: UserModel, required_roles: list[str]) -> tuple[bool, list[str]]:
+    def check_user_has_roles(
+        user: UserModel, required_roles: list[str]
+    ) -> tuple[bool, list[str]]:
         """
         Core role-checking logic: checks if user has ALL required roles.
 
@@ -32,7 +34,9 @@ class RBACManager(metaclass=SingletonMeta):
         if not required_roles:
             return True, []
 
-        missing_roles = [role for role in required_roles if role not in user.roles]
+        missing_roles = [
+            role for role in required_roles if role not in user.roles
+        ]
         has_permission = len(missing_roles) == 0
 
         return has_permission, missing_roles
@@ -55,7 +59,9 @@ class RBACManager(metaclass=SingletonMeta):
         from app.routing import pkg_router
 
         required_roles = pkg_router.get_permissions(pkg_id)
-        has_permission, missing_roles = self.check_user_has_roles(user, required_roles)
+        has_permission, missing_roles = self.check_user_has_roles(
+            user, required_roles
+        )
 
         if not has_permission:
             logger.info(
@@ -91,7 +97,11 @@ class RBACManager(metaclass=SingletonMeta):
             router = APIRouter()
             rbac = RBACManager()
 
-            @router.get("/authors", dependencies=[Depends(rbac.require_roles("get-authors"))])
+
+            @router.get(
+                "/authors",
+                dependencies=[Depends(rbac.require_roles("get-authors"))],
+            )
             async def get_authors():
                 return {"authors": []}
             ```
@@ -111,14 +121,19 @@ class RBACManager(metaclass=SingletonMeta):
                 HTTPException: 401 if not authenticated, 403 if insufficient permissions.
             """
             # Check if user is authenticated
-            if isinstance(request.user, UnauthenticatedUser) or not request.user:
+            if (
+                isinstance(request.user, UnauthenticatedUser)
+                or not request.user
+            ):
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     detail="Authentication required",
                 )
 
             user: UserModel = request.user
-            has_permission, missing_roles = self.check_user_has_roles(user, list(roles))
+            has_permission, missing_roles = self.check_user_has_roles(
+                user, list(roles)
+            )
 
             if not has_permission:
                 logger.info(

@@ -29,6 +29,4 @@ async def metrics() -> Response:
         http_requests_total{method="GET",endpoint="/health",status_code="200"} 42.0
         ```
     """
-    return Response(
-        content=generate_latest(), media_type=CONTENT_TYPE_LATEST
-    )
+    return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)

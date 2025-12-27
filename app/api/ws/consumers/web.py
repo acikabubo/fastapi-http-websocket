@@ -93,7 +93,9 @@ class Web(PackageAuthWebSocketEndpoint):
                 proto_request = ProtoRequest()
                 proto_request.ParseFromString(data)
                 request = proto_to_pydantic_request(proto_request)
-                logger.debug(f"Received protobuf request: pkg_id={request.pkg_id}")
+                logger.debug(
+                    f"Received protobuf request: pkg_id={request.pkg_id}"
+                )
                 message_format = "protobuf"
             else:
                 # JSON format

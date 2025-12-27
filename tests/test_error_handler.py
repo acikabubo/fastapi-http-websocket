@@ -8,12 +8,10 @@ to ensure proper exception handling and response formatting.
 import json
 
 import pytest
-from fastapi import HTTPException
 from sqlalchemy.exc import IntegrityError
 
 from app.api.ws.constants import PkgID, RSPCode
 from app.exceptions import (
-    AppException,
     AuthorizationError,
     NotFoundError,
     ValidationError as AppValidationError,
@@ -300,7 +298,9 @@ class TestErrorHandlerIntegration:
     """Integration tests for error handlers in realistic scenarios."""
 
     @pytest.mark.asyncio
-    async def test_websocket_handler_with_nested_exceptions(self, sample_request):
+    async def test_websocket_handler_with_nested_exceptions(
+        self, sample_request
+    ):
         """Should handle exceptions raised from nested function calls."""
 
         async def nested_function():

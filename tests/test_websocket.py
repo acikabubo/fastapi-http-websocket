@@ -34,7 +34,9 @@ class TestWebSocketAuthentication:
         """
         # Create a mock websocket endpoint with proper scope
         scope = {"type": "websocket", "user": UnauthenticatedUser()}
-        endpoint = PackageAuthWebSocketEndpoint(scope=scope, receive=None, send=None)  # type: ignore
+        endpoint = PackageAuthWebSocketEndpoint(
+            scope=scope, receive=None, send=None
+        )  # type: ignore
 
         # Mock the websocket
         mock_websocket = MagicMock()
@@ -67,7 +69,9 @@ class TestWebSocketAuthentication:
 
         # Create a mock websocket endpoint with proper scope
         scope = {"type": "websocket", "user": user}
-        endpoint = PackageAuthWebSocketEndpoint(scope=scope, receive=None, send=None)  # type: ignore
+        endpoint = PackageAuthWebSocketEndpoint(
+            scope=scope, receive=None, send=None
+        )  # type: ignore
 
         # Mock the websocket
         mock_websocket = MagicMock()
@@ -78,12 +82,17 @@ class TestWebSocketAuthentication:
         mock_redis = AsyncMock()
         mock_redis.add_kc_user_session = AsyncMock()
 
-        with patch(
-            "app.api.ws.websocket.get_auth_redis_connection",
-            return_value=mock_redis,
-        ), patch("app.api.ws.websocket.connection_manager") as mock_cm, patch(
-            "app.api.ws.websocket.ws_clients", {}
-        ), patch("app.api.ws.websocket.connection_limiter") as mock_conn_limiter:
+        with (
+            patch(
+                "app.api.ws.websocket.get_auth_redis_connection",
+                return_value=mock_redis,
+            ),
+            patch("app.api.ws.websocket.connection_manager") as mock_cm,
+            patch("app.api.ws.websocket.ws_clients", {}),
+            patch(
+                "app.api.ws.websocket.connection_limiter"
+            ) as mock_conn_limiter,
+        ):
             mock_cm.connect = MagicMock()
             mock_conn_limiter.add_connection = AsyncMock(return_value=True)
 
@@ -110,7 +119,9 @@ class TestWebSocketAuthentication:
         user = UserModel(**mock_user_data)
 
         scope = {"type": "websocket", "user": user}
-        endpoint = PackageAuthWebSocketEndpoint(scope=scope, receive=None, send=None)  # type: ignore
+        endpoint = PackageAuthWebSocketEndpoint(
+            scope=scope, receive=None, send=None
+        )  # type: ignore
         endpoint.user = user
 
         mock_websocket = MagicMock()
@@ -156,7 +167,8 @@ class TestWebSocketMessageHandling:
 
         # Mock the handler to avoid database dependencies
         with patch(
-            "app.repositories.author_repository.AuthorRepository.get_all", new_callable=AsyncMock
+            "app.repositories.author_repository.AuthorRepository.get_all",
+            new_callable=AsyncMock,
         ) as mock_get_list:
             mock_get_list.return_value = []
 
@@ -201,8 +213,12 @@ class TestWebSocketMessageHandling:
         web.correlation_id = "test-1234"  # Mock correlation_id
 
         # Mock rate limiter to avoid Redis connection issues
-        with patch("app.api.ws.consumers.web.rate_limiter") as mock_rate_limiter:
-            mock_rate_limiter.check_rate_limit = AsyncMock(return_value=(True, 100))
+        with patch(
+            "app.api.ws.consumers.web.rate_limiter"
+        ) as mock_rate_limiter:
+            mock_rate_limiter.check_rate_limit = AsyncMock(
+                return_value=(True, 100)
+            )
 
             # Call on_receive with invalid data
             await web.on_receive(mock_websocket, invalid_data)
@@ -241,8 +257,12 @@ class TestWebSocketMessageHandling:
         web.correlation_id = "test-1234"  # Mock correlation_id
 
         # Mock rate limiter to avoid Redis connection issues
-        with patch("app.api.ws.consumers.web.rate_limiter") as mock_rate_limiter:
-            mock_rate_limiter.check_rate_limit = AsyncMock(return_value=(True, 100))
+        with patch(
+            "app.api.ws.consumers.web.rate_limiter"
+        ) as mock_rate_limiter:
+            mock_rate_limiter.check_rate_limit = AsyncMock(
+                return_value=(True, 100)
+            )
 
             # Call on_receive
             await web.on_receive(mock_websocket, request_data)
@@ -280,7 +300,9 @@ class TestPackageRouter:
         assert "No handler found" in response.data.get("msg", "")
 
     @pytest.mark.asyncio
-    async def test_handler_permission_check(self, mock_user, limited_user_data):
+    async def test_handler_permission_check(
+        self, mock_user, limited_user_data
+    ):
         """
         Test permission checking for different users.
 
@@ -298,7 +320,8 @@ class TestPackageRouter:
 
         # Mock the handler to avoid database
         with patch(
-            "app.repositories.author_repository.AuthorRepository.get_all", new_callable=AsyncMock
+            "app.repositories.author_repository.AuthorRepository.get_all",
+            new_callable=AsyncMock,
         ) as mock_get_list:
             mock_get_list.return_value = []
 
@@ -361,7 +384,8 @@ class TestPackageRouter:
 
         # Mock the database call
         with patch(
-            "app.repositories.author_repository.AuthorRepository.get_all", new_callable=AsyncMock
+            "app.repositories.author_repository.AuthorRepository.get_all",
+            new_callable=AsyncMock,
         ) as mock_get_list:
             mock_get_list.return_value = []
 
@@ -422,7 +446,9 @@ class TestWebSocketEdgeCases:
     async def test_websocket_with_null_user(self):
         """Test WebSocket behavior when user is None."""
         scope = {"type": "websocket", "user": None}
-        endpoint = PackageAuthWebSocketEndpoint(scope=scope, receive=None, send=None)  # type: ignore
+        endpoint = PackageAuthWebSocketEndpoint(
+            scope=scope, receive=None, send=None
+        )  # type: ignore
 
         mock_websocket = MagicMock()
         mock_websocket.accept = AsyncMock()
@@ -456,7 +482,8 @@ class TestWebSocketEdgeCases:
 
         # Mock the database call to raise a SQLAlchemy exception
         with patch(
-            "app.repositories.author_repository.AuthorRepository.get_all", new_callable=AsyncMock
+            "app.repositories.author_repository.AuthorRepository.get_all",
+            new_callable=AsyncMock,
         ) as mock_get_list:
             mock_get_list.side_effect = SQLAlchemyError("Database error")
 
@@ -465,4 +492,3 @@ class TestWebSocketEdgeCases:
             # Handler should catch database exception and return error response
             assert response.status_code == RSPCode.ERROR
             assert "Database error occurred" in response.data.get("msg", "")
-

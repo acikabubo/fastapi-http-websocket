@@ -152,7 +152,9 @@ async def get_paginated_results(
                 count_query = select(func.count(model.id))
                 if filters:
                     if apply_filters:
-                        count_query = apply_filters(count_query, model, filters)
+                        count_query = apply_filters(
+                            count_query, model, filters
+                        )
                     else:
                         count_query = default_apply_filters(
                             count_query, model, filters

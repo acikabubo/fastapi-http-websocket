@@ -191,7 +191,9 @@ class TestRateLimitMiddlewareDispatch:
             with patch(
                 "app.middlewares.rate_limit.rate_limiter"
             ) as mock_limiter:
-                mock_limiter.check_rate_limit = AsyncMock(return_value=(False, 0))
+                mock_limiter.check_rate_limit = AsyncMock(
+                    return_value=(False, 0)
+                )
 
                 middleware = RateLimitMiddleware(mock_app)
                 response = await middleware.dispatch(

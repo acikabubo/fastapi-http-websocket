@@ -8,7 +8,6 @@ from redis.asyncio import ConnectionPool, Redis
 
 from app.constants import KC_SESSION_EXPIRY_BUFFER_SECONDS
 from app.logging import logger
-from app.schemas.types import RedisPoolStats
 from app.schemas.user import UserModel
 from app.settings import app_settings
 from app.utils.singleton import SingletonMeta
@@ -23,7 +22,9 @@ class RedisPool:
     """
 
     __instances: dict[int, Redis] = {}
-    __pools: dict[int, ConnectionPool] = {}  # Store pools for metrics and shutdown
+    __pools: dict[
+        int, ConnectionPool
+    ] = {}  # Store pools for metrics and shutdown
 
     @classmethod
     async def get_instance(cls, db: int = 1) -> Redis:
@@ -67,7 +68,10 @@ class RedisPool:
         cls.__pools[db] = pool
 
         # Update Prometheus metrics for this pool
-        from app.utils.metrics import redis_pool_info, redis_pool_max_connections
+        from app.utils.metrics import (
+            redis_pool_info,
+            redis_pool_max_connections,
+        )
 
         redis_pool_max_connections.labels(db=str(db)).set(pool.max_connections)
         redis_pool_info.labels(
@@ -76,7 +80,9 @@ class RedisPool:
             port=str(app_settings.REDIS_PORT),
             socket_timeout=str(app_settings.REDIS_SOCKET_TIMEOUT),
             connect_timeout=str(app_settings.REDIS_CONNECT_TIMEOUT),
-            health_check_interval=str(app_settings.REDIS_HEALTH_CHECK_INTERVAL),
+            health_check_interval=str(
+                app_settings.REDIS_HEALTH_CHECK_INTERVAL
+            ),
         ).set(1)
 
         redis_instance = await Redis.from_pool(pool)
@@ -102,7 +108,9 @@ class RedisPool:
                 await pool.disconnect()
                 logger.info(f"Closed Redis pool for database {db}")
             except Exception as ex:
-                logger.error(f"Error closing Redis pool for database {db}: {ex}")
+                logger.error(
+                    f"Error closing Redis pool for database {db}: {ex}"
+                )
 
         cls.__pools.clear()
         cls.__instances.clear()
@@ -159,7 +167,9 @@ class RedisPool:
         logger.debug(f"Added user session in redis for: {user.username}")
 
 
-async def get_redis_connection(db: int = app_settings.MAIN_REDIS_DB) -> Redis | None:
+async def get_redis_connection(
+    db: int = app_settings.MAIN_REDIS_DB,
+) -> Redis | None:
     try:
         return await RedisPool.get_instance(db)
     except (ConnectionError, TimeoutError, OSError) as ex:
@@ -240,7 +250,9 @@ class RedisHandler:
     event_handlers: dict[str, REventHandler] = {}
     tasks: list[asyncio.Task[None]] = []
 
-    async def subscribe(self, channel: str, callback: Callable, **kwargs: Any) -> None:
+    async def subscribe(
+        self, channel: str, callback: Callable, **kwargs: Any
+    ) -> None:
         if not asyncio.iscoroutinefunction(callback):
             raise ValueError("Callback argument must be a coroutine")
 

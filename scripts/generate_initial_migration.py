@@ -20,9 +20,7 @@ def run_command(cmd: list[str]) -> tuple[int, str, str]:
     Returns:
         Tuple of (exit_code, stdout, stderr).
     """
-    result = subprocess.run(
-        cmd, capture_output=True, text=True, check=False
-    )
+    result = subprocess.run(cmd, capture_output=True, text=True, check=False)
     return result.returncode, result.stdout, result.stderr
 
 
@@ -65,9 +63,7 @@ def main() -> int:
         print("Next steps:")
         print("1. Review the generated migration in alembic/versions/")
         print("2. Apply the migration: make migrate")
-        print(
-            "3. If you have an existing database, consider using:"
-        )
+        print("3. If you have an existing database, consider using:")
         print("   make migration-stamp rev='head'")
         return 0
     else:

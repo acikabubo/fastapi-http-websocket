@@ -9,6 +9,7 @@ Example:
     ```python
     from app.schemas.types import FilterDict, PaginationParams
 
+
     def search_authors(params: PaginationParams) -> list[Author]:
         # Type checker ensures params has correct structure
         page = params["page"]

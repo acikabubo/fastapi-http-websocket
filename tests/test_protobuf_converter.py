@@ -5,9 +5,8 @@ Tests bidirectional conversion between Pydantic models and Protocol Buffers.
 """
 
 import json
-from uuid import UUID, uuid4
+from uuid import uuid4
 
-import pytest
 
 from app.api.ws.constants import PkgID, RSPCode
 from app.schemas.proto import Request as ProtoRequest

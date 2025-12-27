@@ -6,8 +6,7 @@ This module tests the read_json_file function for reading and validating JSON fi
 
 import json
 import pytest
-from pathlib import Path
-from unittest.mock import mock_open, patch
+from unittest.mock import patch
 from jsonschema import ValidationError
 
 

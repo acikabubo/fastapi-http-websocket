@@ -636,4 +636,3 @@ All project documentation is organized in the [`docs/`](docs/) directory:
 **Testing endpoints?** → [Testing Guide](docs/guides/TESTING.md)
 **Understanding the code?** → [Architecture](docs/architecture/OVERVIEW.md)
 **Want to contribute?** → [CLAUDE.md](CLAUDE.md)
-

@@ -58,13 +58,15 @@ class Settings(BaseSettings):
     )
 
     # Security settings
-    ALLOWED_HOSTS: list[str] = ["*"]  # ["example.com", "*.example.com"] in production
+    ALLOWED_HOSTS: list[str] = [
+        "*"
+    ]  # ["example.com", "*.example.com"] in production
     MAX_REQUEST_BODY_SIZE: int = 1024 * 1024  # 1MB default
     # Trusted proxies for X-Forwarded-For header validation
     # Common private network ranges for Docker/Kubernetes environments
     TRUSTED_PROXIES: list[str] = [
-        "10.0.0.0/8",      # Docker default network
-        "172.16.0.0/12",   # Docker custom networks
+        "10.0.0.0/8",  # Docker default network
+        "172.16.0.0/12",  # Docker custom networks
         "192.168.0.0/16",  # Private networks
     ]
 
@@ -79,7 +81,9 @@ class Settings(BaseSettings):
     def validate_debug_auth(cls, v: bool) -> bool:
         """Prevent DEBUG_AUTH from being enabled in production."""
         if v and os.getenv("ENVIRONMENT") == "production":
-            raise ValueError("DEBUG_AUTH cannot be enabled in production environment")
+            raise ValueError(
+                "DEBUG_AUTH cannot be enabled in production environment"
+            )
         return v
 
     # Database initialization settings

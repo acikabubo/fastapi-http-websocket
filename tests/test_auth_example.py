@@ -57,9 +57,7 @@ class TestMockAuthentication:
         """
         rbac = RBACManager()
 
-        has_permission = rbac.check_ws_permission(
-            PkgID.GET_AUTHORS, mock_user
-        )
+        has_permission = rbac.check_ws_permission(PkgID.GET_AUTHORS, mock_user)
 
         assert has_permission is True
 
@@ -274,7 +272,11 @@ class TestAuthenticationMiddleware:
             None,
         )
         author_post_route = next(
-            (r for r in routes if r.path == "/authors" and "POST" in r.methods),
+            (
+                r
+                for r in routes
+                if r.path == "/authors" and "POST" in r.methods
+            ),
             None,
         )
 

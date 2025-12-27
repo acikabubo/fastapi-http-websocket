@@ -101,7 +101,9 @@ async def invalidate_count_cache(
     try:
         redis = await RedisPool.get_connection()
         if redis is None:
-            logger.warning("Redis unavailable, skipping count cache invalidation")
+            logger.warning(
+                "Redis unavailable, skipping count cache invalidation"
+            )
             return
 
         if filters is None:

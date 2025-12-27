@@ -5,6 +5,7 @@ repos:
     rev: v2.3.0
     hooks:
       - id: check-yaml
+        exclude: ^mkdocs\.yml$  # Exclude MkDocs config (uses Python tags)
       - id: end-of-file-fixer
       - id: trailing-whitespace
 
@@ -51,6 +52,7 @@ repos:
       - id: mypy
         name: "mypy: Static type checker"
         args: [--strict, --ignore-missing-imports]
+        exclude: ^(app/schemas/proto/.*_pb2\.pyi?|get_token\.py)$
 
   # Security vulnerability scanner for dependencies
   - repo: https://github.com/twu/skjold

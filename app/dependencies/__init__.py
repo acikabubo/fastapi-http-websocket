@@ -12,6 +12,7 @@ Example:
 
     router = APIRouter()
 
+
     @router.get("/authors")
     async def get_authors(
         repo: AuthorRepoDep,

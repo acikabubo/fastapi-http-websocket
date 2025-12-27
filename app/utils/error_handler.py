@@ -13,7 +13,6 @@ import inspect
 from functools import wraps
 from typing import Any, Callable
 
-from fastapi import HTTPException
 from fastapi.responses import JSONResponse
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -48,7 +47,9 @@ def handle_http_errors(func: Callable) -> Callable:
         ```python
         @router.post("/authors")
         @handle_http_errors
-        async def create_author(data: CreateAuthorInput, repo: AuthorRepoDep) -> Author:
+        async def create_author(
+            data: CreateAuthorInput, repo: AuthorRepoDep
+        ) -> Author:
             command = CreateAuthorCommand(repo)
             return await command.execute(data)  # No try/except needed!
         ```
@@ -118,7 +119,9 @@ def handle_ws_errors(func: Callable) -> Callable:
                 repo = AuthorRepository(session)
                 command = CreateAuthorCommand(repo)
                 author = await command.execute(CreateAuthorInput(**request.data))
-                return ResponseModel.success(request.pkg_id, request.req_id, data=author.model_dump())
+                return ResponseModel.success(
+                    request.pkg_id, request.req_id, data=author.model_dump()
+                )
         ```
 
         Error response format:
@@ -137,7 +140,9 @@ def handle_ws_errors(func: Callable) -> Callable:
     """
 
     @wraps(func)
-    async def wrapper(request: RequestModel, *args: Any, **kwargs: Any) -> ResponseModel:
+    async def wrapper(
+        request: RequestModel, *args: Any, **kwargs: Any
+    ) -> ResponseModel:
         try:
             return await func(request, *args, **kwargs)
         except AppException as ex:

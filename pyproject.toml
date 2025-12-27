@@ -169,6 +169,11 @@ exclude = [
     "app/schemas/*"
 ]
 
+[tool.mypy]
+exclude = [
+    "app/schemas/proto/.*_pb2\\.pyi?$",  # Exclude auto-generated protobuf files
+]
+
 [tool.skjold]
 sources = ["github", "pyup", "gemnasium"]  # Sources to check against.
 report-only = true                         # Report only, always exit with zero.

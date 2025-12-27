@@ -69,12 +69,14 @@ async def connect_with_protobuf(token: str, pkg_id: int, data: dict):
         print(f"  status_code: {response.status_code}")
 
         # Parse JSON data from response
-        response_data = json.loads(response.data_json) if response.data_json else {}
+        response_data = (
+            json.loads(response.data_json) if response.data_json else {}
+        )
         print(f"  data: {response_data}")
 
         # Check if response has metadata (pagination)
         if response.HasField("meta"):
-            print(f"  pagination:")
+            print("  pagination:")
             print(f"    page: {response.meta.page}")
             print(f"    per_page: {response.meta.per_page}")
             print(f"    total: {response.meta.total}")

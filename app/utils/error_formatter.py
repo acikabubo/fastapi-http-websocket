@@ -42,7 +42,7 @@ def create_error_envelope(
         envelope = create_error_envelope(
             code=ErrorCode.NOT_FOUND,
             msg="Author not found",
-            details={"author_id": 42}
+            details={"author_id": 42},
         )
         ```
     """
@@ -70,12 +70,9 @@ def http_error_response(
         error = http_error_response(
             code=ErrorCode.VALIDATION_ERROR,
             msg="Invalid author name",
-            details={"field": "name", "constraint": "min_length"}
+            details={"field": "name", "constraint": "min_length"},
         )
-        return JSONResponse(
-            status_code=400,
-            content=error.model_dump()
-        )
+        return JSONResponse(status_code=400, content=error.model_dump())
         ```
     """
     envelope = create_error_envelope(code, msg, details)
@@ -112,7 +109,7 @@ def ws_error_response(
             code=ErrorCode.PERMISSION_DENIED,
             msg="User lacks required role",
             status_code=RSPCode.PERMISSION_DENIED,
-            details={"required_roles": ["create-author"]}
+            details={"required_roles": ["create-author"]},
         )
         await websocket.send_json(error.model_dump(mode="json"))
         ```
@@ -192,8 +189,7 @@ def http_error_from_exception(
         except AppException as ex:
             error = http_error_from_exception(ex)
             return JSONResponse(
-                status_code=ex.http_status,
-                content=error.model_dump()
+                status_code=ex.http_status, content=error.model_dump()
             )
         ```
     """
@@ -224,11 +220,7 @@ def ws_error_from_exception(
         try:
             await command.execute(data)
         except AppException as ex:
-            return ws_error_from_exception(
-                ex,
-                request.pkg_id,
-                request.req_id
-            )
+            return ws_error_from_exception(ex, request.pkg_id, request.req_id)
         ```
     """
     code = exception_to_error_code(exception)

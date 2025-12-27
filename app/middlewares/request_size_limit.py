@@ -4,7 +4,6 @@ Request body size limit middleware.
 Protects against large payload attacks by enforcing a maximum request body size.
 """
 
-from starlette.datastructures import Headers
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
@@ -34,9 +33,7 @@ class RequestSizeLimitMiddleware(BaseHTTPMiddleware):
         super().__init__(app)
         self.max_size = max_size or app_settings.MAX_REQUEST_BODY_SIZE
 
-    async def dispatch(
-        self, request: Request, call_next: ASGIApp
-    ) -> Response:
+    async def dispatch(self, request: Request, call_next: ASGIApp) -> Response:
         """
         Check request size and reject if too large.
 

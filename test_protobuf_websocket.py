@@ -12,6 +12,7 @@ Usage:
     # Test both and compare
     python test_protobuf_websocket.py both YOUR_ACCESS_TOKEN
 """
+
 import asyncio
 import json
 import sys
@@ -29,13 +30,14 @@ async def test_json_format(token: str) -> dict:
     """Test WebSocket with JSON format."""
     # Encode token properly for URL
     from urllib.parse import quote
-    encoded_token = quote(f"Bearer {token}", safe='')
+
+    encoded_token = quote(f"Bearer {token}", safe="")
     url = f"ws://localhost:8000/web?Authorization={encoded_token}"
 
     print("\n" + "=" * 60)
     print("Testing JSON Format")
     print("=" * 60)
-    print(f"URL: ws://localhost:8000/web?Authorization=Bearer ...\n")
+    print("URL: ws://localhost:8000/web?Authorization=Bearer ...\n")
 
     try:
         async with websockets.connect(url) as websocket:
@@ -81,13 +83,16 @@ async def test_protobuf_format(token: str) -> dict:
     """Test WebSocket with Protobuf format."""
     # Encode token properly for URL
     from urllib.parse import quote
-    encoded_token = quote(f"Bearer {token}", safe='')
+
+    encoded_token = quote(f"Bearer {token}", safe="")
     url = f"ws://localhost:8000/web?Authorization={encoded_token}&format=protobuf"
 
     print("\n" + "=" * 60)
     print("Testing Protobuf Format")
     print("=" * 60)
-    print(f"URL: ws://localhost:8000/web?Authorization=Bearer ...&format=protobuf\n")
+    print(
+        "URL: ws://localhost:8000/web?Authorization=Bearer ...&format=protobuf\n"
+    )
 
     try:
         async with websockets.connect(url) as websocket:
@@ -161,7 +166,9 @@ async def test_both_formats(token: str):
 
         json_req_size = json_result["request_size"]
         proto_req_size = protobuf_result["request_size"]
-        req_reduction = ((json_req_size - proto_req_size) / json_req_size) * 100
+        req_reduction = (
+            (json_req_size - proto_req_size) / json_req_size
+        ) * 100
 
         json_resp_size = json_result["response_size"]
         proto_resp_size = protobuf_result["response_size"]
@@ -191,11 +198,15 @@ async def test_both_formats(token: str):
 
     else:
         print("❌ One or both formats failed:\n")
-        print(f"  JSON:     {'✅ Success' if json_result.get('success') else '❌ Failed'}")
+        print(
+            f"  JSON:     {'✅ Success' if json_result.get('success') else '❌ Failed'}"
+        )
         if "error" in json_result:
             print(f"    Error: {json_result['error']}")
 
-        print(f"  Protobuf: {'✅ Success' if protobuf_result.get('success') else '❌ Failed'}")
+        print(
+            f"  Protobuf: {'✅ Success' if protobuf_result.get('success') else '❌ Failed'}"
+        )
         if "error" in protobuf_result:
             print(f"    Error: {protobuf_result['error']}")
 

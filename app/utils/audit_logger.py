@@ -109,13 +109,19 @@ async def audit_log_worker():
 
                     # Update outcome counts
                     for log_entry in batch:
-                        audit_logs_total.labels(outcome=log_entry.outcome).inc()
+                        audit_logs_total.labels(
+                            outcome=log_entry.outcome
+                        ).inc()
 
-                    logger.debug(f"Wrote {len(batch)} audit logs to database in {duration:.3f}s")
+                    logger.debug(
+                        f"Wrote {len(batch)} audit logs to database in {duration:.3f}s"
+                    )
 
                 except Exception as e:
                     # Record batch write error
-                    audit_log_errors_total.labels(error_type=type(e).__name__).inc()
+                    audit_log_errors_total.labels(
+                        error_type=type(e).__name__
+                    ).inc()
                     logger.error(f"Failed to write audit log batch: {e}")
 
             # Update queue size metric
@@ -156,7 +162,9 @@ async def flush_audit_queue() -> int:
                     session.add_all(remaining_logs)
                     await session.flush()
 
-            logger.info(f"Flushed {len(remaining_logs)} audit logs to database")
+            logger.info(
+                f"Flushed {len(remaining_logs)} audit logs to database"
+            )
             return len(remaining_logs)
 
         except Exception as e:

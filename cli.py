@@ -39,7 +39,7 @@ def ws_handlers():
     console.print(
         Panel.fit(
             "[bold cyan]Registered WebSocket Handlers[/bold cyan]",
-            border_style="cyan"
+            border_style="cyan",
         )
     )
     console.print()
@@ -59,15 +59,16 @@ def ws_handlers():
         if not handler:
             table.add_row(
                 f"[dim]{pkg_id.value} - {pkg_id.name}[/dim]",
-                "[red]No handler registered[/red]"
+                "[red]No handler registered[/red]",
             )
             missing_handlers.append(pkg_id.name)
             continue
 
-        handler_path = f"{handler.__module__}.[yellow]{handler.__name__}[/yellow]"
+        handler_path = (
+            f"{handler.__module__}.[yellow]{handler.__name__}[/yellow]"
+        )
         table.add_row(
-            f"[green]{pkg_id.value} - {pkg_id.name}[/green]",
-            handler_path
+            f"[green]{pkg_id.value} - {pkg_id.name}[/green]", handler_path
         )
 
     console.print(table)
@@ -84,12 +85,10 @@ def ws_handlers():
         console.print()
         console.print(
             "[yellow]⚠[/yellow] Missing handlers for:",
-            ", ".join(f"[cyan]{h}[/cyan]" for h in missing_handlers[:5])
+            ", ".join(f"[cyan]{h}[/cyan]" for h in missing_handlers[:5]),
         )
         if len(missing_handlers) > 5:
-            console.print(
-                f"  ... and {len(missing_handlers) - 5} more"
-            )
+            console.print(f"  ... and {len(missing_handlers) - 5} more")
     console.print()
 
 
@@ -174,27 +173,22 @@ def _validate_pkg_id_input() -> str:
 @typer_app.command(name="generate-new-ws-handler")
 def generate_new_ws_handler(
     schema: bool = typer.Option(
-        False,
-        "--schema",
-        "-s",
-        help="Include JSON schema validation example"
+        False, "--schema", "-s", help="Include JSON schema validation example"
     ),
     paginated: bool = typer.Option(
         False,
         "--paginated",
         "-p",
-        help="Include pagination logic with get_paginated_results"
+        help="Include pagination logic with get_paginated_results",
     ),
     roles: list[str] = typer.Option(
         None,
         "--role",
         "-r",
-        help="Required RBAC roles (can specify multiple: -r admin -r editor)"
+        help="Required RBAC roles (can specify multiple: -r admin -r editor)",
     ),
     overwrite: bool = typer.Option(
-        False,
-        "--overwrite",
-        help="Overwrite existing file without prompting"
+        False, "--overwrite", help="Overwrite existing file without prompting"
     ),
 ):
     """
@@ -227,7 +221,7 @@ def generate_new_ws_handler(
         Panel.fit(
             "[bold cyan]WebSocket Handler Generator[/bold cyan]",
             subtitle="F-string based with AST validation",
-            border_style="cyan"
+            border_style="cyan",
         )
     )
     console.print()
@@ -275,7 +269,7 @@ def generate_new_ws_handler(
                 f"[green]✓ Handler successfully generated[/green]\n\n"
                 f"File: [yellow]{output_path}[/yellow]",
                 border_style="green",
-                title="Success"
+                title="Success",
             )
         )
         console.print()
@@ -299,7 +293,7 @@ def generate_new_ws_handler(
             Panel.fit(
                 f"[red]File already exists[/red]\n\n{e}",
                 border_style="red",
-                title="Error"
+                title="Error",
             )
         )
         console.print()
@@ -315,7 +309,7 @@ def generate_new_ws_handler(
             Panel.fit(
                 f"[red]Syntax error in generated code[/red]\n\n{e}",
                 border_style="red",
-                title="Error"
+                title="Error",
             )
         )
         console.print()
@@ -327,7 +321,7 @@ def generate_new_ws_handler(
             Panel.fit(
                 f"[red]Unexpected error[/red]\n\n{e}",
                 border_style="red",
-                title="Error"
+                title="Error",
             )
         )
         console.print()
@@ -348,8 +342,7 @@ def validate_handlers():
     console.print()
     console.print(
         Panel.fit(
-            "[bold cyan]Handler Validation[/bold cyan]",
-            border_style="cyan"
+            "[bold cyan]Handler Validation[/bold cyan]", border_style="cyan"
         )
     )
     console.print()
@@ -379,7 +372,7 @@ def validate_handlers():
                 f"[green]✓ All handlers registered[/green]\n\n"
                 f"Total: {total}/{total}",
                 border_style="green",
-                title="Success"
+                title="Success",
             )
         )
         console.print()

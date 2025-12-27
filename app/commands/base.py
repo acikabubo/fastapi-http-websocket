@@ -9,9 +9,11 @@ Example:
     from pydantic import BaseModel
     from app.commands.base import BaseCommand
 
+
     class CreateAuthorInput(BaseModel):
         name: str
         email: str
+
 
     class CreateAuthorCommand(BaseCommand[CreateAuthorInput, Author]):
         def __init__(self, repository: AuthorRepository):
@@ -26,14 +28,15 @@ Example:
             author = Author(**input_data.model_dump())
             return await self.repository.create(author)
 
+
     # Usage in HTTP handler
     @router.post("/authors")
     async def create_author(
-        data: CreateAuthorInput,
-        repo: AuthorRepoDep
+        data: CreateAuthorInput, repo: AuthorRepoDep
     ) -> Author:
         command = CreateAuthorCommand(repo)
         return await command.execute(data)
+
 
     # Usage in WebSocket handler
     @pkg_router.register(PkgID.CREATE_AUTHOR)
@@ -46,7 +49,7 @@ Example:
             return ResponseModel(
                 pkg_id=request.pkg_id,
                 req_id=request.req_id,
-                data=author.model_dump()
+                data=author.model_dump(),
             )
     ```
 """

@@ -17,7 +17,9 @@ class TestBasicAuthKeycloakUser:
     @pytest.mark.asyncio
     async def test_basic_auth_success(self, mock_user_data):
         """Test successful basic authentication."""
-        credentials = HTTPBasicCredentials(username="testuser", password="password")
+        credentials = HTTPBasicCredentials(
+            username="testuser", password="password"
+        )
 
         # Mock Keycloak manager
         mock_kc_manager = MagicMock()
@@ -34,7 +36,9 @@ class TestBasicAuthKeycloakUser:
     @pytest.mark.asyncio
     async def test_basic_auth_invalid_credentials(self):
         """Test basic authentication with invalid credentials."""
-        credentials = HTTPBasicCredentials(username="testuser", password="wrong")
+        credentials = HTTPBasicCredentials(
+            username="testuser", password="wrong"
+        )
 
         # Mock Keycloak manager to raise authentication error
         mock_kc_manager = MagicMock()

@@ -5,7 +5,6 @@ Adds security-related HTTP headers to all responses to protect against
 common web vulnerabilities.
 """
 
-from starlette.datastructures import Headers
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
@@ -37,9 +36,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         """
         super().__init__(app)
 
-    async def dispatch(
-        self, request: Request, call_next: ASGIApp
-    ) -> Response:
+    async def dispatch(self, request: Request, call_next: ASGIApp) -> Response:
         """
         Add security headers to the response.
 

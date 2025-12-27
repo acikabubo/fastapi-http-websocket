@@ -54,8 +54,12 @@ class TestGetPaginatedResults:
         mock_session_inst.__aenter__.return_value = mock_session_inst
         mock_session_inst.__aexit__.return_value = None
 
-        with patch("app.storage.db.async_session", return_value=mock_session_inst):
-            results, meta = await get_paginated_results(Author, page=1, per_page=3)
+        with patch(
+            "app.storage.db.async_session", return_value=mock_session_inst
+        ):
+            results, meta = await get_paginated_results(
+                Author, page=1, per_page=3
+            )
 
             assert len(results) == 3
             assert meta.page == 1
@@ -86,7 +90,9 @@ class TestGetPaginatedResults:
         mock_session_inst.__aenter__.return_value = mock_session_inst
         mock_session_inst.__aexit__.return_value = None
 
-        with patch("app.storage.db.async_session", return_value=mock_session_inst):
+        with patch(
+            "app.storage.db.async_session", return_value=mock_session_inst
+        ):
             results, meta = await get_paginated_results(
                 Author, page=1, per_page=10, filters={"name": "Test"}
             )
@@ -116,7 +122,9 @@ class TestGetPaginatedResults:
         mock_session_inst.exec = AsyncMock(return_value=mock_data_result)
 
         mock_context_manager = MagicMock()
-        mock_context_manager.__aenter__ = AsyncMock(return_value=mock_session_inst)
+        mock_context_manager.__aenter__ = AsyncMock(
+            return_value=mock_session_inst
+        )
         mock_context_manager.__aexit__ = AsyncMock(return_value=None)
 
         mock_session_maker = MagicMock(return_value=mock_context_manager)
@@ -151,8 +159,12 @@ class TestGetPaginatedResults:
         mock_session_inst.__aenter__.return_value = mock_session_inst
         mock_session_inst.__aexit__.return_value = None
 
-        with patch("app.storage.db.async_session", return_value=mock_session_inst):
-            results, meta = await get_paginated_results(Author, page=1, per_page=10)
+        with patch(
+            "app.storage.db.async_session", return_value=mock_session_inst
+        ):
+            results, meta = await get_paginated_results(
+                Author, page=1, per_page=10
+            )
 
             assert len(results) == 0
             assert meta.total == 0
@@ -166,7 +178,10 @@ class TestGetPaginatedResults:
         from app.models.author import Author
         from app.storage.db import get_paginated_results
 
-        mock_authors = [Author(id=21, name="Author 21"), Author(id=22, name="Author 22")]
+        mock_authors = [
+            Author(id=21, name="Author 21"),
+            Author(id=22, name="Author 22"),
+        ]
 
         mock_count_result = MagicMock()
         mock_count_result.one.return_value = 22
@@ -181,8 +196,12 @@ class TestGetPaginatedResults:
         mock_session_inst.__aenter__.return_value = mock_session_inst
         mock_session_inst.__aexit__.return_value = None
 
-        with patch("app.storage.db.async_session", return_value=mock_session_inst):
-            results, meta = await get_paginated_results(Author, page=3, per_page=10)
+        with patch(
+            "app.storage.db.async_session", return_value=mock_session_inst
+        ):
+            results, meta = await get_paginated_results(
+                Author, page=3, per_page=10
+            )
 
             assert len(results) == 2
             assert meta.page == 3
@@ -219,7 +238,9 @@ class TestGetPaginatedResults:
         mock_session_inst.__aenter__.return_value = mock_session_inst
         mock_session_inst.__aexit__.return_value = None
 
-        with patch("app.storage.db.async_session", return_value=mock_session_inst):
+        with patch(
+            "app.storage.db.async_session", return_value=mock_session_inst
+        ):
             results, meta = await get_paginated_results(
                 Author,
                 page=1,
@@ -246,7 +267,9 @@ class TestDefaultApplyFilters:
         query = select(PaginationTestModel)
         filters = {"name": "john"}
 
-        filtered_query = default_apply_filters(query, PaginationTestModel, filters)
+        filtered_query = default_apply_filters(
+            query, PaginationTestModel, filters
+        )
 
         # Verify the query was modified
         assert filtered_query is not None
@@ -263,7 +286,9 @@ class TestDefaultApplyFilters:
         query = select(PaginationTestModel)
         filters = {"age": 25}
 
-        filtered_query = default_apply_filters(query, PaginationTestModel, filters)
+        filtered_query = default_apply_filters(
+            query, PaginationTestModel, filters
+        )
 
         assert filtered_query is not None
         assert isinstance(filtered_query, Select)
@@ -279,7 +304,9 @@ class TestDefaultApplyFilters:
         query = select(PaginationTestModel)
         filters = {"status": ["active", "pending"]}
 
-        filtered_query = default_apply_filters(query, PaginationTestModel, filters)
+        filtered_query = default_apply_filters(
+            query, PaginationTestModel, filters
+        )
 
         assert filtered_query is not None
         assert isinstance(filtered_query, Select)
@@ -308,7 +335,9 @@ class TestDefaultApplyFilters:
         query = select(PaginationTestModel)
         filters = {"name": "john", "status": "active", "age": 25}
 
-        filtered_query = default_apply_filters(query, PaginationTestModel, filters)
+        filtered_query = default_apply_filters(
+            query, PaginationTestModel, filters
+        )
 
         assert filtered_query is not None
         assert isinstance(filtered_query, Select)
@@ -324,7 +353,9 @@ class TestDefaultApplyFilters:
         query = select(PaginationTestModel)
         filters = {}
 
-        filtered_query = default_apply_filters(query, PaginationTestModel, filters)
+        filtered_query = default_apply_filters(
+            query, PaginationTestModel, filters
+        )
 
         # Should return same query object (no modifications)
         assert filtered_query is query
@@ -377,7 +408,9 @@ class TestDatabaseConnection:
         from app.storage.db import get_session
 
         mock_session = AsyncMock()
-        mock_session.commit.side_effect = IntegrityError("test", "params", "orig")
+        mock_session.commit.side_effect = IntegrityError(
+            "test", "params", "orig"
+        )
 
         mock_context_manager = MagicMock()
         mock_context_manager.__aenter__ = AsyncMock(return_value=mock_session)
@@ -488,7 +521,9 @@ class TestDatabaseConnection:
         from app.storage.db import wait_and_init_db
 
         mock_engine = MagicMock()
-        mock_engine.connect.side_effect = OperationalError("test", "params", "orig")
+        mock_engine.connect.side_effect = OperationalError(
+            "test", "params", "orig"
+        )
 
         with patch("app.storage.db.engine", mock_engine):
             with patch("app.storage.db.asyncio.sleep"):
@@ -557,7 +592,9 @@ class TestFilterEdgeCases:
         query = select(PaginationTestModel)
         filters = {"name": None}
 
-        filtered_query = default_apply_filters(query, PaginationTestModel, filters)
+        filtered_query = default_apply_filters(
+            query, PaginationTestModel, filters
+        )
         assert filtered_query is not None
 
     def test_filter_empty_list(self):
@@ -571,7 +608,9 @@ class TestFilterEdgeCases:
         query = select(PaginationTestModel)
         filters = {"status": []}
 
-        filtered_query = default_apply_filters(query, PaginationTestModel, filters)
+        filtered_query = default_apply_filters(
+            query, PaginationTestModel, filters
+        )
         assert filtered_query is not None
 
     def test_filter_special_characters_in_string(self):
@@ -586,7 +625,9 @@ class TestFilterEdgeCases:
         filters = {"name": "test_user%"}
 
         # Should not raise an error
-        filtered_query = default_apply_filters(query, PaginationTestModel, filters)
+        filtered_query = default_apply_filters(
+            query, PaginationTestModel, filters
+        )
         assert filtered_query is not None
 
 

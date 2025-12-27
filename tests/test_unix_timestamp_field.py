@@ -138,9 +138,7 @@ class TestUnixTimestampFieldStorage:
 
     def test_create_event_with_explicit_timestamp(self, session):
         """Test creating event with explicit timestamp."""
-        specific_time = datetime(
-            2025, 12, 12, 10, 30, 0, tzinfo=timezone.utc
-        )
+        specific_time = datetime(2025, 12, 12, 10, 30, 0, tzinfo=timezone.utc)
 
         event = Event(name="Test Event", created_at=specific_time)
 
@@ -199,9 +197,7 @@ class TestUnixTimestampFieldQuerying:
 
     def test_filter_by_exact_timestamp(self, session):
         """Test filtering events by exact timestamp."""
-        specific_time = datetime(
-            2025, 12, 12, 10, 30, 0, tzinfo=timezone.utc
-        )
+        specific_time = datetime(2025, 12, 12, 10, 30, 0, tzinfo=timezone.utc)
 
         event1 = Event(name="Event 1", created_at=specific_time)
         event2 = Event(
@@ -289,9 +285,7 @@ class TestUnixTimestampFieldQuerying:
         session.commit()
 
         # Query ordered by created_at
-        result = session.exec(
-            select(Event).order_by(Event.created_at)
-        ).all()
+        result = session.exec(select(Event).order_by(Event.created_at)).all()
 
         assert len(result) == 3
         assert result[0].name == "Event A"

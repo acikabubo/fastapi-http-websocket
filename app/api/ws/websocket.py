@@ -114,7 +114,9 @@ class PackageAuthWebSocketEndpoint(WebSocketEndpoint):
         finally:
             await self.on_disconnect(websocket, close_code)
 
-    async def decode(self, websocket: WebSocket, message: dict) -> dict | bytes:
+    async def decode(
+        self, websocket: WebSocket, message: dict
+    ) -> dict | bytes:
         """
         Decode incoming WebSocket message.
 
@@ -240,9 +242,8 @@ class PackageAuthWebSocketEndpoint(WebSocketEndpoint):
         connection_manager.disconnect(websocket)
 
         # Remove from connection limiter if connection was established
-        if (
-            not isinstance(self.user, UnauthenticatedUser)
-            and hasattr(self, "connection_id")
+        if not isinstance(self.user, UnauthenticatedUser) and hasattr(
+            self, "connection_id"
         ):
             await connection_limiter.remove_connection(
                 user_id=self.user.username, connection_id=self.connection_id

@@ -74,9 +74,7 @@ class TestPrometheusMetrics:
         assert "http_requests_total" in metrics_data
         assert "http_request_duration_seconds" in metrics_data
 
-    def test_metrics_middleware_tracks_duration(
-        self, mock_keycloak_manager
-    ):
+    def test_metrics_middleware_tracks_duration(self, mock_keycloak_manager):
         """
         Test that PrometheusMiddleware tracks request duration.
 
@@ -238,9 +236,7 @@ class TestMetricsDefinitions:
         # Gauge checks
         assert isinstance(
             http_requests_in_progress._type, type(Gauge._type)
-        ) or isinstance(
-            http_requests_in_progress, type(Gauge("test", "test"))
-        )
+        ) or isinstance(http_requests_in_progress, type(Gauge("test", "test")))
         assert isinstance(
             ws_connections_active._type, type(Gauge._type)
         ) or isinstance(ws_connections_active, type(Gauge("test", "test")))
