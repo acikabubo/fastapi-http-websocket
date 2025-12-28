@@ -195,8 +195,18 @@ class PackageAuthWebSocketEndpoint(WebSocketEndpoint):  # type: ignore[misc]
         # Generate unique connection ID
         self.connection_id = str(uuid.uuid4())
 
-        # TODO: Try to get original correlation id from header???
-        self.correlation_id = self.connection_id[:8]
+        # Extract correlation ID from WebSocket upgrade request headers
+        # If X-Correlation-ID header was present in the upgrade request,
+        # use it to maintain correlation with preceding HTTP requests
+        headers = dict(websocket.headers)
+        correlation_id_from_header = headers.get("x-correlation-id", "")
+
+        # Use header correlation ID if present, otherwise use first 8 chars of connection ID
+        self.correlation_id = (
+            correlation_id_from_header[:8]
+            if correlation_id_from_header
+            else self.connection_id[:8]
+        )
 
         # Check connection limit
         connection_allowed = await connection_limiter.add_connection(
