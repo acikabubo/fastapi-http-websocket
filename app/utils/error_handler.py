@@ -120,7 +120,9 @@ def handle_ws_errors(func: Callable[..., Any]) -> Callable[..., Any]:
             async with async_session() as session:
                 repo = AuthorRepository(session)
                 command = CreateAuthorCommand(repo)
-                author = await command.execute(CreateAuthorInput(**request.data))
+                author = await command.execute(
+                    CreateAuthorInput(**request.data)
+                )
                 return ResponseModel.success(
                     request.pkg_id, request.req_id, data=author.model_dump()
                 )

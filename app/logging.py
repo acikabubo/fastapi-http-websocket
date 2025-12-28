@@ -50,7 +50,9 @@ def set_log_context(**kwargs: Any) -> None:
 
     Example:
         >>> set_log_context(user_id=123, endpoint="/api/authors")
-        >>> logger.info("Processing request")  # Will include user_id and endpoint
+        >>> logger.info(
+        ...     "Processing request"
+        ... )  # Will include user_id and endpoint
     """
     current = log_context.get()
     current.update(kwargs)
