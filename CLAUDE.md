@@ -689,6 +689,29 @@ All commits must pass:
 - **typos**: Spell checking
 - **bandit**: Security scanning (low severity threshold `-lll`)
 - **skjold**: Dependency vulnerability checks
+- **pytest-cov**: Code coverage checker (≥80% coverage, runs on `git push` only)
+
+**Running Tests with Coverage:**
+
+```bash
+# Run tests with coverage report
+uv run pytest --cov=app --cov-report=term-missing
+
+# Run tests with HTML coverage report
+uv run pytest --cov=app --cov-report=html
+
+# View HTML coverage report
+open htmlcov/index.html
+```
+
+**Coverage Configuration:**
+
+Coverage settings are in `pyproject.toml`:
+- Minimum coverage threshold: 80%
+- Omitted files: `__init__.py`, `__main__.py`, tests, logging, routing, settings
+- Excluded lines: `pragma: no cover`, imports, pass statements
+
+**Note**: The coverage hook only runs on `git push` (not on every commit) to avoid slowing down the development workflow. This allows you to commit work-in-progress code while ensuring coverage is checked before pushing to remote.
 
 ### Code Style Requirements
 

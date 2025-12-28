@@ -74,3 +74,14 @@ repos:
         args: [-lll]
         files: \.py$
         exclude: ^(tests/|scripts/|examples/|\.worktree/)
+
+  # Code coverage checker
+  - repo: local
+    hooks:
+      - id: pytest-coverage
+        name: "pytest-cov: Code coverage checker"
+        entry: uv run pytest --cov=app --cov-report=term-missing --cov-fail-under=80
+        language: system
+        pass_filenames: false
+        files: ^(app/.*\.py|tests/.*\.py)$
+        stages: [pre-push]  # Only run on push, not on every commit
