@@ -33,7 +33,7 @@ jobs:
         run: uvx ruff format --check
 
       - name: Run mypy type checking
-        run: uvx mypy app/
+        run: uvx mypy app/ --strict --ignore-missing-imports --config-file=pyproject.toml
 
       - name: Check docstring coverage
         run: uvx interrogate app/ --fail-under=80

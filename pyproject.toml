@@ -95,12 +95,11 @@ ignore_names = [
     "dispatch",
     "get_authors_handler",
     "get_paginated_authors_handler",
-    "authenticate"
+    "authenticate",
+    "dialect",  # SQLAlchemy type decorator required parameter
+    "executemany"  # SQLAlchemy event listener required parameter
 ]
 # exclude = ["app/api/ws/constants.py"]
-
-[tool.typos]
-files.extend-exclude = [".security_reports/*", "realm-export.json"]
 
 [tool.ruff]
 exclude = [
@@ -166,7 +165,8 @@ exclude = [
     "scripts",
     "app/settings.py",
     "app/logging.py",
-    "app/schemas/*"
+    "app/schemas/*",
+    "app/storage/migrations/versions/*"
 ]
 
 [tool.mypy]

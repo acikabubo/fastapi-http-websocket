@@ -156,7 +156,9 @@ def _generate_count_cache_key(
     if filters:
         # Sort filters for consistent hashing
         sorted_filters = json.dumps(filters, sort_keys=True)
-        filter_hash = hashlib.md5(sorted_filters.encode()).hexdigest()[:8]
+        filter_hash = hashlib.md5(
+            sorted_filters.encode(), usedforsecurity=False
+        ).hexdigest()[:8]
         return f"pagination:count:{model_name}:{filter_hash}"
     else:
         return f"pagination:count:{model_name}:all"
