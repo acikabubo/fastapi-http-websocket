@@ -1,0 +1,71 @@
+# Dependabot configuration for automated dependency updates
+# https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
+
+version: 2
+updates:
+  # Python dependencies (pip)
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Europe/Skopje"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "acikabubo"
+    assignees:
+      - "acikabubo"
+    labels:
+      - "dependencies"
+      - "python"
+    commit-message:
+      prefix: "deps"
+      prefix-development: "deps(dev)"
+      include: "scope"
+    # Auto-merge configuration
+    allow:
+      - dependency-type: "direct"
+      - dependency-type: "indirect"
+    # Group minor and patch updates together
+    groups:
+      minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"
+        patterns:
+          - "*"
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Europe/Skopje"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "acikabubo"
+    labels:
+      - "dependencies"
+      - "github-actions"
+    commit-message:
+      prefix: "deps(actions)"
+
+  # Docker dependencies
+  - package-ecosystem: "docker"
+    directory: "/docker"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Europe/Skopje"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "acikabubo"
+    labels:
+      - "dependencies"
+      - "docker"
+    commit-message:
+      prefix: "deps(docker)"

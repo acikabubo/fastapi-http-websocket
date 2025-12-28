@@ -721,6 +721,60 @@ Coverage settings are in `pyproject.toml`:
 - **Formatting**: Double quotes, 4-space indentation
 - **Unused code**: Will be caught by vulture (see `pyproject.toml` for ignored names)
 
+### Automated Dependency Updates
+
+**Dependabot Configuration:**
+
+The project uses GitHub Dependabot for automated dependency updates. Configuration is in `.github/dependabot.yml`.
+
+**Update Schedule:**
+- **Python dependencies** (pip): Weekly on Mondays at 09:00 Europe/Skopje time
+- **GitHub Actions**: Weekly on Mondays at 09:00 Europe/Skopje time
+- **Docker images**: Weekly on Mondays at 09:00 Europe/Skopje time
+
+**Grouping Strategy:**
+- Minor and patch updates are grouped together to reduce PR noise
+- Major version updates create separate PRs for careful review
+
+**Pull Request Management:**
+- Maximum 10 open PRs for Python dependencies
+- Maximum 5 open PRs for GitHub Actions and Docker
+- PRs are labeled with `dependencies` and ecosystem-specific labels
+- Automatic reviewer assignment to `@acikabubo`
+
+**Commit Message Format:**
+- Python dependencies: `deps: Update package-name from X to Y`
+- Development dependencies: `deps(dev): Update package-name from X to Y`
+- GitHub Actions: `deps(actions): Update action-name from X to Y`
+- Docker: `deps(docker): Update image-name from X to Y`
+
+**Reviewing Dependabot PRs:**
+
+1. **Check CI Status**: Ensure all tests pass
+2. **Review Changelog**: Check breaking changes in package release notes
+3. **Test Locally**: For major updates, test locally before merging
+4. **Merge Strategy**:
+   - Patch updates: Can be auto-merged if tests pass
+   - Minor updates: Review changelog, merge if no breaking changes
+   - Major updates: Careful review, test locally, update code if needed
+
+**Dependabot Commands:**
+
+You can interact with Dependabot via PR comments:
+- `@dependabot rebase` - Rebase the PR
+- `@dependabot recreate` - Recreate the PR (ignore local edits)
+- `@dependabot merge` - Merge the PR (after approvals)
+- `@dependabot squash and merge` - Squash and merge
+- `@dependabot cancel merge` - Cancel a merge request
+- `@dependabot close` - Close the PR and don't create updates
+- `@dependabot ignore this dependency` - Close and ignore future updates
+- `@dependabot ignore this major version` - Ignore major version updates
+- `@dependabot ignore this minor version` - Ignore minor version updates
+
+**Security Updates:**
+
+Dependabot also creates PRs for security vulnerabilities automatically (not on schedule). These should be reviewed and merged with high priority.
+
 ### Type Safety
 
 This project uses advanced typing features for improved type safety and IDE support:
