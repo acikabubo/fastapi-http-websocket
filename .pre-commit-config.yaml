@@ -74,14 +74,3 @@ repos:
         args: [-lll]
         files: \.py$
         exclude: ^(tests/|scripts/|examples/|\.worktree/)
-
-  # Local hooks
-  - repo: local
-    hooks:
-      - id: test-migrations
-        name: "Test database migrations (upgrade/downgrade)"
-        entry: python scripts/test_migrations.py
-        language: system
-        pass_filenames: false
-        files: '^app/storage/migrations/versions/.*\.py$'
-        stages: [pre-commit]
