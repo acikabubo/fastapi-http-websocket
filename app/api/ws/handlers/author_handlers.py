@@ -89,7 +89,7 @@ async def get_authors_handler(request: RequestModel) -> ResponseModel[Author]:
         command = GetAuthorsCommand(repo)
 
         # Parse input from request data
-        input_data = GetAuthorsInput(**request.data)
+        input_data = GetAuthorsInput(**(request.data or {}))
 
         # Execute command (same business logic as HTTP handler!)
         authors = await command.execute(input_data)
@@ -159,7 +159,7 @@ async def get_paginated_authors_handler(
             }
         }
     """
-    authors, meta = await get_paginated_results(Author, **request.data)
+    authors, meta = await get_paginated_results(Author, **(request.data or {}))
 
     return ResponseModel(
         pkg_id=request.pkg_id,
@@ -216,7 +216,7 @@ async def create_author_handler(
             command = CreateAuthorCommand(repo)
 
             # Parse input from request data
-            input_data = CreateAuthorInput(**request.data)
+            input_data = CreateAuthorInput(**(request.data or {}))
 
             # Execute command
             author = await command.execute(input_data)

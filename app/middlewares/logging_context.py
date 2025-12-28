@@ -13,7 +13,7 @@ from starlette.types import ASGIApp
 from app.logging import clear_log_context, set_log_context
 
 
-class LoggingContextMiddleware(BaseHTTPMiddleware):
+class LoggingContextMiddleware(BaseHTTPMiddleware):  # type: ignore[misc]
     """
     Middleware to inject contextual fields into structured logs.
 

@@ -1,4 +1,4 @@
-from typing import Annotated
+from typing import Annotated, Any
 from urllib.parse import parse_qsl
 
 from fastapi import Depends, HTTPException
@@ -42,7 +42,7 @@ class AuthenticationError(Exception):
         super().__init__(f"{reason}: {detail}")
 
 
-class AuthBackend(AuthenticationBackend):
+class AuthBackend(AuthenticationBackend):  # type: ignore[misc]
     """
     Authentication backend for handling both HTTP and WebSocket requests using Keycloak tokens.
 
@@ -66,11 +66,11 @@ class AuthBackend(AuthenticationBackend):
             - Token decoding errors (reason='token_decode_error')
     """
 
-    def __init__(self, *args, **kwargs) -> None:
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         self.excluded_paths = app_settings.EXCLUDED_PATHS
 
-    async def authenticate(self, request):  # pragma: no cover
+    async def authenticate(self, request):  # type: ignore[no-untyped-def] # pragma: no cover
         """
         Authenticates a request by decoding the access token and retrieving the user data.
 
@@ -108,7 +108,7 @@ class AuthBackend(AuthenticationBackend):
                     "DEBUG_AUTH is enabled - using debug credentials. "
                     "NEVER enable this in production!"
                 )
-                token = kc_manager.login(
+                token = kc_manager.login(  # type: ignore[func-returns-value]
                     app_settings.DEBUG_AUTH_USERNAME,
                     app_settings.DEBUG_AUTH_PASSWORD,
                 )
@@ -149,7 +149,7 @@ def basic_auth_keycloak_user(
     """
     try:
         kc_manager = KeycloakManager()
-        token = kc_manager.login(credentials.username, credentials.password)
+        token = kc_manager.login(credentials.username, credentials.password)  # type: ignore[func-returns-value]
         user_data = kc_manager.openid.decode_token(token["access_token"])
 
         user: UserModel = UserModel(**user_data)

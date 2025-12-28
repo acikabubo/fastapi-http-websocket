@@ -1,6 +1,7 @@
 """HTTP endpoints for querying audit logs."""
 
 from datetime import datetime
+from typing import Any
 
 from fastapi import APIRouter, Depends, Query
 from sqlmodel import select
@@ -78,14 +79,14 @@ async def get_audit_logs_endpoint(
         filters["outcome"] = outcome
 
     # Custom filter function for date range
-    def apply_date_filters(stmt):
+    def apply_date_filters(stmt: Any) -> Any:
         """Apply date range filters to the query."""
         if start_date:
             stmt = stmt.where(UserAction.timestamp >= start_date)
         if end_date:
             stmt = stmt.where(UserAction.timestamp <= end_date)
         # Order by timestamp descending (most recent first)
-        stmt = stmt.order_by(UserAction.timestamp.desc())
+        stmt = stmt.order_by(UserAction.timestamp.desc())  # type: ignore[attr-defined]
         return stmt
 
     # Get paginated results
@@ -94,7 +95,7 @@ async def get_audit_logs_endpoint(
         page,
         per_page,
         filters=filters,
-        apply_filters=apply_date_filters if (start_date or end_date) else None,
+        apply_filters=apply_date_filters if (start_date or end_date) else None,  # type: ignore[arg-type]
     )
 
     return PaginatedResponseModel(items=items, meta=meta)
@@ -159,14 +160,14 @@ async def get_user_audit_logs_endpoint(
     """
 
     # Custom filter function for date range
-    def apply_date_filters(stmt):
+    def apply_date_filters(stmt: Any) -> Any:
         """Apply date range filters to the query."""
         if start_date:
             stmt = stmt.where(UserAction.timestamp >= start_date)
         if end_date:
             stmt = stmt.where(UserAction.timestamp <= end_date)
         # Order by timestamp descending (most recent first)
-        stmt = stmt.order_by(UserAction.timestamp.desc())
+        stmt = stmt.order_by(UserAction.timestamp.desc())  # type: ignore[attr-defined]
         return stmt
 
     # Get paginated results
@@ -175,7 +176,7 @@ async def get_user_audit_logs_endpoint(
         page,
         per_page,
         filters={"user_id": user_id},
-        apply_filters=apply_date_filters if (start_date or end_date) else None,
+        apply_filters=apply_date_filters if (start_date or end_date) else None,  # type: ignore[arg-type]
     )
 
     return PaginatedResponseModel(items=items, meta=meta)

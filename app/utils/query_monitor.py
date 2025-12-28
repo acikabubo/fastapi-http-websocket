@@ -42,7 +42,7 @@ def _get_query_operation(statement: str) -> str:
 
 
 @event.listens_for(Engine, "before_cursor_execute")
-def before_cursor_execute(
+def before_cursor_execute(  # type: ignore[no-untyped-def]
     conn, cursor, statement, parameters, context, executemany
 ):
     """
@@ -63,7 +63,7 @@ def before_cursor_execute(
 
 
 @event.listens_for(Engine, "after_cursor_execute")
-def after_cursor_execute(
+def after_cursor_execute(  # type: ignore[no-untyped-def]
     conn, cursor, statement, parameters, context, executemany
 ):
     """
@@ -107,7 +107,7 @@ def after_cursor_execute(
         )
 
 
-def enable_query_monitoring():
+def enable_query_monitoring() -> None:
     """
     Enable database query performance monitoring.
 

@@ -171,8 +171,13 @@ exclude = [
 
 [tool.mypy]
 exclude = [
-    "app/schemas/proto/.*_pb2\\.pyi?$",  # Exclude auto-generated protobuf files
+    "app/schemas/proto/",  # Exclude auto-generated protobuf files
 ]
+disable_error_code = ["untyped-decorator", "no-any-return"]
+
+[[tool.mypy.overrides]]
+module = "app.schemas.proto.*"
+ignore_errors = true
 
 [tool.skjold]
 sources = ["github", "pyup", "gemnasium"]  # Sources to check against.

@@ -11,7 +11,7 @@ from prometheus_client import REGISTRY, Counter, Gauge, Histogram
 
 def _get_or_create_counter(
     name: str, doc: str, labels: list[str] | None = None
-):
+) -> Counter:
     """
     Get existing counter or create new one.
 
@@ -24,7 +24,9 @@ def _get_or_create_counter(
         return REGISTRY._names_to_collectors[name]
 
 
-def _get_or_create_gauge(name: str, doc: str, labels: list[str] | None = None):
+def _get_or_create_gauge(
+    name: str, doc: str, labels: list[str] | None = None
+) -> Gauge:
     """
     Get existing gauge or create new one.
 
@@ -38,8 +40,11 @@ def _get_or_create_gauge(name: str, doc: str, labels: list[str] | None = None):
 
 
 def _get_or_create_histogram(
-    name: str, doc: str, labels: list[str] | None = None, buckets=None
-):
+    name: str,
+    doc: str,
+    labels: list[str] | None = None,
+    buckets: list[float] | tuple[float, ...] | tuple[int, ...] | None = None,
+) -> Histogram:
     """
     Get existing histogram or create new one.
 

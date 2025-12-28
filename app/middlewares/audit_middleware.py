@@ -15,7 +15,7 @@ from app.settings import app_settings
 from app.utils.audit_logger import extract_ip_address, log_user_action
 
 
-class AuditMiddleware(BaseHTTPMiddleware):
+class AuditMiddleware(BaseHTTPMiddleware):  # type: ignore[misc]
     """
     Middleware to log HTTP requests to the audit log.
 

@@ -16,14 +16,14 @@ from app.utils.metrics import get_websocket_health_info
 router = APIRouter()
 
 
-class WebSocketHealthInfo(BaseModel):
+class WebSocketHealthInfo(BaseModel):  # type: ignore[misc]
     """WebSocket health information."""
 
     status: str
     active_connections: int
 
 
-class HealthResponse(BaseModel):
+class HealthResponse(BaseModel):  # type: ignore[misc]
     """Response model for health check endpoint."""
 
     status: str
@@ -73,7 +73,7 @@ async def health_check(response: Response) -> HealthResponse:
     # Check Redis connection
     try:
         r = await get_redis_connection(db=app_settings.MAIN_REDIS_DB)
-        await r.ping()
+        await r.ping()  # type: ignore[union-attr]
     except (
         AsyncRedisError,
         SyncRedisError,

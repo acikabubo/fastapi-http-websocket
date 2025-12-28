@@ -282,14 +282,14 @@ class TestAuthenticationMiddleware:
 
         # Verify routes exist
         assert author_get_route is not None, "GET /authors route should exist"
-        assert author_post_route is not None, (
-            "POST /authors route should exist"
-        )
+        assert (
+            author_post_route is not None
+        ), "POST /authors route should exist"
 
         # Verify they have dependencies (from RBACDep)
-        assert len(author_get_route.dependant.dependencies) > 0, (
-            "GET /authors should have dependencies"
-        )
-        assert len(author_post_route.dependant.dependencies) > 0, (
-            "POST /authors should have dependencies"
-        )
+        assert (
+            len(author_get_route.dependant.dependencies) > 0
+        ), "GET /authors should have dependencies"
+        assert (
+            len(author_post_route.dependant.dependencies) > 0
+        ), "POST /authors should have dependencies"

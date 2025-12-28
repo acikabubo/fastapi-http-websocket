@@ -34,3 +34,5 @@ def validator(
         return ResponseModel.err_msg(
             request.pkg_id, request.req_id, status_code=RSPCode.INVALID_DATA
         )
+
+    return None

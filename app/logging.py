@@ -50,9 +50,7 @@ def set_log_context(**kwargs: Any) -> None:
 
     Example:
         >>> set_log_context(user_id=123, endpoint="/api/authors")
-        >>> logger.info(
-        ...     "Processing request"
-        ... )  # Will include user_id and endpoint
+        >>> logger.info("Processing request")  # Will include user_id and endpoint
     """
     current = log_context.get()
     current.update(kwargs)
@@ -160,10 +158,12 @@ class StructuredJSONFormatter(logging.Formatter):
         # Truncate message if too long (for Loki compatibility)
         json_str = json.dumps(log_data)
         if len(json_str) > LOKI_MAX_LOG_SIZE_BYTES:
-            log_data["message"] = (
-                log_data["message"][: LOKI_MAX_LOG_SIZE_BYTES - 1000]
-                + "... [TRUNCATED]"
-            )
+            message = log_data.get("message", "")
+            if isinstance(message, str):
+                log_data["message"] = (
+                    message[: LOKI_MAX_LOG_SIZE_BYTES - 1000]
+                    + "... [TRUNCATED]"
+                )
             json_str = json.dumps(log_data)
 
         return json_str

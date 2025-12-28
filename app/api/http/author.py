@@ -13,6 +13,8 @@ Example:
     return await command.execute(input_data)
 """
 
+from typing import Any
+
 from fastapi import APIRouter, Depends, status
 
 from app.commands.author_commands import (
@@ -226,7 +228,7 @@ async def get_paginated_authors(
     Example:
         GET /authors/paginated?page=1&per_page=10
     """
-    filters = {}
+    filters: dict[str, Any] = {}
     if id is not None:
         filters["id"] = id
     if name is not None:

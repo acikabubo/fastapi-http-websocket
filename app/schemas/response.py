@@ -8,24 +8,24 @@ from app.api.ws.constants import PkgID, RSPCode
 from app.schemas.generic_typing import GenericSQLModelType
 
 
-class MetadataModel(BaseModel):
+class MetadataModel(BaseModel):  # type: ignore[misc]
     page: Annotated[int, Field(ge=1)]
     per_page: Annotated[int, Field(ge=1)]
     total: Annotated[int, Field(ge=0)]
     pages: Annotated[int, Field(ge=0)]
 
 
-class BroadcastDataModel[GenericSQLModelType](BaseModel):
+class BroadcastDataModel[GenericSQLModelType](BaseModel):  # type: ignore[misc]
     pkg_id: PkgID = Field(frozen=True)
     req_id: UUID = Field(default=UUID(int=0), frozen=True)
     data: dict[str, Any] | list[GenericSQLModelType]
 
 
-class ResponseModel[GenericSQLModelType](BaseModel):
+class ResponseModel[GenericSQLModelType](BaseModel):  # type: ignore[misc]
     pkg_id: PkgID = Field(frozen=True)
     req_id: UUID = Field(frozen=True)
     status_code: RSPCode | None = RSPCode.OK
-    meta: MetadataModel | dict | None = None
+    meta: MetadataModel | dict[str, Any] | None = None
     data: dict[str, Any] | list[GenericSQLModelType] | None = None
 
     @classmethod
@@ -35,7 +35,7 @@ class ResponseModel[GenericSQLModelType](BaseModel):
         req_id: UUID,
         data: dict[str, Any] | None = None,
         msg: str | None = None,
-    ) -> "ResponseModel":
+    ) -> "ResponseModel[Any]":
         if data is None:
             data = {}
         if msg:
@@ -52,7 +52,7 @@ class ResponseModel[GenericSQLModelType](BaseModel):
         data: dict[str, Any] | None = None,
         msg: str | None = None,
         status_code: RSPCode | None = RSPCode.ERROR,
-    ) -> "ResponseModel":
+    ) -> "ResponseModel[Any]":
         if data is None:
             data = {}
         if msg:
@@ -62,6 +62,6 @@ class ResponseModel[GenericSQLModelType](BaseModel):
         )
 
 
-class PaginatedResponseModel(BaseModel, Generic[GenericSQLModelType]):
+class PaginatedResponseModel(BaseModel, Generic[GenericSQLModelType]):  # type: ignore[misc]
     items: list[GenericSQLModelType]
     meta: MetadataModel

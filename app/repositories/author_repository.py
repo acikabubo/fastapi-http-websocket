@@ -72,7 +72,7 @@ class AuthorRepository(BaseRepository[Author]):
             results = await repo.search_by_name("John")
             ```
         """
-        stmt = select(Author).where(Author.name.ilike(f"%{name_pattern}%"))
+        stmt = select(Author).where(Author.name.ilike(f"%{name_pattern}%"))  # type: ignore[attr-defined]
         result = await self.session.exec(stmt)
         return list(result.all())
 

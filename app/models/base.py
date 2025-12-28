@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncAttrs
 from sqlmodel import SQLModel
 
 
-class BaseModel(SQLModel, AsyncAttrs):
+class BaseModel(SQLModel, AsyncAttrs):  # type: ignore[misc]
     """
     Base model for all database tables with async relationship support.
 

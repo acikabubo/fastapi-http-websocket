@@ -15,7 +15,7 @@ from app.utils.ip_utils import get_client_ip
 from app.utils.rate_limiter import rate_limiter
 
 
-class RateLimitMiddleware(BaseHTTPMiddleware):
+class RateLimitMiddleware(BaseHTTPMiddleware):  # type: ignore[misc]
     """
     Middleware to enforce rate limits on HTTP requests.
 
@@ -105,7 +105,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             Rate limit key string.
         """
         # Try to get user from request (set by authentication middleware)
-        user: UserModel = getattr(request, "user", None)
+        user: UserModel = getattr(request, "user", None)  # type: ignore[assignment]
 
         if user and user.username:
             return f"user:{user.username}"

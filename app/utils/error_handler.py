@@ -30,7 +30,7 @@ from app.utils.error_formatter import (
 )
 
 
-def handle_http_errors(func: Callable) -> Callable:
+def handle_http_errors(func: Callable[..., Any]) -> Callable[..., Any]:
     """
     Decorator for HTTP endpoints to convert AppException to unified error envelope.
 
@@ -97,7 +97,7 @@ def handle_http_errors(func: Callable) -> Callable:
     return wrapper
 
 
-def handle_ws_errors(func: Callable) -> Callable:
+def handle_ws_errors(func: Callable[..., Any]) -> Callable[..., Any]:
     """
     Decorator for WebSocket handlers to convert AppException to unified error envelope.
 
@@ -116,13 +116,11 @@ def handle_ws_errors(func: Callable) -> Callable:
         @handle_ws_errors
         async def create_author_handler(
             request: RequestModel,
-        ) -> ResponseModel:
+        ) -> ResponseModel[Any]:
             async with async_session() as session:
                 repo = AuthorRepository(session)
                 command = CreateAuthorCommand(repo)
-                author = await command.execute(
-                    CreateAuthorInput(**request.data)
-                )
+                author = await command.execute(CreateAuthorInput(**request.data))
                 return ResponseModel.success(
                     request.pkg_id, request.req_id, data=author.model_dump()
                 )
@@ -146,7 +144,7 @@ def handle_ws_errors(func: Callable) -> Callable:
     @wraps(func)
     async def wrapper(
         request: RequestModel, *args: Any, **kwargs: Any
-    ) -> ResponseModel:
+    ) -> ResponseModel[Any]:
         try:
             return await func(request, *args, **kwargs)
         except AppException as ex:
@@ -192,7 +190,7 @@ def handle_ws_errors(func: Callable) -> Callable:
     return wrapper
 
 
-def handle_errors(func: Callable) -> Callable:
+def handle_errors(func: Callable[..., Any]) -> Callable[..., Any]:
     """
     Auto-detecting decorator that applies appropriate error handling.
 
@@ -220,7 +218,7 @@ def handle_errors(func: Callable) -> Callable:
         # WebSocket Handler
         @pkg_router.register(PkgID.CREATE_AUTHOR)
         @handle_errors
-        async def create_author_handler(request: RequestModel) -> ResponseModel:
+        async def create_author_handler(request: RequestModel) -> ResponseModel[Any]:
             ...
         ```
     """

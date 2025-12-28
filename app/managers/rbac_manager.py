@@ -1,3 +1,5 @@
+from collections.abc import Awaitable, Callable
+
 from fastapi import HTTPException, Request, status
 from starlette.authentication import UnauthenticatedUser
 
@@ -76,7 +78,9 @@ class RBACManager(metaclass=SingletonMeta):
 
         return has_permission
 
-    def require_roles(self, *roles: str):
+    def require_roles(
+        self, *roles: str
+    ) -> Callable[[Request], Awaitable[None]]:
         """
         Create a FastAPI dependency that requires the user to have ALL specified roles.
 

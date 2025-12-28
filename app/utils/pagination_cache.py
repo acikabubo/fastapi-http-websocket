@@ -33,7 +33,7 @@ async def get_cached_count(
     cache_key = _generate_count_cache_key(model_name, filters)
 
     try:
-        redis = await RedisPool.get_connection()
+        redis = await RedisPool.get_instance()
         if redis is None:
             logger.warning("Redis unavailable, skipping count cache lookup")
             return None
@@ -72,7 +72,7 @@ async def set_cached_count(
     cache_key = _generate_count_cache_key(model_name, filters)
 
     try:
-        redis = await RedisPool.get_connection()
+        redis = await RedisPool.get_instance()
         if redis is None:
             logger.warning("Redis unavailable, skipping count cache storage")
             return
@@ -99,7 +99,7 @@ async def invalidate_count_cache(
         filters: Query filters to invalidate (None = invalidate all for model).
     """
     try:
-        redis = await RedisPool.get_connection()
+        redis = await RedisPool.get_instance()
         if redis is None:
             logger.warning(
                 "Redis unavailable, skipping count cache invalidation"

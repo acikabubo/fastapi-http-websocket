@@ -26,9 +26,7 @@ def pydantic_to_proto_request(pydantic_req: RequestModel) -> Request:
         Protobuf Request message.
 
     Example:
-        >>> req = RequestModel(
-        ...     pkg_id=PkgID.GET_AUTHORS, req_id=UUID(...), data={}
-        ... )
+        >>> req = RequestModel(pkg_id=PkgID.GET_AUTHORS, req_id=UUID(...), data={})
         >>> proto_req = pydantic_to_proto_request(req)
         >>> proto_bytes = proto_req.SerializeToString()
     """
@@ -71,7 +69,7 @@ def proto_to_pydantic_request(proto_req: Request) -> RequestModel:
     )
 
 
-def pydantic_to_proto_response(pydantic_resp: ResponseModel) -> Response:
+def pydantic_to_proto_response(pydantic_resp: ResponseModel[Any]) -> Response:
     """
     Convert Pydantic ResponseModel to Protobuf Response.
 
@@ -122,7 +120,7 @@ def pydantic_to_proto_response(pydantic_resp: ResponseModel) -> Response:
     return proto_resp
 
 
-def proto_to_pydantic_response(proto_resp: Response) -> ResponseModel:
+def proto_to_pydantic_response(proto_resp: Response) -> ResponseModel[Any]:
     """
     Convert Protobuf Response to Pydantic ResponseModel.
 
@@ -185,7 +183,7 @@ def detect_message_format(data: bytes | str) -> str:
 
 
 def serialize_response(
-    response: ResponseModel, format: str = "json"
+    response: ResponseModel[Any], format: str = "json"
 ) -> bytes | dict[str, Any]:
     """
     Serialize ResponseModel to specified format.

@@ -34,6 +34,8 @@ Example:
     ```
 """
 
+from typing import Any
+
 from pydantic import BaseModel, Field
 
 from app.commands.base import BaseCommand
@@ -47,7 +49,7 @@ from app.repositories.author_repository import AuthorRepository
 # ============================================================================
 
 
-class GetAuthorsInput(BaseModel):
+class GetAuthorsInput(BaseModel):  # type: ignore[misc]
     """Input model for getting authors."""
 
     id: int | None = Field(default=None, description="Filter by author ID")
@@ -58,13 +60,13 @@ class GetAuthorsInput(BaseModel):
     )
 
 
-class CreateAuthorInput(BaseModel):
+class CreateAuthorInput(BaseModel):  # type: ignore[misc]
     """Input model for creating an author."""
 
     name: str = Field(..., min_length=1, description="Author name")
 
 
-class UpdateAuthorInput(BaseModel):
+class UpdateAuthorInput(BaseModel):  # type: ignore[misc]
     """Input model for updating an author."""
 
     id: int = Field(..., description="Author ID to update")
@@ -120,7 +122,7 @@ class GetAuthorsCommand(BaseCommand[GetAuthorsInput, list[Author]]):
             return await self.repository.search_by_name(input_data.search_term)
 
         # Otherwise, use exact filters
-        filters = {}
+        filters: dict[str, Any] = {}
         if input_data.id is not None:
             filters["id"] = input_data.id
         if input_data.name is not None:

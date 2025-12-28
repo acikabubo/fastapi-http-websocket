@@ -3,7 +3,7 @@ from sqlmodel import Field
 from app.models.base import BaseModel
 
 
-class Author(BaseModel, table=True):
+class Author(BaseModel, table=True):  # type: ignore[call-arg]
     """
     SQLModel representing an author entity in the database.
 

@@ -11,7 +11,7 @@ from starlette.responses import Response
 from starlette.types import ASGIApp
 
 
-class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):  # type: ignore[misc]
     """
     Middleware that adds security headers to all HTTP responses.
 

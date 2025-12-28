@@ -17,7 +17,7 @@ from starlette.types import ASGIApp
 correlation_id: ContextVar[str] = ContextVar("correlation_id", default="")
 
 
-class CorrelationIDMiddleware(BaseHTTPMiddleware):
+class CorrelationIDMiddleware(BaseHTTPMiddleware):  # type: ignore[misc]
     """
     Middleware to add correlation IDs to requests for distributed tracing.
 

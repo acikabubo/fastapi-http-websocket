@@ -8,7 +8,7 @@ from sqlalchemy.dialects.postgresql import JSON
 from sqlmodel import Field, SQLModel
 
 
-class UserAction(SQLModel, table=True):
+class UserAction(SQLModel, table=True):  # type: ignore[misc,call-arg]
     """
     Audit log model for tracking user actions across the application.
 

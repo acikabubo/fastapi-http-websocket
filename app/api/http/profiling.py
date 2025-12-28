@@ -5,6 +5,7 @@ Provides endpoints to check profiling status and access profiling reports.
 """
 
 from pathlib import Path
+from typing import Any
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse, JSONResponse
@@ -15,7 +16,7 @@ router = APIRouter(prefix="/api/profiling", tags=["profiling"])
 
 
 @router.get("/status")
-async def get_status() -> dict:
+async def get_status() -> dict[str, Any]:
     """
     Get current profiling configuration and status.
 
@@ -42,7 +43,7 @@ async def get_status() -> dict:
 
 
 @router.get("/reports")
-async def list_reports() -> dict:
+async def list_reports() -> dict[str, Any]:
     """
     List all available profiling reports.
 
@@ -85,7 +86,7 @@ async def list_reports() -> dict:
         )
 
     # Sort by creation time, newest first
-    reports.sort(key=lambda x: x["created_at"], reverse=True)
+    reports.sort(key=lambda x: x["created_at"], reverse=True)  # type: ignore[arg-type,return-value]
 
     return {"reports": reports, "total_count": len(reports)}
 

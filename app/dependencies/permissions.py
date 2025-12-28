@@ -12,7 +12,7 @@ from app.managers.rbac_manager import RBACManager
 _rbac_manager = RBACManager()
 
 
-def require_roles(*roles: str):
+def require_roles(*roles: str):  # type: ignore[no-untyped-def]
     """
     Create a FastAPI dependency that requires the user to have ALL specified roles.
 

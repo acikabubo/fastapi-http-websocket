@@ -11,6 +11,8 @@ from starlette.websockets import WebSocket
 from app.connection_registry import ws_clients
 from app.logging import logger
 from app.managers.websocket_connection_manager import connection_manager
+from typing import Any
+
 from app.schemas.response import BroadcastDataModel, ResponseModel
 from app.schemas.user import UserModel
 from app.settings import app_settings
@@ -22,7 +24,7 @@ from app.utils.rate_limiter import connection_limiter
 class UUIDEncoder(json.JSONEncoder):
     """Custom JSON encoder that handles UUID objects."""
 
-    def default(self, obj):
+    def default(self, obj: Any) -> Any:
         """
         Convert UUID objects to strings for JSON serialization.
 
@@ -37,17 +39,17 @@ class UUIDEncoder(json.JSONEncoder):
         return super().default(obj)
 
 
-class PackagedWebSocket(WebSocket):
+class PackagedWebSocket(WebSocket):  # type: ignore[misc]
     """Extended WebSocket class for sending packaged responses."""
 
     async def send_response(
-        self, data: BroadcastDataModel | ResponseModel
+        self, data: BroadcastDataModel[Any] | ResponseModel[Any]
     ) -> None:
         """
         Sends a response over the WebSocket connection.
 
         Parameters:
-        - `data`: An instance of either `BroadcastDataModel` or `ResponseModel` containing the data to be sent.
+        - `data`: An instance of either `BroadcastDataModel[Any]` or `ResponseModel` containing the data to be sent.
 
         This method first serializes the data using the `UUIDEncoder` to handle `UUID` objects, then sends the serialized data over the WebSocket connection with a message type of "websocket.send".
         """
@@ -56,7 +58,7 @@ class PackagedWebSocket(WebSocket):
         await self.send({"type": "websocket.send", "text": text})
 
 
-class PackageAuthWebSocketEndpoint(WebSocketEndpoint):
+class PackageAuthWebSocketEndpoint(WebSocketEndpoint):  # type: ignore[misc]
     """
     WebSocket endpoint with authentication and package routing.
 
@@ -93,7 +95,7 @@ class PackageAuthWebSocketEndpoint(WebSocketEndpoint):
         websocket = self.websocket_class(
             self.scope, receive=self.receive, send=self.send
         )
-        await self.on_connect(websocket)
+        await self.on_connect(websocket)  # type: ignore[no-untyped-call]
 
         close_code = status.WS_1000_NORMAL_CLOSURE
 
@@ -112,11 +114,11 @@ class PackageAuthWebSocketEndpoint(WebSocketEndpoint):
             close_code = status.WS_1011_INTERNAL_ERROR
             raise exc
         finally:
-            await self.on_disconnect(websocket, close_code)
+            await self.on_disconnect(websocket, close_code)  # type: ignore[no-untyped-call]
 
     async def decode(
-        self, websocket: WebSocket, message: dict
-    ) -> dict | bytes:
+        self, websocket: WebSocket, message: dict[str, Any]
+    ) -> dict[str, Any] | bytes:
         """
         Decode incoming WebSocket message.
 
@@ -142,7 +144,7 @@ class PackageAuthWebSocketEndpoint(WebSocketEndpoint):
             # Fallback for other message types
             return message.get("text", message.get("bytes", b""))
 
-    async def on_connect(self, websocket):
+    async def on_connect(self, websocket):  # type: ignore[no-untyped-def]
         """
         Handles WebSocket client connection with authentication and rate limiting.
 
@@ -213,7 +215,7 @@ class PackageAuthWebSocketEndpoint(WebSocketEndpoint):
             return
 
         # Set user username in redis with TTL from expired seconds from keycloak
-        await self.r.add_kc_user_session(self.user)
+        await self.r.add_kc_user_session(self.user)  # type: ignore[union-attr]
 
         # Map username with websocket instance
         ws_clients[
@@ -227,7 +229,7 @@ class PackageAuthWebSocketEndpoint(WebSocketEndpoint):
             f"Client connected to websocket (connection_id: {self.connection_id})"
         )
 
-    async def on_disconnect(self, websocket, close_code):
+    async def on_disconnect(self, websocket, close_code):  # type: ignore[no-untyped-def]
         """
         Handles WebSocket client disconnection and cleanup.
 

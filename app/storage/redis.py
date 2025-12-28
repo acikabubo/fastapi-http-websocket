@@ -143,7 +143,7 @@ class RedisPool:
 
         # Return stats for all pools
         return {
-            db: {
+            db: {  # type: ignore[misc]
                 "max_connections": pool.max_connections,
                 "connection_kwargs": {
                     "socket_timeout": app_settings.REDIS_SOCKET_TIMEOUT,
@@ -200,9 +200,11 @@ class REventHandler:
         self.channel = channel
         self.redis = redis
         self.rch: Any = None
-        self.callbacks: list[tuple[Callable, dict[str, Any]]] = []
+        self.callbacks: list[tuple[Callable[..., Any], dict[str, Any]]] = []
 
-    def add_callback(self, callback: tuple[Callable, dict[str, Any]]) -> None:
+    def add_callback(
+        self, callback: tuple[Callable[..., Any], dict[str, Any]]
+    ) -> None:
         if callback not in self.callbacks:
             self.callbacks.append(callback)
 
@@ -251,7 +253,7 @@ class RedisHandler:
     tasks: list[asyncio.Task[None]] = []
 
     async def subscribe(
-        self, channel: str, callback: Callable, **kwargs: Any
+        self, channel: str, callback: Callable[..., Any], **kwargs: Any
     ) -> None:
         if not asyncio.iscoroutinefunction(callback):
             raise ValueError("Callback argument must be a coroutine")

@@ -13,7 +13,7 @@ from app.logging import logger
 from app.settings import app_settings
 
 
-class RequestSizeLimitMiddleware(BaseHTTPMiddleware):
+class RequestSizeLimitMiddleware(BaseHTTPMiddleware):  # type: ignore[misc]
     """
     Middleware that enforces maximum request body size.
 

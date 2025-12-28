@@ -37,8 +37,8 @@ async_session = sessionmaker(
 
 
 async def wait_and_init_db(
-    retry_interval: int = None,
-    max_retries: int = None,
+    retry_interval: int | None = None,
+    max_retries: int | None = None,
 ) -> None:
     """
     Wait until the database is available.
@@ -128,13 +128,13 @@ async def get_paginated_results(
         per_page = app_settings.DEFAULT_PAGE_SIZE
     per_page = min(per_page, MAX_PAGE_SIZE)
 
-    query = select(model)
+    query: Select = select(model)
 
     if filters:
         if apply_filters:
-            query: Select = apply_filters(query, model, filters)
+            query = apply_filters(query, model, filters)
         else:
-            query: Select = default_apply_filters(query, model, filters)
+            query = default_apply_filters(query, model, filters)
 
     async with async_session() as s:
         # Calculate total

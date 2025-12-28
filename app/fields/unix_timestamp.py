@@ -19,7 +19,7 @@ from sqlalchemy import BigInteger, TypeDecorator
 from sqlmodel import Field
 
 
-class UnixTimestampType(TypeDecorator):
+class UnixTimestampType(TypeDecorator):  # type: ignore[misc]
     """
     SQLAlchemy type decorator for Unix timestamps.
 
@@ -140,7 +140,7 @@ def UnixTimestampField(
     # Only add default or default_factory, not both
     if default_factory is not None:
         field_kwargs["default_factory"] = default_factory
-    elif default is not ...:
+    elif default is not ...:  # type: ignore[comparison-overlap]
         field_kwargs["default"] = default
 
     return Field(**field_kwargs)

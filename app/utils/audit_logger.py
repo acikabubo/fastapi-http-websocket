@@ -64,7 +64,7 @@ def get_audit_queue() -> asyncio.Queue[UserAction]:
     return _audit_queue
 
 
-async def audit_log_worker():
+async def audit_log_worker() -> None:
     """
     Background worker that processes audit logs from queue in batches.
 
@@ -195,10 +195,10 @@ def sanitize_data(data: dict[str, Any] | None) -> dict[str, Any] | None:
             sanitized[key] = "[REDACTED]"
         elif isinstance(value, dict):
             # Recursively sanitize nested dictionaries
-            sanitized[key] = sanitize_data(value)
+            sanitized[key] = sanitize_data(value)  # type: ignore[assignment]
         elif isinstance(value, list):
             # Sanitize list items if they are dictionaries
-            sanitized[key] = [
+            sanitized[key] = [  # type: ignore[assignment]
                 sanitize_data(item) if isinstance(item, dict) else item
                 for item in value
             ]

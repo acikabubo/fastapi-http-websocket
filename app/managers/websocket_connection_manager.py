@@ -1,4 +1,5 @@
 import asyncio
+from typing import Any
 
 from fastapi import WebSocket
 
@@ -14,7 +15,7 @@ class ConnectionManager:
     for sending messages to all active connections.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """
         Initializes a new instance of the `ConnectionManager` class.
 
@@ -22,7 +23,7 @@ class ConnectionManager:
         """
         self.active_connections: list[WebSocket] = []
 
-    def connect(self, websocket: WebSocket):
+    def connect(self, websocket: WebSocket) -> None:
         """
         Accepts a new WebSocket connection and adds it to the list of active connections managed by this `ConnectionManager` instance.
 
@@ -34,7 +35,7 @@ class ConnectionManager:
             f"websocket object ({id(websocket)}) added to active connections"
         )
 
-    def disconnect(self, websocket: WebSocket):
+    def disconnect(self, websocket: WebSocket) -> None:
         """
         Removes the specified WebSocket connection from the list of active connections managed by this `ConnectionManager` instance.
 
@@ -50,7 +51,7 @@ class ConnectionManager:
             f"websocket objects ({id(websocket)}) removed from active connections"
         )
 
-    async def broadcast(self, message: BroadcastDataModel):
+    async def broadcast(self, message: BroadcastDataModel[Any]) -> None:
         """
         Broadcasts message to all active connections concurrently.
 
@@ -58,7 +59,7 @@ class ConnectionManager:
         improving performance when broadcasting to many connections.
 
         Args:
-            message (BroadcastDataModel): The message to be broadcast to all
+            message (BroadcastDataModel[Any]): The message to be broadcast to all
                 active connections.
         """
         if not self.active_connections:
@@ -67,7 +68,7 @@ class ConnectionManager:
         # Create a snapshot of connections to avoid modification during iteration
         connections_snapshot = list(self.active_connections)
 
-        async def safe_send(connection: WebSocket):
+        async def safe_send(connection: WebSocket) -> None:
             """
             Safely sends a message to a single connection with error handling.
 

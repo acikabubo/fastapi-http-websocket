@@ -7,7 +7,7 @@ connections using Redis as the backend storage.
 
 import time
 
-from redis.asyncio import RedisError as AsyncRedisError
+from redis.asyncio import Redis, RedisError as AsyncRedisError
 from redis.exceptions import RedisError as SyncRedisError
 
 from app.logging import logger
@@ -23,12 +23,12 @@ class RateLimiter:
     configurable rate limits.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the rate limiter with Redis connection."""
-        self.redis = None
+        self.redis: Redis | None = None
         self.enabled = app_settings.RATE_LIMIT_ENABLED
 
-    async def _get_redis(self):
+    async def _get_redis(self) -> Redis | None:
         """Get or create Redis connection."""
         if self.redis is None:
             self.redis = await get_redis_connection()
@@ -61,6 +61,10 @@ class RateLimiter:
 
         try:
             redis = await self._get_redis()
+            if redis is None:
+                logger.error("Redis connection not available")
+                return True, limit  # Fail open
+
             redis_key = f"rate_limit:{key}"
             current_time = time.time()
             window_start = current_time - window_seconds
@@ -111,6 +115,10 @@ class RateLimiter:
         """
         try:
             redis = await self._get_redis()
+            if redis is None:
+                logger.error("Redis connection not available")
+                return
+
             redis_key = f"rate_limit:{key}"
             await redis.delete(redis_key)
         except (AsyncRedisError, SyncRedisError) as ex:
@@ -126,12 +134,12 @@ class ConnectionLimiter:
     Tracks active connections per user and enforces maximum connection limits.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the connection limiter with Redis connection."""
-        self.redis = None
+        self.redis: Redis | None = None
         self.max_connections = app_settings.WS_MAX_CONNECTIONS_PER_USER
 
-    async def _get_redis(self):
+    async def _get_redis(self) -> Redis | None:
         """Get or create Redis connection."""
         if self.redis is None:
             self.redis = await get_redis_connection()
@@ -150,6 +158,10 @@ class ConnectionLimiter:
         """
         try:
             redis = await self._get_redis()
+            if redis is None:
+                logger.error("Redis connection not available")
+                return False
+
             redis_key = f"ws_connections:{user_id}"
 
             # Get current connection count
@@ -197,6 +209,10 @@ class ConnectionLimiter:
         """
         try:
             redis = await self._get_redis()
+            if redis is None:
+                logger.error("Redis connection not available")
+                return
+
             redis_key = f"ws_connections:{user_id}"
             await redis.srem(redis_key, connection_id)
             logger.info(
@@ -219,6 +235,10 @@ class ConnectionLimiter:
         """
         try:
             redis = await self._get_redis()
+            if redis is None:
+                logger.error("Redis connection not available")
+                return 0
+
             redis_key = f"ws_connections:{user_id}"
             return await redis.scard(redis_key)
         except (AsyncRedisError, SyncRedisError) as ex:

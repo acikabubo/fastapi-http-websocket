@@ -9,7 +9,7 @@ import sys
 from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
-from typing import AsyncGenerator
+from typing import Any, AsyncGenerator
 
 from app.logging import logger
 from app.settings import app_settings
@@ -122,7 +122,7 @@ async def profile_context(
         logger.debug(f"Profiling finished: {name} took {duration:.4f}s")
 
 
-def get_profiling_status() -> dict:
+def get_profiling_status() -> dict[str, Any]:
     """
     Get current profiling configuration and status.
 

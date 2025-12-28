@@ -6,7 +6,7 @@ from pydantic import SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-class Settings(BaseSettings):
+class Settings(BaseSettings):  # type: ignore[misc]
     model_config = SettingsConfigDict(case_sensitive=True)
 
     # Keycloak settings
@@ -53,7 +53,7 @@ class Settings(BaseSettings):
             f"@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
         )
 
-    EXCLUDED_PATHS: re.Pattern = re.compile(
+    EXCLUDED_PATHS: re.Pattern[str] = re.compile(
         r"^(/docs|/openapi.json|/health|/metrics)$"
     )
 

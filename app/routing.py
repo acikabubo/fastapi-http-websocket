@@ -1,5 +1,6 @@
 import os
 import pkgutil
+from collections.abc import Callable
 from importlib import import_module
 from typing import Any
 
@@ -26,7 +27,7 @@ class PackageRouter:
     including validation and permission checking for each request.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """
         Initializes the `PackageRouter` class with empty dictionaries to store registered handlers and validators for different package IDs (PkgID).
 
@@ -47,7 +48,7 @@ class PackageRouter:
         json_schema: JsonSchemaType | None = None,
         validator_callback: ValidatorType | None = None,
         roles: list[str] | None = None,
-    ):
+    ) -> Callable[[HandlerCallableType], HandlerCallableType]:
         """
         Decorator function to register a handler and validator for a specific package ID (PkgID).
 
@@ -63,7 +64,7 @@ class PackageRouter:
             A decorator function that can be used to register a handler function.
         """
 
-        def decorator(func: HandlerCallableType):
+        def decorator(func: HandlerCallableType) -> HandlerCallableType:
             for pkg_id in pkg_ids:
                 # Check if handler is already registered (idempotent for reload)
                 if pkg_id in self.handlers_registry:
@@ -75,10 +76,13 @@ class PackageRouter:
                     continue
 
                 self.handlers_registry[pkg_id] = func
-                self.validators_registry[pkg_id] = (
-                    json_schema,
-                    validator_callback,
-                )
+
+                # Only store validators if both schema and callback are provided
+                if json_schema is not None and validator_callback is not None:
+                    self.validators_registry[pkg_id] = (
+                        json_schema,
+                        validator_callback,
+                    )
 
                 # Store permissions if roles are specified
                 if roles:
@@ -109,7 +113,7 @@ class PackageRouter:
         """Check if a handler is registered for the given package ID."""
         return pkg_id in self.handlers_registry
 
-    def get_permissions(self, pkg_id: int) -> list[str]:
+    def get_permissions(self, pkg_id: PkgID | int) -> list[str]:
         """
         Get required roles for a package ID.
 
@@ -119,7 +123,7 @@ class PackageRouter:
         Returns:
             List of role names required for access. Empty list means public access.
         """
-        return self.permissions_registry.get(pkg_id, [])
+        return self.permissions_registry.get(PkgID(pkg_id), [])
 
     def _check_permission(self, pkg_id: int, user: UserModel) -> bool:
         """Check if user has permission for the package ID."""
@@ -139,11 +143,16 @@ class PackageRouter:
         if validator_func is None or json_schema is None:
             return None
 
-        # Convert Pydantic model to JSON schema if needed
+        # Convert Pydantic model class to JSON schema if needed
+        schema_dict: dict[str, Any]
         if hasattr(json_schema, "model_json_schema"):
-            json_schema = json_schema.model_json_schema()
+            # It's a Pydantic model class (classmethod call)
+            schema_dict = json_schema.model_json_schema()  # type: ignore[call-arg]
+        else:
+            # It's already a dict
+            schema_dict = json_schema
 
-        return validator_func(request, json_schema)
+        return validator_func(request, schema_dict)
 
     async def handle_request(
         self, user: UserModel, request: RequestModel

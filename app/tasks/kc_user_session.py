@@ -10,7 +10,7 @@ from app.settings import app_settings
 from app.storage.redis import get_auth_redis_connection
 
 
-async def kc_user_session_task():
+async def kc_user_session_task() -> None:
     """
     Runs a task that monitors the expiration of user sessions stored in Redis.
 
@@ -28,7 +28,7 @@ async def kc_user_session_task():
     while True:
         try:
             if not rch:
-                rch = r.pubsub()
+                rch = r.pubsub()  # type: ignore[union-attr]
                 await rch.psubscribe("__keyevent@*__:expired")
 
             event = await rch.get_message(

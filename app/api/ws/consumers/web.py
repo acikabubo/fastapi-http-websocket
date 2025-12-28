@@ -24,7 +24,7 @@ from app.utils.protobuf_converter import (
 )
 from app.utils.rate_limiter import rate_limiter
 
-load_handlers()
+load_handlers()  # type: ignore[no-untyped-call]
 
 router = APIRouter()
 
@@ -39,7 +39,9 @@ class Web(PackageAuthWebSocketEndpoint):
     - `on_receive`: Called when data is received on the WebSocket connection. Logs the received data, creates a `RequestModel` instance from the data, handles the request using the `pkg_router`, and sends the response back to the client.
     """
 
-    async def on_receive(self, websocket, data: dict[str, Any] | bytes):
+    async def on_receive(  # type: ignore[no-untyped-def]
+        self, websocket, data: dict[str, Any] | bytes
+    ) -> None:
         """
         Handles incoming WebSocket messages by processing the request and sending back a response.
 
@@ -144,8 +146,9 @@ class Web(PackageAuthWebSocketEndpoint):
             )
 
         except ValidationError as e:
+            data_str = data.decode() if isinstance(data, bytes) else str(data)
             logger.debug(
-                f"Received invalid data: {data} from user {self.user.username}"
+                f"Received invalid data: {data_str} from user {self.user.username}"
             )
 
             # Log validation error

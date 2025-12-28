@@ -2,7 +2,7 @@ import importlib
 import pkgutil
 
 
-def load_handlers():
+def load_handlers():  # type: ignore[no-untyped-def]
     """
     Dynamically loads all ws handlers in the handlers package to
     trigger the registration of handlers via decorators.

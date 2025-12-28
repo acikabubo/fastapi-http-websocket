@@ -1,5 +1,6 @@
 # Uvicorn application factory <https://www.uvicorn.org/#application-factories>
 from asyncio import create_task, gather
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -22,7 +23,7 @@ from app.tasks.kc_user_session import kc_user_session_task
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """
     FastAPI lifespan context manager for startup and shutdown.
 

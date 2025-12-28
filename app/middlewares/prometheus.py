@@ -18,7 +18,7 @@ from app.utils.metrics import (
 )
 
 
-class PrometheusMiddleware(BaseHTTPMiddleware):
+class PrometheusMiddleware(BaseHTTPMiddleware):  # type: ignore[misc]
     """
     Middleware to track Prometheus metrics for HTTP requests.
 

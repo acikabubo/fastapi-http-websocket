@@ -43,7 +43,7 @@ from pydantic import BaseModel, Field
 from app.api.ws.constants import PkgID, RSPCode
 
 
-class ErrorEnvelope(BaseModel):
+class ErrorEnvelope(BaseModel):  # type: ignore[misc]
     """
     Unified error envelope structure used across protocols.
 
@@ -76,7 +76,7 @@ class ErrorEnvelope(BaseModel):
     )
 
 
-class HTTPErrorResponse(BaseModel):
+class HTTPErrorResponse(BaseModel):  # type: ignore[misc]
     """
     HTTP error response envelope.
 
@@ -105,7 +105,7 @@ class HTTPErrorResponse(BaseModel):
     error: ErrorEnvelope = Field(..., description="Error details envelope")
 
 
-class WebSocketErrorResponse(BaseModel):
+class WebSocketErrorResponse(BaseModel):  # type: ignore[misc]
     """
     WebSocket error response with embedded error envelope.
 

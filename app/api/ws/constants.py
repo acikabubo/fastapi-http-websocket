@@ -25,11 +25,11 @@ class RSPCode(IntEnum):
     INVALID_DATA = 2
     PERMISSION_DENIED = 3
 
-    def __str__(self):
+    def __str__(self) -> str:
         """
         Returns a string representation of the enum member in the format example "RSPCode.OK<0>".
         """
-        return f"{__class__.__name__}.{self.name}<{self.value}>"
+        return f"{self.__class__.__name__}.{self.name}<{self.value}>"
 
 
 class PkgID(IntEnum):

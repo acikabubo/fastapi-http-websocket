@@ -11,7 +11,7 @@ class KeycloakManager(metaclass=SingletonMeta):
     Provides OpenID Connect authentication and token management for the application.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """
         Initialize KeycloakManager instance.
 
@@ -24,7 +24,7 @@ class KeycloakManager(metaclass=SingletonMeta):
             realm_name=app_settings.KEYCLOAK_REALM,
         )
 
-    def login(self, username: str, password: str):
+    def login(self, username: str, password: str) -> None:
         """
         Authenticate a user and obtain a token for subsequent API calls.
 

@@ -7,7 +7,7 @@ from typing_extensions import Annotated
 from app.api.ws.constants import PkgID
 
 
-class RequestModel(BaseModel):
+class RequestModel(BaseModel):  # type: ignore[misc]
     """
     Base model for WebSocket requests.
 
@@ -24,7 +24,7 @@ class RequestModel(BaseModel):
     data: dict[str, Any] | None = {}
 
 
-class PaginatedRequestModel(BaseModel):
+class PaginatedRequestModel(BaseModel):  # type: ignore[misc]
     """
     Model for paginated request parameters.
 
