@@ -1,0 +1,246 @@
+groups:
+  - name: application_alerts
+    interval: 30s
+    rules:
+      # High error rate alert
+      - alert: HighErrorRate
+        expr: |
+          (
+            rate(http_requests_total{status_code=~"5.."}[5m])
+            /
+            rate(http_requests_total[5m])
+          ) > 0.05
+        for: 2m
+        labels:
+          severity: warning
+          component: application
+        annotations:
+          summary: "High HTTP 5xx error rate detected"
+          description: "Error rate is {{ $value | humanizePercentage }} (threshold: 5%)"
+
+      # Very high error rate alert
+      - alert: CriticalErrorRate
+        expr: |
+          (
+            rate(http_requests_total{status_code=~"5.."}[5m])
+            /
+            rate(http_requests_total[5m])
+          ) > 0.20
+        for: 1m
+        labels:
+          severity: critical
+          component: application
+        annotations:
+          summary: "Critical HTTP 5xx error rate detected"
+          description: "Error rate is {{ $value | humanizePercentage }} (threshold: 20%)"
+
+      # High 4xx error rate
+      - alert: HighClientErrorRate
+        expr: |
+          (
+            rate(http_requests_total{status_code=~"4.."}[5m])
+            /
+            rate(http_requests_total[5m])
+          ) > 0.30
+        for: 5m
+        labels:
+          severity: info
+          component: application
+        annotations:
+          summary: "High HTTP 4xx client error rate"
+          description: "Client error rate is {{ $value | humanizePercentage }} (threshold: 30%)"
+
+      # Slow response time
+      - alert: SlowResponseTime
+        expr: |
+          histogram_quantile(0.95,
+            rate(http_request_duration_seconds_bucket[5m])
+          ) > 1.0
+        for: 5m
+        labels:
+          severity: warning
+          component: application
+        annotations:
+          summary: "Slow HTTP response time (p95)"
+          description: "95th percentile response time is {{ $value }}s (threshold: 1s)"
+
+  - name: database_alerts
+    interval: 30s
+    rules:
+      # Database down
+      - alert: DatabaseDown
+        expr: up{job="postgres"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: database
+        annotations:
+          summary: "PostgreSQL database is down"
+          description: "PostgreSQL instance {{ $labels.instance }} has been down for more than 1 minute"
+
+      # Slow database queries
+      - alert: SlowDatabaseQueries
+        expr: |
+          histogram_quantile(0.95,
+            rate(db_query_duration_seconds_bucket[5m])
+          ) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+          component: database
+        annotations:
+          summary: "Slow database queries detected"
+          description: "95th percentile query duration is {{ $value }}s (threshold: 0.5s)"
+
+  - name: redis_alerts
+    interval: 30s
+    rules:
+      # Redis down
+      - alert: RedisDown
+        expr: up{job="redis"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: cache
+        annotations:
+          summary: "Redis cache is down"
+          description: "Redis instance {{ $labels.instance }} has been down for more than 1 minute"
+
+  - name: websocket_alerts
+    interval: 30s
+    rules:
+      # High WebSocket connection rejections
+      - alert: HighWebSocketRejections
+        expr: |
+          (
+            rate(ws_connections_total{status="rejected_auth"}[5m])
+            +
+            rate(ws_connections_total{status="rejected_limit"}[5m])
+          ) > 5
+        for: 3m
+        labels:
+          severity: warning
+          component: websocket
+        annotations:
+          summary: "High WebSocket connection rejection rate"
+          description: "WebSocket rejections: {{ $value }} per second (threshold: 5/s)"
+
+      # Too many active WebSocket connections
+      - alert: HighWebSocketConnections
+        expr: ws_connections_active > 1000
+        for: 5m
+        labels:
+          severity: warning
+          component: websocket
+        annotations:
+          summary: "High number of active WebSocket connections"
+          description: "Active WebSocket connections: {{ $value }} (threshold: 1000)"
+
+  - name: audit_alerts
+    interval: 30s
+    rules:
+      # Audit logs being dropped
+      - alert: AuditLogDropping
+        expr: rate(audit_logs_dropped_total[5m]) > 1
+        for: 2m
+        labels:
+          severity: critical
+          component: audit
+        annotations:
+          summary: "Audit logs are being dropped"
+          description: "Audit logs drop rate: {{ $value }}/s (threshold: 1/s). Queue may be full."
+
+      # High audit log drop rate
+      - alert: HighAuditLogDropRate
+        expr: |
+          (
+            rate(audit_logs_dropped_total[5m])
+            /
+            rate(audit_logs_total[5m])
+          ) > 0.01
+        for: 2m
+        labels:
+          severity: warning
+          component: audit
+        annotations:
+          summary: "High audit log drop rate"
+          description: "Drop rate: {{ $value | humanizePercentage }} (threshold: 1%)"
+
+  - name: rate_limit_alerts
+    interval: 30s
+    rules:
+      # High rate limit hits
+      - alert: HighRateLimitHits
+        expr: rate(rate_limit_hits_total[5m]) > 10
+        for: 5m
+        labels:
+          severity: info
+          component: rate_limiting
+        annotations:
+          summary: "High rate limit hit rate"
+          description: "Rate limit hits: {{ $value }}/s (threshold: 10/s)"
+
+  - name: authentication_alerts
+    interval: 30s
+    rules:
+      # High authentication failure rate
+      - alert: HighAuthFailureRate
+        expr: |
+          (
+            rate(auth_attempts_total{status="failed"}[5m])
+            /
+            rate(auth_attempts_total[5m])
+          ) > 0.20
+        for: 3m
+        labels:
+          severity: warning
+          component: authentication
+        annotations:
+          summary: "High authentication failure rate"
+          description: "Auth failure rate: {{ $value | humanizePercentage }} (threshold: 20%)"
+
+      # Critical authentication failure rate (possible attack)
+      - alert: CriticalAuthFailureRate
+        expr: |
+          (
+            rate(auth_attempts_total{status="failed"}[5m])
+            /
+            rate(auth_attempts_total[5m])
+          ) > 0.50
+        for: 1m
+        labels:
+          severity: critical
+          component: authentication
+        annotations:
+          summary: "Critical authentication failure rate - possible attack"
+          description: "Auth failure rate: {{ $value | humanizePercentage }} (threshold: 50%)"
+
+  - name: keycloak_alerts
+    interval: 30s
+    rules:
+      # Keycloak down
+      - alert: KeycloakDown
+        expr: up{job="keycloak"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: keycloak
+        annotations:
+          summary: "Keycloak is down"
+          description: "Keycloak instance {{ $labels.instance }} has been down for more than 1 minute"
+
+      # High Keycloak JVM memory usage
+      - alert: HighKeycloakMemoryUsage
+        expr: |
+          (
+            jvm_memory_used_bytes{area="heap", job="keycloak"}
+            /
+            jvm_memory_max_bytes{area="heap", job="keycloak"}
+          ) > 0.85
+        for: 5m
+        labels:
+          severity: warning
+          component: keycloak
+        annotations:
+          summary: "High Keycloak JVM heap memory usage"
+          description: "Heap usage: {{ $value | humanizePercentage }} (threshold: 85%)"

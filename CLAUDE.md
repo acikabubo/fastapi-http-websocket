@@ -1745,6 +1745,182 @@ vendor_statistics_entries - Number of entries in cache
 - Monitor failed login attempts for suspicious activity
 - Set up alerts for high failure rates or unusual session patterns
 
+### Prometheus Alerting
+
+**Overview:**
+The application includes comprehensive Prometheus alerting rules for proactive monitoring and incident detection. Alerts are defined in `docker/prometheus/alerts.yml` and automatically loaded by Prometheus.
+
+**Alert Configuration:**
+- Alert rules file: `docker/prometheus/alerts.yml`
+- Evaluation interval: 30 seconds
+- Configured in `docker/prometheus/prometheus.yml` via `rule_files: ['alerts.yml']`
+- Access Prometheus alerts UI: http://localhost:9090/alerts
+
+**Alert Categories:**
+
+1. **Application Alerts** (`application_alerts` group):
+   - `HighErrorRate`: HTTP 5xx error rate > 5% for 2 minutes (warning)
+   - `CriticalErrorRate`: HTTP 5xx error rate > 20% for 1 minute (critical)
+   - `HighClientErrorRate`: HTTP 4xx error rate > 30% for 5 minutes (info)
+   - `SlowResponseTime`: 95th percentile response time > 1s for 5 minutes (warning)
+
+2. **Database Alerts** (`database_alerts` group):
+   - `DatabaseDown`: PostgreSQL unavailable for > 1 minute (critical)
+   - `SlowDatabaseQueries`: 95th percentile query duration > 0.5s for 5 minutes (warning)
+
+3. **Redis Alerts** (`redis_alerts` group):
+   - `RedisDown`: Redis cache unavailable for > 1 minute (critical)
+
+4. **WebSocket Alerts** (`websocket_alerts` group):
+   - `HighWebSocketRejections`: Rejection rate > 5/s for 3 minutes (warning)
+   - `HighWebSocketConnections`: Active connections > 1000 for 5 minutes (warning)
+
+5. **Audit Alerts** (`audit_alerts` group):
+   - `AuditLogDropping`: Audit logs drop rate > 1/s for 2 minutes (critical)
+   - `HighAuditLogDropRate`: Drop rate > 1% for 2 minutes (warning)
+
+6. **Rate Limit Alerts** (`rate_limit_alerts` group):
+   - `HighRateLimitHits`: Rate limit hit rate > 10/s for 5 minutes (info)
+
+7. **Authentication Alerts** (`authentication_alerts` group):
+   - `HighAuthFailureRate`: Auth failure rate > 20% for 3 minutes (warning)
+   - `CriticalAuthFailureRate`: Auth failure rate > 50% for 1 minute (critical - possible attack)
+
+8. **Keycloak Alerts** (`keycloak_alerts` group):
+   - `KeycloakDown`: Keycloak unavailable for > 1 minute (critical)
+   - `HighKeycloakMemoryUsage`: JVM heap usage > 85% for 5 minutes (warning)
+
+**Alert Severity Levels:**
+- `critical`: Immediate action required (service down, data loss, security incident)
+- `warning`: Requires attention (degraded performance, approaching limits)
+- `info`: Informational (unusual but not critical activity)
+
+**Alert Annotations:**
+Each alert includes:
+- `summary`: Brief description of the alert condition
+- `description`: Detailed information with metric values and thresholds
+
+**Example Alert Rule:**
+```yaml
+- alert: HighErrorRate
+  expr: |
+    (
+      rate(http_requests_total{status_code=~"5.."}[5m])
+      /
+      rate(http_requests_total[5m])
+    ) > 0.05
+  for: 2m
+  labels:
+    severity: warning
+    component: application
+  annotations:
+    summary: "High HTTP 5xx error rate detected"
+    description: "Error rate is {{ $value | humanizePercentage }} (threshold: 5%)"
+```
+
+**Configuring Alert Notifications:**
+
+To receive alert notifications, configure Alertmanager:
+
+1. **Add Alertmanager to docker-compose.yml:**
+```yaml
+alertmanager:
+  image: prom/alertmanager:latest
+  ports:
+    - "9093:9093"
+  volumes:
+    - ./docker/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml
+  command:
+    - '--config.file=/etc/alertmanager/alertmanager.yml'
+```
+
+2. **Create `docker/alertmanager/alertmanager.yml`:**
+```yaml
+global:
+  resolve_timeout: 5m
+
+route:
+  group_by: ['alertname', 'severity']
+  group_wait: 10s
+  group_interval: 10s
+  repeat_interval: 12h
+  receiver: 'team-notifications'
+
+receivers:
+  - name: 'team-notifications'
+    email_configs:
+      - to: 'team@example.com'
+        from: 'alerts@example.com'
+        smarthost: 'smtp.gmail.com:587'
+        auth_username: 'alerts@example.com'
+        auth_password: 'app_password'
+    slack_configs:
+      - api_url: 'https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK'
+        channel: '#alerts'
+        title: '{{ .GroupLabels.alertname }}'
+        text: '{{ range .Alerts }}{{ .Annotations.description }}{{ end }}'
+```
+
+3. **Update Prometheus configuration:**
+```yaml
+# docker/prometheus/prometheus.yml
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ['alertmanager:9093']
+```
+
+**Viewing Alerts:**
+- Prometheus alerts UI: http://localhost:9090/alerts
+- Alertmanager UI: http://localhost:9093 (after configuration)
+- Grafana dashboards: Alerts are visualized in panels
+
+**Testing Alerts:**
+
+```bash
+# Trigger HighErrorRate alert (generate 500 errors)
+for i in {1..100}; do curl http://localhost:8000/non-existent-endpoint; done
+
+# Trigger SlowResponseTime alert (if you have slow endpoints)
+ab -n 1000 -c 10 http://localhost:8000/slow-endpoint
+
+# Trigger AuditLogDropping alert (requires heavy load on audit logging)
+# Simulate high traffic that fills the audit queue
+```
+
+**Best Practices:**
+1. **Tune thresholds**: Adjust alert thresholds based on your traffic patterns
+2. **Reduce alert fatigue**: Set appropriate `for` durations to avoid flapping alerts
+3. **Group alerts**: Use Alertmanager grouping to avoid notification storms
+4. **Test regularly**: Verify alerts trigger correctly during deployments
+5. **Document runbooks**: Create response procedures for each alert type
+6. **Review alert history**: Use Grafana to analyze alert trends over time
+
+**Audit Queue Overflow Monitoring:**
+
+The application includes comprehensive monitoring for audit log queue overflow:
+
+- **Metric**: `audit_logs_dropped_total` - Counter incremented when queue is full
+- **Metric**: `audit_queue_size` - Current number of logs in queue
+- **Alert**: `AuditLogDropping` - Triggers when logs are being dropped (rate > 1/s)
+- **Alert**: `HighAuditLogDropRate` - Triggers when drop rate > 1% of total logs
+- **Dashboard**: Grafana panel in `fastapi-metrics` dashboard shows dropped log trends
+- **Queue size**: Configured via `AUDIT_QUEUE_MAX_SIZE` (default: 10,000)
+
+**What happens when queue is full:**
+1. New audit logs are rejected with `asyncio.QueueFull` exception
+2. `audit_logs_dropped_total` counter is incremented
+3. Warning is logged: `"Audit queue full, dropping log entry for {username}"`
+4. Alert triggers if drop rate exceeds threshold
+5. No impact on request processing (audit logging is non-blocking)
+
+**Mitigation strategies:**
+- Increase `AUDIT_QUEUE_MAX_SIZE` in settings
+- Increase `AUDIT_BATCH_SIZE` for faster queue processing
+- Optimize database write performance
+- Add more database connections
+- Scale horizontally (add more application instances)
+
 ### Centralized Logging with Loki
 
 **Overview:**
