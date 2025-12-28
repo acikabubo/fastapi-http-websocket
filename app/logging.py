@@ -117,7 +117,7 @@ class StructuredJSONFormatter(logging.Formatter):
             log_data.update(context)
 
         # Add environment
-        log_data["environment"] = app_settings.ENVIRONMENT
+        log_data["environment"] = app_settings.ENV.value
 
         # Add exception information if present
         if record.exc_info:

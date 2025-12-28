@@ -1,13 +1,31 @@
 import os
 import re
-from typing import Literal
+from enum import Enum
+from typing import Any, Literal
 
 from pydantic import SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
+class Environment(str, Enum):
+    """
+    Application environment types.
+
+    Determines configuration defaults and behavior for different deployment
+    environments. Each environment has specific defaults for security,
+    performance, and debugging settings.
+    """
+
+    DEV = "dev"
+    STAGING = "staging"
+    PRODUCTION = "production"
+
+
 class Settings(BaseSettings):  # type: ignore[misc]
     model_config = SettingsConfigDict(case_sensitive=True)
+
+    # Environment configuration
+    ENV: Environment = Environment.DEV
 
     # Keycloak settings
     KEYCLOAK_REALM: str
@@ -78,9 +96,11 @@ class Settings(BaseSettings):  # type: ignore[misc]
 
     @field_validator("DEBUG_AUTH")
     @classmethod
-    def validate_debug_auth(cls, v: bool) -> bool:
+    def validate_debug_auth(cls, v: bool, info) -> bool:  # type: ignore[no-untyped-def]
         """Prevent DEBUG_AUTH from being enabled in production."""
-        if v and os.getenv("ENVIRONMENT") == "production":
+        # Get ENV from validation context
+        env = info.data.get("ENV", Environment.DEV)
+        if v and env == Environment.PRODUCTION:
             raise ValueError(
                 "DEBUG_AUTH cannot be enabled in production environment"
             )
@@ -117,9 +137,6 @@ class Settings(BaseSettings):  # type: ignore[misc]
     # Alloy replaced deprecated Promtail (Feb 2025)
     # No direct LokiHandler needed - simplified architecture
 
-    # Environment tag for log filtering
-    ENVIRONMENT: str = "development"
-
     # Audit logging settings
     AUDIT_LOG_ENABLED: bool = True
     AUDIT_LOG_RETENTION_DAYS: int = 365
@@ -131,6 +148,100 @@ class Settings(BaseSettings):  # type: ignore[misc]
     PROFILING_ENABLED: bool = True
     PROFILING_OUTPUT_DIR: str = "profiling_reports"
     PROFILING_INTERVAL_SECONDS: int = 30  # Profiling snapshot interval
+
+    def __init__(self, **kwargs: Any) -> None:
+        """
+        Initialize settings with environment-specific defaults.
+
+        Environment-specific defaults are applied based on the ENV setting:
+        - DEV: Permissive settings for local development
+        - STAGING: Production-like settings with some debugging enabled
+        - PRODUCTION: Strict security and performance settings
+
+        Args:
+            **kwargs: Keyword arguments passed to BaseSettings.
+        """
+        super().__init__(**kwargs)
+        self._apply_environment_defaults()
+
+    def _apply_environment_defaults(self) -> None:
+        """Apply environment-specific configuration defaults."""
+        if self.ENV == Environment.PRODUCTION:
+            # Production environment: strict security and performance
+            # Override only if not explicitly set via environment variables
+
+            # Security: Disable debug auth in production
+            if os.getenv("DEBUG_AUTH") is None:
+                self.DEBUG_AUTH = False
+
+            # Rate limiting: Fail closed in production (deny when Redis down)
+            if os.getenv("RATE_LIMIT_FAIL_MODE") is None:
+                self.RATE_LIMIT_FAIL_MODE = "closed"
+
+            # Logging: JSON format for log aggregation
+            if os.getenv("LOG_CONSOLE_FORMAT") is None:
+                self.LOG_CONSOLE_FORMAT = "json"
+
+            # Logging: Reduce log level for production
+            if os.getenv("LOG_LEVEL") is None:
+                self.LOG_LEVEL = "WARNING"
+
+            # Profiling: Disable in production by default
+            if os.getenv("PROFILING_ENABLED") is None:
+                self.PROFILING_ENABLED = False
+
+        elif self.ENV == Environment.STAGING:
+            # Staging environment: production-like with some debugging
+
+            # Rate limiting: Fail open (allow when Redis down)
+            if os.getenv("RATE_LIMIT_FAIL_MODE") is None:
+                self.RATE_LIMIT_FAIL_MODE = "open"
+
+            # Logging: JSON format for log aggregation
+            if os.getenv("LOG_CONSOLE_FORMAT") is None:
+                self.LOG_CONSOLE_FORMAT = "json"
+
+            # Logging: INFO level for staging
+            if os.getenv("LOG_LEVEL") is None:
+                self.LOG_LEVEL = "INFO"
+
+            # Profiling: Enable for performance testing
+            if os.getenv("PROFILING_ENABLED") is None:
+                self.PROFILING_ENABLED = True
+
+        else:  # Environment.DEV
+            # Development environment: permissive settings for debugging
+
+            # Rate limiting: Fail open (allow when Redis down)
+            if os.getenv("RATE_LIMIT_FAIL_MODE") is None:
+                self.RATE_LIMIT_FAIL_MODE = "open"
+
+            # Logging: Human-readable format for development
+            if os.getenv("LOG_CONSOLE_FORMAT") is None:
+                self.LOG_CONSOLE_FORMAT = "human"
+
+            # Logging: DEBUG level for development
+            if os.getenv("LOG_LEVEL") is None:
+                self.LOG_LEVEL = "DEBUG"
+
+            # Profiling: Enable for local performance testing
+            if os.getenv("PROFILING_ENABLED") is None:
+                self.PROFILING_ENABLED = True
+
+    @property
+    def is_production(self) -> bool:
+        """Check if running in production environment."""
+        return self.ENV == Environment.PRODUCTION
+
+    @property
+    def is_staging(self) -> bool:
+        """Check if running in staging environment."""
+        return self.ENV == Environment.STAGING
+
+    @property
+    def is_development(self) -> bool:
+        """Check if running in development environment."""
+        return self.ENV == Environment.DEV
 
 
 app_settings = Settings()

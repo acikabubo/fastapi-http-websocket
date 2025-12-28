@@ -573,6 +573,113 @@ Environment variables in `app/settings.py` (loaded via pydantic-settings) use co
 3. Add docstring comment explaining the constant's purpose
 4. If configurable, add to Settings with constant as default value
 
+**Environment-Specific Configuration**
+
+The application supports multiple deployment environments with automatic configuration defaults. The `ENV` setting (from `app.settings.Environment` enum) determines environment-specific behavior:
+
+**Supported Environments:**
+- `dev` - Development environment (default)
+- `staging` - Staging/testing environment
+- `production` - Production environment
+
+**Environment Configuration Files:**
+- `.env.dev.example` - Development environment template
+- `.env.staging.example` - Staging environment template
+- `.env.production.example` - Production environment template
+
+**Environment-Specific Defaults:**
+
+| Setting | DEV | STAGING | PRODUCTION |
+|---------|-----|---------|------------|
+| `DEBUG_AUTH` | Allowed | Disallowed | Disallowed (enforced) |
+| `LOG_LEVEL` | DEBUG | INFO | WARNING |
+| `LOG_CONSOLE_FORMAT` | human | json | json |
+| `RATE_LIMIT_FAIL_MODE` | open | open | closed |
+| `PROFILING_ENABLED` | true | true | false |
+
+**Setting the Environment:**
+
+```bash
+# Development (default)
+ENV=dev
+
+# Staging
+ENV=staging
+
+# Production
+ENV=production
+```
+
+**Environment-Specific Behavior:**
+
+1. **Production Environment** (`ENV=production`):
+   - `DEBUG_AUTH` is automatically disabled (cannot be enabled)
+   - Rate limiting fails closed (denies requests when Redis unavailable)
+   - JSON logging for Grafana Alloy/Loki integration
+   - WARNING log level (minimal logging)
+   - Profiling disabled by default
+
+2. **Staging Environment** (`ENV=staging`):
+   - Production-like settings with some debugging enabled
+   - INFO log level for moderate logging
+   - JSON logging for log aggregation
+   - Profiling enabled for performance testing
+
+3. **Development Environment** (`ENV=dev`):
+   - Permissive settings for local development
+   - DEBUG log level for verbose logging
+   - Human-readable console logging
+   - Profiling enabled for local testing
+
+**Helper Properties:**
+
+The `Settings` class provides helper properties for environment checks:
+
+```python
+from app.settings import app_settings
+
+if app_settings.is_production:
+    # Production-only logic
+    pass
+
+if app_settings.is_staging:
+    # Staging-only logic
+    pass
+
+if app_settings.is_development:
+    # Development-only logic
+    pass
+```
+
+**Configuration Priority:**
+
+Environment-specific defaults are applied **only if** the setting is not explicitly provided via environment variables. This allows overriding defaults when needed:
+
+```bash
+# Override production default (WARNING) with INFO
+ENV=production
+LOG_LEVEL=INFO  # Explicitly set, overrides production default
+```
+
+**Example Usage:**
+
+```bash
+# Development
+cp .env.dev.example .env
+# Edit .env with your local Keycloak credentials
+ENV=dev
+
+# Staging deployment
+cp .env.staging.example .env
+# Update all CHANGE_ME values
+ENV=staging
+
+# Production deployment
+cp .env.production.example .env
+# CRITICAL: Review and update ALL settings
+ENV=production
+```
+
 ### Pre-commit Hooks
 
 All commits must pass:
