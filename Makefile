@@ -51,13 +51,21 @@ serve: ## Start FastAPI application with hot-reload (local development)
 
 ##@ Testing
 
-test: ## Run tests with pytest
-	@echo "Running tests with pytest..."
+test: ## Run tests in parallel with pytest-xdist
+	@echo "Running tests in parallel with pytest-xdist..."
+	@uv run pytest -n auto tests
+
+test-serial: ## Run tests sequentially (without parallelization)
+	@echo "Running tests sequentially..."
 	@uv run pytest tests
 
 test-coverage: ## Run tests with coverage report (terminal + HTML)
 	@echo "Running tests with coverage..."
 	@uv run pytest --cov=app --cov-report=term-missing --cov-report=html tests
+
+test-coverage-parallel: ## Run tests in parallel with coverage
+	@echo "Running tests in parallel with coverage..."
+	@uv run pytest -n auto --cov=app --cov-report=term-missing --cov-report=html tests
 
 ##@ WebSocket Handlers
 

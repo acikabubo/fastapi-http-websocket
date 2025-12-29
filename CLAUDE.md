@@ -214,11 +214,109 @@ make shell
 
 ### Testing
 ```bash
-# Run tests (uses pytest with asyncio support)
-uv run pytest
+# Run tests in parallel (default, uses pytest-xdist)
+make test
+# Or: uv run pytest -n auto tests
+
+# Run tests sequentially (without parallelization)
+make test-serial
+# Or: uv run pytest tests
 
 # Run a single test
 uv run pytest tests/test_check.py::test_function_name
+
+# Run tests with coverage
+make test-coverage
+# Or: uv run pytest --cov=app --cov-report=term-missing --cov-report=html tests
+
+# Run tests in parallel with coverage
+make test-coverage-parallel
+# Or: uv run pytest -n auto --cov=app --cov-report=term-missing --cov-report=html tests
+
+# Run load tests (high resource usage, marked with @pytest.mark.load)
+uv run pytest -m load tests/load/ -v -s
+
+# Run chaos engineering tests (failure scenarios, marked with @pytest.mark.chaos)
+uv run pytest -m chaos tests/chaos/ -v -s
+
+# Skip slow tests
+uv run pytest -m "not load and not chaos"
+```
+
+#### Testing Infrastructure
+
+**Parallel Test Execution (pytest-xdist):**
+- Tests run in parallel by default using all available CPU cores (`-n auto`)
+- 3-5x faster test execution compared to sequential runs
+- Automatically distributes tests across workers
+- Use `make test-serial` for debugging or when parallel execution causes issues
+
+**Centralized Fixtures and Mocks:**
+- Common fixtures defined in `tests/conftest.py`
+- Fixture factories for creating test data: `create_author_fixture()`, `create_request_model_fixture()`, `create_response_model_fixture()`
+- Reusable mock factories in `tests/mocks/`:
+  - `repository_mocks.py` - Repository and CRUD operation mocks
+  - `auth_mocks.py` - Keycloak, AuthBackend, UserModel, RBAC mocks
+  - `redis_mocks.py` - Redis connection and rate limiter mocks
+  - `keycloak_mocks.py` - KeycloakOpenID and KeycloakAdmin mocks
+  - `websocket_mocks.py` - WebSocket connection, consumer, and manager mocks
+
+**Load Testing:**
+- WebSocket load tests in `tests/load/test_websocket_load.py`
+- Test scenarios:
+  - 100 concurrent connections (< 1s connection time, < 2s broadcast time)
+  - 1000 concurrent connections (< 5s connection time, < 10s broadcast time)
+  - Connection churn (500 rapid connect/disconnect cycles < 5s)
+  - High-frequency broadcasts (> 500 messages/sec throughput)
+  - Large message broadcasting (~100KB payloads)
+  - Partial connection failures (20% failure rate resilience)
+  - Concurrent broadcasts (10 simultaneous broadcasts)
+- Run with: `pytest -m load tests/load/ -v -s`
+
+**Chaos Engineering Tests:**
+- Failure scenario testing in `tests/chaos/`
+- Redis failure tests (`test_redis_failures.py`):
+  - Redis unavailable (fail-open behavior)
+  - Connection timeouts and errors
+  - Partial operation failures (INCR succeeds, EXPIRE fails)
+  - Intermittent failures and recovery
+- Database failure tests (`test_database_failures.py`):
+  - Database connection loss
+  - Query timeouts
+  - Transaction rollbacks
+  - Connection pool exhaustion
+  - Network partition scenarios
+- Keycloak failure tests (`test_keycloak_failures.py`):
+  - Keycloak server unavailable
+  - Authentication errors
+  - Token validation failures
+  - Service degradation (partial failures)
+  - Configuration errors
+- Run with: `pytest -m chaos tests/chaos/ -v -s`
+
+**Test Markers:**
+- `@pytest.mark.integration` - Integration tests requiring external services (Keycloak, PostgreSQL, Redis)
+- `@pytest.mark.load` - Load tests with high resource usage (skip by default)
+- `@pytest.mark.chaos` - Chaos engineering tests simulating failures (skip by default)
+
+**Example Usage:**
+```python
+# Using centralized fixtures
+from tests.conftest import create_author_fixture, create_request_model_fixture
+
+def test_my_feature():
+    author = create_author_fixture(id=1, name="Test")
+    request = create_request_model_fixture(pkg_id=1, data={"filter": "active"})
+
+# Using centralized mocks
+from tests.mocks.repository_mocks import create_mock_author_repository
+from tests.mocks.redis_mocks import create_mock_redis_connection
+
+async def test_with_mocks():
+    mock_repo = create_mock_author_repository()
+    mock_redis = create_mock_redis_connection()
+    # Configure mock behavior as needed
+    mock_repo.get_by_id.return_value = create_author_fixture(id=1)
 ```
 
 ### Code Quality & Linting
@@ -1295,8 +1393,13 @@ DEBUG - Cached count for Author (filters: None): 1234 (TTL: 300s)
 ### Testing Notes
 
 - Tests use `pytest-asyncio` with `asyncio_mode = "auto"`
+- Tests run in parallel by default using `pytest-xdist` for faster execution
 - Mock Keycloak interactions where appropriate (`pytest-mock`)
 - Database tests should use test fixtures with isolated sessions
+- Use centralized fixtures from `tests/conftest.py` and mock factories from `tests/mocks/`
+- Load tests (marked `@pytest.mark.load`) test performance under high concurrent loads
+- Chaos tests (marked `@pytest.mark.chaos`) test resilience when dependencies fail
+- Skip slow tests with: `pytest -m "not load and not chaos"`
 
 ### Performance Profiling with Scalene
 
