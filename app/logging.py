@@ -34,7 +34,10 @@ def get_correlation_id() -> str:
         )
 
         return _get_cid()
-    except Exception:
+    except (ImportError, AttributeError, RuntimeError):
+        # ImportError: Module not available
+        # AttributeError: Function not found
+        # RuntimeError: Correlation ID context not initialized
         return ""
 
 
@@ -255,7 +258,9 @@ def setup_logging() -> logging.Logger:
         file_handler.setLevel(logging.ERROR)
         file_handler.setFormatter(StructuredJSONFormatter())
         logger.addHandler(file_handler)
-    except Exception as e:
+    except (OSError, PermissionError) as e:
+        # OSError: File system errors (path doesn't exist, disk full)
+        # PermissionError: No write permission for log directory
         logger.warning(f"Could not create file handler: {e}")
 
     # Note: We use Grafana Alloy to collect logs from Docker stdout and send to Loki

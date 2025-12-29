@@ -286,7 +286,7 @@ class TestLogUserAction:
         with (
             patch(
                 "app.utils.audit_logger.sanitize_data",
-                side_effect=Exception("Sanitization error"),
+                side_effect=ValueError("Sanitization error"),
             ),
             patch("app.utils.audit_logger.logger") as mock_logger,
         ):
@@ -382,9 +382,11 @@ class TestFlushAuditQueue:
                 outcome="success",
             )
 
-            # Mock database error
-            mock_session_ctx.return_value.__aenter__.side_effect = Exception(
-                "Database error"
+            # Mock database error with specific exception type
+            from sqlalchemy.exc import OperationalError
+
+            mock_session_ctx.return_value.__aenter__.side_effect = (
+                OperationalError("Database error", None, None)
             )
 
             count = await flush_audit_queue()

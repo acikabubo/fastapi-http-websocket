@@ -51,11 +51,21 @@ class TestGetPaginatedResults:
         mock_session_inst.exec = AsyncMock(
             side_effect=[mock_count_result, mock_data_result]
         )
-        mock_session_inst.__aenter__.return_value = mock_session_inst
-        mock_session_inst.__aexit__.return_value = None
 
-        with patch(
-            "app.storage.db.async_session", return_value=mock_session_inst
+        mock_context_manager = MagicMock()
+        mock_context_manager.__aenter__ = AsyncMock(
+            return_value=mock_session_inst
+        )
+        mock_context_manager.__aexit__ = AsyncMock(return_value=None)
+
+        mock_session_maker = MagicMock(return_value=mock_context_manager)
+
+        with (
+            patch("app.storage.db.async_session", mock_session_maker),
+            patch(
+                "app.storage.db.get_cached_count", AsyncMock(return_value=None)
+            ),
+            patch("app.storage.db.set_cached_count", AsyncMock()),
         ):
             results, meta = await get_paginated_results(
                 Author, page=1, per_page=3
@@ -87,11 +97,22 @@ class TestGetPaginatedResults:
         mock_session_inst.exec = AsyncMock(
             side_effect=[mock_count_result, mock_data_result]
         )
-        mock_session_inst.__aenter__.return_value = mock_session_inst
-        mock_session_inst.__aexit__.return_value = None
 
-        with patch(
-            "app.storage.db.async_session", return_value=mock_session_inst
+        # Create proper async context manager mock
+        mock_context_manager = MagicMock()
+        mock_context_manager.__aenter__ = AsyncMock(
+            return_value=mock_session_inst
+        )
+        mock_context_manager.__aexit__ = AsyncMock(return_value=None)
+
+        mock_session_maker = MagicMock(return_value=mock_context_manager)
+
+        with (
+            patch("app.storage.db.async_session", mock_session_maker),
+            patch(
+                "app.storage.db.get_cached_count", AsyncMock(return_value=None)
+            ),
+            patch("app.storage.db.set_cached_count", AsyncMock()),
         ):
             results, meta = await get_paginated_results(
                 Author, page=1, per_page=10, filters={"name": "Test"}
@@ -156,11 +177,22 @@ class TestGetPaginatedResults:
         mock_session_inst.exec = AsyncMock(
             side_effect=[mock_count_result, mock_data_result]
         )
-        mock_session_inst.__aenter__.return_value = mock_session_inst
-        mock_session_inst.__aexit__.return_value = None
 
-        with patch(
-            "app.storage.db.async_session", return_value=mock_session_inst
+        # Create proper async context manager mock
+        mock_context_manager = MagicMock()
+        mock_context_manager.__aenter__ = AsyncMock(
+            return_value=mock_session_inst
+        )
+        mock_context_manager.__aexit__ = AsyncMock(return_value=None)
+
+        mock_session_maker = MagicMock(return_value=mock_context_manager)
+
+        with (
+            patch("app.storage.db.async_session", mock_session_maker),
+            patch(
+                "app.storage.db.get_cached_count", AsyncMock(return_value=None)
+            ),
+            patch("app.storage.db.set_cached_count", AsyncMock()),
         ):
             results, meta = await get_paginated_results(
                 Author, page=1, per_page=10
@@ -193,11 +225,22 @@ class TestGetPaginatedResults:
         mock_session_inst.exec = AsyncMock(
             side_effect=[mock_count_result, mock_data_result]
         )
-        mock_session_inst.__aenter__.return_value = mock_session_inst
-        mock_session_inst.__aexit__.return_value = None
 
-        with patch(
-            "app.storage.db.async_session", return_value=mock_session_inst
+        # Create proper async context manager mock
+        mock_context_manager = MagicMock()
+        mock_context_manager.__aenter__ = AsyncMock(
+            return_value=mock_session_inst
+        )
+        mock_context_manager.__aexit__ = AsyncMock(return_value=None)
+
+        mock_session_maker = MagicMock(return_value=mock_context_manager)
+
+        with (
+            patch("app.storage.db.async_session", mock_session_maker),
+            patch(
+                "app.storage.db.get_cached_count", AsyncMock(return_value=None)
+            ),
+            patch("app.storage.db.set_cached_count", AsyncMock()),
         ):
             results, meta = await get_paginated_results(
                 Author, page=3, per_page=10
@@ -235,11 +278,22 @@ class TestGetPaginatedResults:
         mock_session_inst.exec = AsyncMock(
             side_effect=[mock_count_result, mock_data_result]
         )
-        mock_session_inst.__aenter__.return_value = mock_session_inst
-        mock_session_inst.__aexit__.return_value = None
 
-        with patch(
-            "app.storage.db.async_session", return_value=mock_session_inst
+        # Create proper async context manager mock
+        mock_context_manager = MagicMock()
+        mock_context_manager.__aenter__ = AsyncMock(
+            return_value=mock_session_inst
+        )
+        mock_context_manager.__aexit__ = AsyncMock(return_value=None)
+
+        mock_session_maker = MagicMock(return_value=mock_context_manager)
+
+        with (
+            patch("app.storage.db.async_session", mock_session_maker),
+            patch(
+                "app.storage.db.get_cached_count", AsyncMock(return_value=None)
+            ),
+            patch("app.storage.db.set_cached_count", AsyncMock()),
         ):
             results, meta = await get_paginated_results(
                 Author,

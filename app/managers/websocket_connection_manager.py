@@ -2,6 +2,7 @@ import asyncio
 from typing import Any
 
 from fastapi import WebSocket
+from starlette.websockets import WebSocketDisconnect
 
 from app.logging import logger
 from app.schemas.response import BroadcastDataModel
@@ -77,9 +78,18 @@ class ConnectionManager:
             """
             try:
                 await connection.send_json(message.model_dump(mode="json"))
-            except Exception as e:
+            except (WebSocketDisconnect, ConnectionError, RuntimeError) as e:
+                # WebSocketDisconnect: Client disconnected
+                # ConnectionError: Network errors
+                # RuntimeError: WebSocket in invalid state
                 logger.warning(
                     f"Failed to send to connection {id(connection)}: {e}"
+                )
+                self.disconnect(connection)
+            except Exception as e:
+                # Catch-all for unexpected send errors
+                logger.warning(
+                    f"Unexpected error sending to connection {id(connection)}: {e}"
                 )
                 self.disconnect(connection)
 

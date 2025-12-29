@@ -1,18 +1,17 @@
 import json
 import uuid
-from typing import Type
+from typing import Any, Type
 from uuid import UUID
 
+from pydantic import ValidationError
 from starlette import status
 from starlette.authentication import UnauthenticatedUser
 from starlette.endpoints import WebSocketEndpoint
-from starlette.websockets import WebSocket
+from starlette.websockets import WebSocket, WebSocketDisconnect
 
 from app.connection_registry import ws_clients
 from app.logging import logger
 from app.managers.websocket_connection_manager import connection_manager
-from typing import Any
-
 from app.schemas.response import BroadcastDataModel, ResponseModel
 from app.schemas.user import UserModel
 from app.settings import app_settings
@@ -110,7 +109,20 @@ class PackageAuthWebSocketEndpoint(WebSocketEndpoint):  # type: ignore[misc]
                         message.get("code") or status.WS_1000_NORMAL_CLOSURE
                     )
                     break
+        except (
+            ValidationError,
+            ValueError,
+            KeyError,
+            WebSocketDisconnect,
+        ) as exc:
+            # ValidationError: Pydantic validation failed
+            # ValueError: Invalid message format
+            # KeyError: Missing required message fields
+            # WebSocketDisconnect: Client disconnected
+            close_code = status.WS_1003_UNSUPPORTED_DATA
+            raise exc
         except Exception as exc:
+            # Catch-all for unexpected errors
             close_code = status.WS_1011_INTERNAL_ERROR
             raise exc
         finally:

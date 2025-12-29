@@ -1,5 +1,7 @@
 from asyncio import CancelledError, TimeoutError, sleep
 
+from redis.exceptions import RedisError
+
 from app.connection_registry import ws_clients
 from app.constants import (
     REDIS_MESSAGE_TIMEOUT_SECONDS,
@@ -65,7 +67,9 @@ async def kc_user_session_task() -> None:
         except TimeoutError:
             await sleep(TASK_SLEEP_INTERVAL_SECONDS)
 
-        except Exception as ex:
+        except (RedisError, ConnectionError) as ex:
+            # RedisError: Redis operation errors
+            # ConnectionError: Network connection issues
             logger.error(
                 f"Keycloak user session task error occurred with: {ex}"
             )

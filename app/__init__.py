@@ -93,7 +93,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         flushed_count = await flush_audit_queue()
         if flushed_count > 0:
             logger.info(f"Flushed {flushed_count} audit logs during shutdown")
-    except Exception as ex:
+    except (ImportError, RuntimeError, OSError) as ex:
+        # ImportError: Module not available
+        # RuntimeError: Async context issues
+        # OSError: Database connection/write errors
         logger.error(f"Error flushing audit logs: {ex}")
 
     # Close Redis connection pools
@@ -102,7 +105,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
         await RedisPool.close_all()
         logger.info("Closed Redis connection pools")
-    except Exception as ex:
+    except (ImportError, RuntimeError, ConnectionError) as ex:
+        # ImportError: Module not available
+        # RuntimeError: Async context issues
+        # ConnectionError: Redis connection errors
         logger.error(f"Error closing Redis connection pools: {ex}")
 
     # Cancel background tasks

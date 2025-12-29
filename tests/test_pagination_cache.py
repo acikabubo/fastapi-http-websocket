@@ -108,8 +108,10 @@ class TestGetCachedCount:
     @pytest.mark.asyncio
     async def test_get_cached_count_handles_exception(self):
         """Test handles Redis errors gracefully."""
+        from redis.exceptions import RedisError
+
         mock_redis = AsyncMock()
-        mock_redis.get = AsyncMock(side_effect=Exception("Redis error"))
+        mock_redis.get = AsyncMock(side_effect=RedisError("Redis error"))
 
         with patch.object(
             __import__("app.storage.redis").storage.redis.RedisPool,
@@ -172,8 +174,10 @@ class TestSetCachedCount:
     @pytest.mark.asyncio
     async def test_set_cached_count_handles_exception(self):
         """Test handles Redis errors gracefully."""
+        from redis.exceptions import RedisError
+
         mock_redis = AsyncMock()
-        mock_redis.setex = AsyncMock(side_effect=Exception("Redis error"))
+        mock_redis.setex = AsyncMock(side_effect=RedisError("Redis error"))
 
         with patch.object(
             __import__("app.storage.redis").storage.redis.RedisPool,
@@ -268,8 +272,10 @@ class TestInvalidateCountCache:
     @pytest.mark.asyncio
     async def test_invalidate_handles_exception(self):
         """Test handles Redis errors gracefully."""
+        from redis.exceptions import RedisError
+
         mock_redis = AsyncMock()
-        mock_redis.delete = AsyncMock(side_effect=Exception("Redis error"))
+        mock_redis.delete = AsyncMock(side_effect=RedisError("Redis error"))
 
         with patch.object(
             __import__("app.storage.redis").storage.redis.RedisPool,

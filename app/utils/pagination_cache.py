@@ -9,6 +9,8 @@ import hashlib
 import json
 from typing import Any
 
+from redis.exceptions import RedisError
+
 from app.logging import logger
 from app.storage.redis import RedisPool
 
@@ -49,8 +51,14 @@ async def get_cached_count(
         logger.debug(f"Count cache miss for {model_name} (filters: {filters})")
         return None
 
-    except Exception as ex:
+    except (RedisError, ConnectionError) as ex:
+        # RedisError: Redis operation failed
+        # ConnectionError: Redis connection issues
         logger.error(f"Error reading count cache: {ex}")
+        return None
+    except (ValueError, TypeError) as ex:
+        # ValueError/TypeError: Invalid cached data format
+        logger.error(f"Invalid count cache data format: {ex}")
         return None
 
 
@@ -82,7 +90,9 @@ async def set_cached_count(
             f"Cached count for {model_name} (filters: {filters}): {count} (TTL: {ttl}s)"
         )
 
-    except Exception as ex:
+    except (RedisError, ConnectionError) as ex:
+        # RedisError: Redis operation failed
+        # ConnectionError: Redis connection issues
         logger.error(f"Error writing count cache: {ex}")
 
 
@@ -134,7 +144,9 @@ async def invalidate_count_cache(
                     f"Invalidated count cache for {model_name} (filters: {filters})"
                 )
 
-    except Exception as ex:
+    except (RedisError, ConnectionError) as ex:
+        # RedisError: Redis operation failed
+        # ConnectionError: Redis connection issues
         logger.error(f"Error invalidating count cache: {ex}")
 
 

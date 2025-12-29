@@ -5,6 +5,7 @@ from json import loads
 from typing import Any, Callable
 
 from redis.asyncio import ConnectionPool, Redis
+from redis.exceptions import RedisError
 
 from app.constants import KC_SESSION_EXPIRY_BUFFER_SECONDS
 from app.logging import logger
@@ -107,7 +108,10 @@ class RedisPool:
             try:
                 await pool.disconnect()
                 logger.info(f"Closed Redis pool for database {db}")
-            except Exception as ex:
+            except (RedisError, ConnectionError, RuntimeError) as ex:
+                # RedisError: Redis operation errors
+                # ConnectionError: Network issues
+                # RuntimeError: Async context issues
                 logger.error(
                     f"Error closing Redis pool for database {db}: {ex}"
                 )
@@ -212,8 +216,16 @@ class REventHandler:
         for callback, kw in self.callbacks:
             try:
                 await callback(ch_name, loads(data), **kw)
-            except Exception as ex:
+            except (ValueError, TypeError) as ex:
+                # ValueError: JSON decode error
+                # TypeError: Invalid callback arguments
                 self.get_logger().error(f"Callback {callback} failed: {ex}")
+                break
+            except Exception as ex:
+                # Catch-all for callback errors (don't fail the loop)
+                self.get_logger().error(
+                    f"Unexpected error in callback {callback}: {ex}"
+                )
                 break
 
     async def loop(self) -> None:
@@ -234,7 +246,10 @@ class REventHandler:
                     f"REventHandler on {self.channel} cancelled!"
                 )
                 break
-            except Exception as ex:
+            except (RedisError, ConnectionError, TimeoutError) as ex:
+                # RedisError: Redis operation errors
+                # ConnectionError: Network issues
+                # TimeoutError: Message timeout
                 self.get_logger().error(
                     f"Error in REventHandler {self.channel}: {ex}"
                 )

@@ -12,6 +12,7 @@ import time
 from datetime import UTC, datetime
 from typing import Any
 
+from sqlalchemy.exc import SQLAlchemyError
 from starlette.requests import Request
 
 from app.logging import logger
@@ -117,7 +118,10 @@ async def audit_log_worker() -> None:
                         f"Wrote {len(batch)} audit logs to database in {duration:.3f}s"
                     )
 
-                except Exception as e:
+                except (SQLAlchemyError, OSError, RuntimeError) as e:
+                    # SQLAlchemyError: Database errors
+                    # OSError: I/O errors (disk full, connection issues)
+                    # RuntimeError: Async context issues
                     # Record batch write error
                     audit_log_errors_total.labels(
                         error_type=type(e).__name__
@@ -127,7 +131,12 @@ async def audit_log_worker() -> None:
             # Update queue size metric
             audit_queue_size.set(queue.qsize())
 
-        except Exception as e:
+        except (asyncio.CancelledError, GeneratorExit, KeyboardInterrupt):
+            # Graceful shutdown signals - re-raise
+            raise
+        except (RuntimeError, OSError) as e:
+            # RuntimeError: Async loop issues
+            # OSError: I/O errors
             logger.error(f"Audit log worker error: {e}")
             await asyncio.sleep(1)  # Backoff on errors
 
@@ -167,7 +176,10 @@ async def flush_audit_queue() -> int:
             )
             return len(remaining_logs)
 
-        except Exception as e:
+        except (SQLAlchemyError, OSError, RuntimeError) as e:
+            # SQLAlchemyError: Database errors
+            # OSError: I/O errors
+            # RuntimeError: Async context issues
             logger.error(f"Failed to flush audit logs: {e}")
             return 0
 
@@ -304,7 +316,10 @@ async def log_user_action(
             )
             return None
 
-    except Exception as e:
+    except (ValueError, TypeError, AttributeError) as e:
+        # ValueError: Invalid data format
+        # TypeError: Wrong data type
+        # AttributeError: Missing expected attributes
         # Record audit log error
         audit_log_errors_total.labels(error_type=type(e).__name__).inc()
 
