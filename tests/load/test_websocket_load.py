@@ -290,7 +290,7 @@ class TestWebSocketErrorResilience:
         # Send 10 broadcasts concurrently
         async def send_broadcast(seq: int):
             broadcast_msg = BroadcastDataModel(
-                pkg_id=seq, status_code=0, data={"seq": seq}
+                pkg_id=1, status_code=0, data={"seq": seq}
             )
             await connection_manager.broadcast(broadcast_msg)
 
