@@ -71,6 +71,9 @@ omit = [
     "app/logging.py",
     "app/routing.py",
     "app/settings.py",
+    "app/storage/migrations/*",
+    "app/protocols.py",
+    "app/schemas/*"
 ]
 
 [tool.coverage.report]

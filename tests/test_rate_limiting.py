@@ -328,3 +328,291 @@ class TestWebSocketRateLimiting:
         from app.api.ws.consumers.web import Web
 
         assert hasattr(Web, "on_receive")
+
+
+class TestRateLimiterErrorHandling:
+    """Tests for RateLimiter error handling scenarios."""
+
+    @pytest.mark.asyncio
+    async def test_check_rate_limit_disabled(self):
+        """Test that rate limiter allows all requests when disabled."""
+        from app.utils.rate_limiter import RateLimiter
+
+        limiter = RateLimiter()
+        limiter.enabled = False
+
+        is_allowed, remaining = await limiter.check_rate_limit(
+            key="test_user", limit=10
+        )
+
+        assert is_allowed is True
+        assert remaining == 10
+
+    @pytest.mark.asyncio
+    async def test_check_rate_limit_redis_unavailable(self):
+        """Test rate limiter behavior when Redis is unavailable."""
+        from app.utils.rate_limiter import RateLimiter
+
+        with patch(
+            "app.utils.rate_limiter.get_redis_connection",
+            return_value=None,
+        ):
+            limiter = RateLimiter()
+            limiter.enabled = True
+
+            is_allowed, remaining = await limiter.check_rate_limit(
+                key="test_user", limit=10
+            )
+
+            # Should fail open (allow request)
+            assert is_allowed is True
+            assert remaining == 10
+
+    @pytest.mark.asyncio
+    async def test_check_rate_limit_redis_error_fail_open(self, mock_redis):
+        """Test rate limiter fails open on Redis error (default mode)."""
+        from redis.exceptions import RedisError
+
+        from app.utils.rate_limiter import RateLimiter
+
+        mock_redis.zremrangebyscore.side_effect = RedisError(
+            "Connection error"
+        )
+
+        with (
+            patch(
+                "app.utils.rate_limiter.get_redis_connection",
+                return_value=mock_redis,
+            ),
+            patch("app.utils.rate_limiter.app_settings") as mock_settings,
+        ):
+            mock_settings.RATE_LIMIT_FAIL_MODE = "open"
+            limiter = RateLimiter()
+            limiter.enabled = True
+            limiter.redis = mock_redis
+
+            is_allowed, remaining = await limiter.check_rate_limit(
+                key="test_user", limit=10
+            )
+
+            # Should fail open (allow request)
+            assert is_allowed is True
+            assert remaining == 10
+
+    @pytest.mark.asyncio
+    async def test_check_rate_limit_redis_error_fail_closed(self, mock_redis):
+        """Test rate limiter fails closed on Redis error (closed mode)."""
+        from redis.exceptions import RedisError
+
+        from app.utils.rate_limiter import RateLimiter
+
+        mock_redis.zremrangebyscore.side_effect = RedisError(
+            "Connection error"
+        )
+
+        with (
+            patch(
+                "app.utils.rate_limiter.get_redis_connection",
+                return_value=mock_redis,
+            ),
+            patch("app.utils.rate_limiter.app_settings") as mock_settings,
+        ):
+            mock_settings.RATE_LIMIT_FAIL_MODE = "closed"
+            limiter = RateLimiter()
+            limiter.enabled = True
+            limiter.redis = mock_redis
+
+            is_allowed, remaining = await limiter.check_rate_limit(
+                key="test_user", limit=10
+            )
+
+            # Should fail closed (deny request)
+            assert is_allowed is False
+            assert remaining == 0
+
+    @pytest.mark.asyncio
+    async def test_check_rate_limit_value_error(self, mock_redis):
+        """Test rate limiter handles ValueError gracefully."""
+        from app.utils.rate_limiter import RateLimiter
+
+        mock_redis.zcard.side_effect = ValueError("Invalid value")
+
+        with patch(
+            "app.utils.rate_limiter.get_redis_connection",
+            return_value=mock_redis,
+        ):
+            limiter = RateLimiter()
+            limiter.enabled = True
+            limiter.redis = mock_redis
+
+            is_allowed, remaining = await limiter.check_rate_limit(
+                key="test_user", limit=10
+            )
+
+            # Should fail closed on programming errors
+            assert is_allowed is False
+            assert remaining == 0
+
+    @pytest.mark.asyncio
+    async def test_reset_limit_redis_unavailable(self):
+        """Test reset_limit when Redis is unavailable."""
+        from app.utils.rate_limiter import RateLimiter
+
+        with patch(
+            "app.utils.rate_limiter.get_redis_connection",
+            return_value=None,
+        ):
+            limiter = RateLimiter()
+            # Should not raise exception
+            await limiter.reset_limit("test_user")
+
+    @pytest.mark.asyncio
+    async def test_reset_limit_redis_error(self, mock_redis):
+        """Test reset_limit handles Redis errors gracefully."""
+        from redis.exceptions import RedisError
+
+        from app.utils.rate_limiter import RateLimiter
+
+        mock_redis.delete.side_effect = RedisError("Connection error")
+
+        with patch(
+            "app.utils.rate_limiter.get_redis_connection",
+            return_value=mock_redis,
+        ):
+            limiter = RateLimiter()
+            limiter.redis = mock_redis
+            # Should not raise exception
+            await limiter.reset_limit("test_user")
+
+
+class TestConnectionLimiterErrorHandling:
+    """Tests for ConnectionLimiter error handling scenarios."""
+
+    @pytest.mark.asyncio
+    async def test_add_connection_redis_unavailable(self):
+        """Test add_connection when Redis is unavailable."""
+        from app.utils.rate_limiter import ConnectionLimiter
+
+        with patch(
+            "app.utils.rate_limiter.get_redis_connection",
+            return_value=None,
+        ):
+            limiter = ConnectionLimiter()
+            result = await limiter.add_connection(
+                user_id="test_user", connection_id="conn_1"
+            )
+
+            # Should deny connection when Redis unavailable
+            assert result is False
+
+    @pytest.mark.asyncio
+    async def test_add_connection_redis_error(self, mock_redis):
+        """Test add_connection handles Redis errors gracefully."""
+        from redis.exceptions import RedisError
+
+        from app.utils.rate_limiter import ConnectionLimiter
+
+        mock_redis.scard.side_effect = RedisError("Connection error")
+
+        with patch(
+            "app.utils.rate_limiter.get_redis_connection",
+            return_value=mock_redis,
+        ):
+            limiter = ConnectionLimiter()
+            limiter.redis = mock_redis
+            result = await limiter.add_connection(
+                user_id="test_user", connection_id="conn_1"
+            )
+
+            # Should fail closed on Redis errors
+            assert result is False
+
+    @pytest.mark.asyncio
+    async def test_add_connection_value_error(self, mock_redis):
+        """Test add_connection handles ValueError gracefully."""
+        from app.utils.rate_limiter import ConnectionLimiter
+
+        mock_redis.scard.side_effect = ValueError("Invalid value")
+
+        with patch(
+            "app.utils.rate_limiter.get_redis_connection",
+            return_value=mock_redis,
+        ):
+            limiter = ConnectionLimiter()
+            limiter.redis = mock_redis
+            result = await limiter.add_connection(
+                user_id="test_user", connection_id="conn_1"
+            )
+
+            # Should fail closed on programming errors
+            assert result is False
+
+    @pytest.mark.asyncio
+    async def test_remove_connection_redis_unavailable(self):
+        """Test remove_connection when Redis is unavailable."""
+        from app.utils.rate_limiter import ConnectionLimiter
+
+        with patch(
+            "app.utils.rate_limiter.get_redis_connection",
+            return_value=None,
+        ):
+            limiter = ConnectionLimiter()
+            # Should not raise exception
+            await limiter.remove_connection(
+                user_id="test_user", connection_id="conn_1"
+            )
+
+    @pytest.mark.asyncio
+    async def test_remove_connection_redis_error(self, mock_redis):
+        """Test remove_connection handles Redis errors gracefully."""
+        from redis.exceptions import RedisError
+
+        from app.utils.rate_limiter import ConnectionLimiter
+
+        mock_redis.srem.side_effect = RedisError("Connection error")
+
+        with patch(
+            "app.utils.rate_limiter.get_redis_connection",
+            return_value=mock_redis,
+        ):
+            limiter = ConnectionLimiter()
+            limiter.redis = mock_redis
+            # Should not raise exception
+            await limiter.remove_connection(
+                user_id="test_user", connection_id="conn_1"
+            )
+
+    @pytest.mark.asyncio
+    async def test_get_connection_count_redis_unavailable(self):
+        """Test get_connection_count when Redis is unavailable."""
+        from app.utils.rate_limiter import ConnectionLimiter
+
+        with patch(
+            "app.utils.rate_limiter.get_redis_connection",
+            return_value=None,
+        ):
+            limiter = ConnectionLimiter()
+            count = await limiter.get_connection_count(user_id="test_user")
+
+            # Should return 0 when Redis unavailable
+            assert count == 0
+
+    @pytest.mark.asyncio
+    async def test_get_connection_count_redis_error(self, mock_redis):
+        """Test get_connection_count handles Redis errors gracefully."""
+        from redis.exceptions import RedisError
+
+        from app.utils.rate_limiter import ConnectionLimiter
+
+        mock_redis.scard.side_effect = RedisError("Connection error")
+
+        with patch(
+            "app.utils.rate_limiter.get_redis_connection",
+            return_value=mock_redis,
+        ):
+            limiter = ConnectionLimiter()
+            limiter.redis = mock_redis
+            count = await limiter.get_connection_count(user_id="test_user")
+
+            # Should return 0 on error
+            assert count == 0
