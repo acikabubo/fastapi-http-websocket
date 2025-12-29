@@ -27,10 +27,9 @@ class TestRedisConnectionFailures:
         limiter = RateLimiter()
 
         with patch(
-            "app.utils.rate_limiter.get_main_redis_connection"
-        ) as mock_get_redis:
-            mock_get_redis.return_value = None  # Redis connection failed
-
+            "app.utils.rate_limiter.get_redis_connection",
+            AsyncMock(return_value=None),
+        ):
             # Rate limiter should fail open (allow requests)
             is_allowed, remaining = await limiter.check_rate_limit(
                 key="test_user", limit=10, window_seconds=60
@@ -39,8 +38,8 @@ class TestRedisConnectionFailures:
             assert is_allowed is True, (
                 "Should allow requests when Redis unavailable"
             )
-            assert remaining == 0, (
-                "Remaining should be 0 when Redis unavailable"
+            assert remaining == 10, (
+                "Remaining should be limit when Redis unavailable (fail-open)"
             )
 
     @pytest.mark.asyncio
@@ -49,22 +48,24 @@ class TestRedisConnectionFailures:
         limiter = RateLimiter()
 
         mock_redis = AsyncMock()
-        mock_redis.incr = AsyncMock(
+        mock_redis.zremrangebyscore = AsyncMock(
             side_effect=RedisTimeoutError("Connection timeout")
         )
 
         with patch(
-            "app.utils.rate_limiter.get_main_redis_connection",
-            return_value=mock_redis,
+            "app.utils.rate_limiter.get_redis_connection",
+            AsyncMock(return_value=mock_redis),
         ):
             # Should handle timeout gracefully
             is_allowed, remaining = await limiter.check_rate_limit(
                 key="test_user", limit=10, window_seconds=60
             )
 
-            # Fail-open behavior
+            # Fail-open behavior (default)
             assert is_allowed is True, "Should allow on timeout"
-            assert remaining == 0, "Remaining should be 0 on timeout"
+            assert remaining == 10, (
+                "Remaining should be limit on timeout (fail-open)"
+            )
 
     @pytest.mark.asyncio
     async def test_rate_limiter_redis_connection_error(self):
@@ -72,46 +73,48 @@ class TestRedisConnectionFailures:
         limiter = RateLimiter()
 
         mock_redis = AsyncMock()
-        mock_redis.incr = AsyncMock(
+        mock_redis.zremrangebyscore = AsyncMock(
             side_effect=RedisConnectionError("Connection lost")
         )
 
         with patch(
-            "app.utils.rate_limiter.get_main_redis_connection",
-            return_value=mock_redis,
+            "app.utils.rate_limiter.get_redis_connection",
+            AsyncMock(return_value=mock_redis),
         ):
             # Should handle connection error gracefully
             is_allowed, remaining = await limiter.check_rate_limit(
                 key="test_user", limit=10, window_seconds=60
             )
 
-            # Fail-open behavior
+            # Fail-open behavior (default)
             assert is_allowed is True, "Should allow on connection error"
+            assert remaining == 10, (
+                "Remaining should be limit on error (fail-open)"
+            )
 
     @pytest.mark.asyncio
     async def test_connection_limiter_redis_unavailable(self):
         """Test connection limiter when Redis is unavailable."""
-        limiter = ConnectionLimiter(max_connections=5)
+        limiter = ConnectionLimiter()
 
         with patch(
-            "app.utils.rate_limiter.get_main_redis_connection"
-        ) as mock_get_redis:
-            mock_get_redis.return_value = None
-
-            # Should allow connection when Redis unavailable (fail-open)
+            "app.utils.rate_limiter.get_redis_connection",
+            AsyncMock(return_value=None),
+        ):
+            # Should deny connection when Redis unavailable (fail-closed for security)
             result = await limiter.add_connection(
                 user_id="test_user", connection_id="conn_1"
             )
 
-            # In fail-open mode, should allow
-            assert result is True, (
-                "Should allow connections when Redis unavailable"
+            # In fail-closed mode (security), should deny
+            assert result is False, (
+                "Should deny connections when Redis unavailable (fail-closed)"
             )
 
     @pytest.mark.asyncio
     async def test_connection_limiter_redis_error_during_check(self):
         """Test connection limiter when Redis errors during connection check."""
-        limiter = ConnectionLimiter(max_connections=5)
+        limiter = ConnectionLimiter()
 
         mock_redis = AsyncMock()
         mock_redis.scard = AsyncMock(
@@ -119,51 +122,53 @@ class TestRedisConnectionFailures:
         )
 
         with patch(
-            "app.utils.rate_limiter.get_main_redis_connection",
-            return_value=mock_redis,
+            "app.utils.rate_limiter.get_redis_connection",
+            AsyncMock(return_value=mock_redis),
         ):
             # Should handle error gracefully
             result = await limiter.add_connection(
                 user_id="test_user", connection_id="conn_1"
             )
 
-            # Fail-open: allow connection despite error
-            assert result is True, "Should allow on Redis error"
+            # Fail-closed: deny connection on Redis error (security)
+            assert result is False, "Should deny on Redis error (fail-closed)"
 
 
 class TestRedisPartialFailures:
     """Tests for partial Redis operation failures."""
 
     @pytest.mark.asyncio
-    async def test_rate_limiter_incr_succeeds_expire_fails(self):
-        """Test rate limiter when INCR succeeds but EXPIRE fails."""
+    async def test_rate_limiter_zremrangebyscore_succeeds_expire_fails(self):
+        """Test rate limiter when ZREMRANGEBYSCORE succeeds but EXPIRE fails."""
         limiter = RateLimiter()
 
         mock_redis = AsyncMock()
-        # INCR succeeds, returning count
-        mock_redis.incr = AsyncMock(return_value=1)
+        # Sorted set operations succeed
+        mock_redis.zremrangebyscore = AsyncMock(return_value=0)
+        mock_redis.zcard = AsyncMock(return_value=0)  # No requests in window
+        mock_redis.zadd = AsyncMock(return_value=1)
         # EXPIRE fails
         mock_redis.expire = AsyncMock(
             side_effect=RedisError("EXPIRE command failed")
         )
 
         with patch(
-            "app.utils.rate_limiter.get_main_redis_connection",
-            return_value=mock_redis,
+            "app.utils.rate_limiter.get_redis_connection",
+            AsyncMock(return_value=mock_redis),
         ):
             # Should still process the request even if EXPIRE fails
             is_allowed, remaining = await limiter.check_rate_limit(
                 key="test_user", limit=10, window_seconds=60
             )
 
-            # INCR worked, so rate limit check should succeed
-            assert is_allowed is True
-            assert remaining == 9  # 10 - 1 = 9
+            # Operations worked, so rate limit check should fail-open
+            assert is_allowed is True, "Should allow when EXPIRE fails"
+            assert remaining == 10, "Should return full limit on error"
 
     @pytest.mark.asyncio
     async def test_connection_limiter_sadd_succeeds_expire_fails(self):
         """Test connection limiter when SADD succeeds but EXPIRE fails."""
-        limiter = ConnectionLimiter(max_connections=5)
+        limiter = ConnectionLimiter()
 
         mock_redis = AsyncMock()
         mock_redis.scard = AsyncMock(return_value=0)  # No existing connections
@@ -173,16 +178,16 @@ class TestRedisPartialFailures:
         )  # Expire fails
 
         with patch(
-            "app.utils.rate_limiter.get_main_redis_connection",
-            return_value=mock_redis,
+            "app.utils.rate_limiter.get_redis_connection",
+            AsyncMock(return_value=mock_redis),
         ):
             # Should still add connection even if EXPIRE fails
             result = await limiter.add_connection(
                 user_id="test_user", connection_id="conn_1"
             )
 
-            assert result is True, (
-                "Should allow connection even if EXPIRE fails"
+            assert result is False, (
+                "Should deny connection when EXPIRE fails (fail-closed)"
             )
             mock_redis.sadd.assert_called_once()
 
@@ -197,10 +202,9 @@ class TestRedisIntermittentFailures:
 
         # First call: Redis fails
         with patch(
-            "app.utils.rate_limiter.get_main_redis_connection"
-        ) as mock_get_redis:
-            mock_get_redis.return_value = None
-
+            "app.utils.rate_limiter.get_redis_connection",
+            AsyncMock(return_value=None),
+        ):
             is_allowed, remaining = await limiter.check_rate_limit(
                 key="test_user", limit=10, window_seconds=60
             )
@@ -208,15 +212,20 @@ class TestRedisIntermittentFailures:
             assert is_allowed is True, (
                 "Should fail-open when Redis unavailable"
             )
+            assert remaining == 10, (
+                "Remaining should be limit when unavailable"
+            )
 
         # Second call: Redis recovers
         mock_redis = AsyncMock()
-        mock_redis.incr = AsyncMock(return_value=1)
+        mock_redis.zremrangebyscore = AsyncMock(return_value=0)
+        mock_redis.zcard = AsyncMock(return_value=0)  # No requests yet
+        mock_redis.zadd = AsyncMock(return_value=1)
         mock_redis.expire = AsyncMock(return_value=True)
 
         with patch(
-            "app.utils.rate_limiter.get_main_redis_connection",
-            return_value=mock_redis,
+            "app.utils.rate_limiter.get_redis_connection",
+            AsyncMock(return_value=mock_redis),
         ):
             is_allowed, remaining = await limiter.check_rate_limit(
                 key="test_user", limit=10, window_seconds=60
@@ -224,14 +233,12 @@ class TestRedisIntermittentFailures:
 
             # Should work normally when Redis recovers
             assert is_allowed is True
-            assert remaining == 9
-            mock_redis.incr.assert_called_once()
+            assert remaining == 9  # 10 - 1 (current request) = 9
+            mock_redis.zadd.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_connection_limiter_handles_flapping_redis(self):
         """Test connection limiter with flapping Redis (up/down/up)."""
-        limiter = ConnectionLimiter(max_connections=3)
-
         # Round 1: Redis available
         mock_redis_1 = AsyncMock()
         mock_redis_1.scard = AsyncMock(return_value=0)
@@ -239,22 +246,25 @@ class TestRedisIntermittentFailures:
         mock_redis_1.expire = AsyncMock(return_value=True)
 
         with patch(
-            "app.utils.rate_limiter.get_main_redis_connection",
-            return_value=mock_redis_1,
+            "app.utils.rate_limiter.get_redis_connection",
+            AsyncMock(return_value=mock_redis_1),
         ):
-            result1 = await limiter.add_connection("user1", "conn1")
+            limiter1 = ConnectionLimiter()
+            result1 = await limiter1.add_connection("user1", "conn1")
             assert result1 is True
 
-        # Round 2: Redis fails
+        # Round 2: Redis fails (new limiter instance to avoid caching)
         with patch(
-            "app.utils.rate_limiter.get_main_redis_connection"
-        ) as mock_get_redis:
-            mock_get_redis.return_value = None
+            "app.utils.rate_limiter.get_redis_connection",
+            AsyncMock(return_value=None),
+        ):
+            limiter2 = ConnectionLimiter()
+            result2 = await limiter2.add_connection("user1", "conn2")
+            assert result2 is False, (
+                "Should fail-closed when Redis unavailable (security)"
+            )
 
-            result2 = await limiter.add_connection("user1", "conn2")
-            assert result2 is True, "Should fail-open when Redis unavailable"
-
-        # Round 3: Redis recovers
+        # Round 3: Redis recovers (new limiter instance)
         mock_redis_3 = AsyncMock()
         mock_redis_3.scard = AsyncMock(
             return_value=2
@@ -263,8 +273,9 @@ class TestRedisIntermittentFailures:
         mock_redis_3.expire = AsyncMock(return_value=True)
 
         with patch(
-            "app.utils.rate_limiter.get_main_redis_connection",
-            return_value=mock_redis_3,
+            "app.utils.rate_limiter.get_redis_connection",
+            AsyncMock(return_value=mock_redis_3),
         ):
-            result3 = await limiter.add_connection("user1", "conn3")
+            limiter3 = ConnectionLimiter()
+            result3 = await limiter3.add_connection("user1", "conn3")
             assert result3 is True  # Should work again

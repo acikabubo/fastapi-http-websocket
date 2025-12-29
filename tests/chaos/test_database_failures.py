@@ -6,7 +6,7 @@ Tests application resilience when PostgreSQL is unavailable or fails.
 Run with: pytest tests/chaos/test_database_failures.py -v -m chaos
 """
 
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 from sqlalchemy.exc import (
@@ -33,8 +33,8 @@ class TestDatabaseConnectionFailures:
         mock_session.exec = AsyncMock(
             side_effect=OperationalError(
                 "could not connect to server",
-                params=None,
-                orig=Exception("Connection refused"),
+                None,
+                Exception("Connection refused"),
             )
         )
 
@@ -53,7 +53,7 @@ class TestDatabaseConnectionFailures:
         mock_session.add = AsyncMock()
         mock_session.flush = AsyncMock(
             side_effect=DisconnectionError(
-                "connection lost", params=None, orig=Exception("EOF")
+                "connection lost", None, Exception("EOF")
             )
         )
 
@@ -70,7 +70,7 @@ class TestDatabaseConnectionFailures:
         mock_session = AsyncMock()
         mock_session.exec = AsyncMock(
             side_effect=SQLTimeoutError(
-                "query timeout", params=None, orig=Exception("Timeout")
+                "query timeout", None, Exception("Timeout")
             )
         )
 
@@ -87,7 +87,7 @@ class TestDatabaseConnectionFailures:
         mock_session.add = AsyncMock()
         mock_session.flush = AsyncMock(
             side_effect=OperationalError(
-                "deadlock detected", params=None, orig=Exception()
+                "deadlock detected", None, Exception()
             )
         )
         mock_session.rollback = AsyncMock()
@@ -114,7 +114,7 @@ class TestDatabasePartialFailures:
         # Simulate partial result fetch
         call_count = [0]
 
-        async def mock_all():
+        def mock_all():
             call_count[0] += 1
             if call_count[0] == 1:
                 # First call returns partial data
@@ -124,9 +124,7 @@ class TestDatabasePartialFailures:
                 ]
             else:
                 # Subsequent calls fail
-                raise DBAPIError(
-                    "cursor closed", params=None, orig=Exception()
-                )
+                raise DBAPIError("cursor closed", None, Exception())
 
         mock_result.all = mock_all
 
@@ -146,9 +144,7 @@ class TestDatabasePartialFailures:
         mock_session.add = AsyncMock()
         mock_session.flush = AsyncMock()  # Flush succeeds
         mock_session.commit = AsyncMock(
-            side_effect=OperationalError(
-                "commit failed", params=None, orig=Exception()
-            )
+            side_effect=OperationalError("commit failed", None, Exception())
         )
 
         # Note: Current repository pattern uses flush, not commit
@@ -167,7 +163,7 @@ class TestDatabaseIntermittentFailures:
         # Second attempt: success
         call_count = [0]
         mock_result = AsyncMock()
-        mock_result.all = AsyncMock(
+        mock_result.all = Mock(
             return_value=[Author(id=1, name="Test", bio="Bio")]
         )
 
@@ -175,9 +171,7 @@ class TestDatabaseIntermittentFailures:
             call_count[0] += 1
             if call_count[0] == 1:
                 raise OperationalError(
-                    "server closed connection",
-                    params=None,
-                    orig=Exception(),
+                    "server closed connection", None, Exception()
                 )
             else:
                 return mock_result
@@ -206,16 +200,14 @@ class TestDatabaseIntermittentFailures:
             mock_result = AsyncMock()
             if i < 15:
                 # First 15 queries: pool exhausted
-                mock_result.all = AsyncMock(
+                mock_result.all = Mock(
                     side_effect=OperationalError(
-                        "connection pool exhausted",
-                        params=None,
-                        orig=Exception(),
+                        "connection pool exhausted", None, Exception()
                     )
                 )
             else:
                 # Last 5 queries: pool recovered
-                mock_result.all = AsyncMock(return_value=[])
+                mock_result.all = Mock(return_value=[])
 
             queries.append(mock_result)
 
@@ -249,12 +241,12 @@ class TestDatabaseNetworkPartitions:
         mock_session = AsyncMock()
 
         # Simulate slow network by delaying query execution
-        import asyncio
-
         mock_result = AsyncMock()
 
-        async def slow_all():
-            await asyncio.sleep(0.5)  # 500ms delay
+        def slow_all():
+            import time
+
+            time.sleep(0.5)  # 500ms delay (synchronous sleep)
             return [Author(id=1, name="Test", bio="Bio")]
 
         mock_result.all = slow_all
