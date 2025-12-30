@@ -28,12 +28,14 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     FastAPI lifespan context manager for startup and shutdown.
 
     Handles:
+    - Startup validation (environment variables and service connections)
     - Database initialization with retries
     - Background task startup (user session sync, audit log worker)
     - Prometheus metrics initialization
     - Graceful shutdown with audit log flushing and task cancellation
 
     Startup operations:
+    - Validates required settings and service connections (fail-fast)
     - Sets up the database and tables
     - Creates user session background task
     - Starts audit log background worker
@@ -46,6 +48,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """
     # Startup
     logger.info("Application startup: initializing resources")
+
+    # Run startup validations (fail-fast if configuration is invalid)
+    from app.startup_validation import run_all_validations
+
+    await run_all_validations()
 
     # Create the database and tables
     await wait_and_init_db()

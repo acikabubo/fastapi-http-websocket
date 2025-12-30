@@ -778,6 +778,75 @@ cp .env.production.example .env
 ENV=production
 ```
 
+**Startup Validation (`app/startup_validation.py`)**
+
+The application implements **fail-fast validation** to ensure it does not start with invalid configuration or unavailable dependencies. All validations run during application startup, before accepting any requests.
+
+**Validation Functions:**
+
+1. **`validate_settings()`** - Validates required environment variables:
+   - Keycloak settings: `KEYCLOAK_REALM`, `KEYCLOAK_CLIENT_ID`, `KEYCLOAK_BASE_URL`, `KEYCLOAK_ADMIN_USERNAME`, `KEYCLOAK_ADMIN_PASSWORD`
+   - Database settings: `DB_USER`, `DB_PASSWORD`
+   - Validates `DEBUG_AUTH` is disabled in production
+   - Validates `DEBUG_AUTH` credentials if enabled
+
+2. **`validate_database_connection()`** - Tests database connectivity:
+   - Attempts connection to PostgreSQL
+   - Executes simple health check query (`SELECT 1`)
+   - Raises `StartupValidationError` if connection fails
+
+3. **`validate_redis_connection()`** - Tests Redis connectivity:
+   - Attempts connection to Redis
+   - Executes PING command to verify connection
+   - Raises `StartupValidationError` if connection fails
+
+4. **`run_all_validations()`** - Orchestrates all validation checks:
+   - Runs settings validation first (no external dependencies)
+   - Then validates database connection
+   - Finally validates Redis connection
+   - Application will not start if any validation fails
+
+**Integration with Lifespan:**
+
+Startup validation runs automatically in the `lifespan()` context manager before any other initialization:
+
+```python
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+    # Run startup validations (fail-fast if configuration is invalid)
+    from app.startup_validation import run_all_validations
+    await run_all_validations()
+
+    # Continue with normal startup (database, background tasks, etc.)
+    ...
+```
+
+**Error Messages:**
+
+When validation fails, the application logs a clear error message and raises `StartupValidationError`:
+
+```
+ERROR - Startup validation failed: KEYCLOAK_REALM environment variable is required
+ERROR - Application will not start. Fix the configuration errors and try again.
+```
+
+**Benefits:**
+
+- ✅ **Fail-fast principle**: Application won't start with invalid configuration
+- ✅ **Clear error messages**: Actionable feedback for missing/invalid settings
+- ✅ **Early detection**: Catch configuration errors before accepting requests
+- ✅ **Service availability checks**: Verify database and Redis are reachable
+- ✅ **Production safety**: Prevents DEBUG_AUTH from being enabled in production
+
+**Testing:**
+
+Comprehensive tests in [tests/test_startup_validation.py](tests/test_startup_validation.py) cover:
+- Missing environment variables
+- Invalid configuration (e.g., DEBUG_AUTH in production)
+- Database connection failures
+- Redis connection failures
+- Validation orchestration
+
 ### Pre-commit Hooks
 
 All commits must pass:
