@@ -1396,10 +1396,120 @@ DEBUG - Cached count for Author (filters: None): 1234 (TTL: 300s)
 - Tests run in parallel by default using `pytest-xdist` for faster execution
 - Mock Keycloak interactions where appropriate (`pytest-mock`)
 - Database tests should use test fixtures with isolated sessions
-- Use centralized fixtures from `tests/conftest.py` and mock factories from `tests/mocks/`
+- **IMPORTANT:** Use centralized fixtures from `tests/conftest.py` and mock factories from `tests/mocks/`
 - Load tests (marked `@pytest.mark.load`) test performance under high concurrent loads
 - Chaos tests (marked `@pytest.mark.chaos`) test resilience when dependencies fail
 - Skip slow tests with: `pytest -m "not load and not chaos"`
+
+#### Centralized Test Mocks
+
+**CRITICAL:** Always use centralized mock factories from `tests/mocks/` instead of creating inline mocks. This ensures consistency, reduces code duplication, and makes tests easier to maintain.
+
+**Available Mock Factories:**
+
+```python
+# Redis Mocks (tests/mocks/redis_mocks.py)
+from tests.mocks.redis_mocks import (
+    create_mock_redis_connection,     # Full Redis connection with all operations
+    create_mock_rate_limiter,          # RateLimiter instance
+    create_mock_connection_limiter,    # ConnectionLimiter instance
+)
+
+# WebSocket Mocks (tests/mocks/websocket_mocks.py)
+from tests.mocks.websocket_mocks import (
+    create_mock_websocket,             # WebSocket connection with send/receive
+    create_mock_connection_manager,    # ConnectionManager with broadcast
+    create_mock_package_router,        # PackageRouter with handle_request
+    create_mock_broadcast_message,     # BroadcastDataModel factory
+)
+
+# Auth Mocks (tests/mocks/auth_mocks.py)
+from tests.mocks.auth_mocks import (
+    create_mock_keycloak_manager,      # KeycloakManager with login/decode_token
+    create_mock_user_model,             # UserModel factory
+    create_mock_auth_backend,           # AuthBackend for middleware tests
+    create_mock_rbac_manager,           # RBACManager for permission tests
+)
+
+# Repository Mocks (tests/mocks/repository_mocks.py)
+from tests.mocks.repository_mocks import (
+    create_mock_author_repository,     # AuthorRepository with CRUD ops
+    create_mock_crud_repository,        # Generic BaseRepository
+)
+```
+
+**Usage Examples:**
+
+```python
+# ✅ GOOD - Use centralized mocks
+from tests.mocks.redis_mocks import create_mock_redis_connection
+
+@pytest.fixture
+def mock_redis():
+    return create_mock_redis_connection()
+
+async def test_rate_limiting(mock_redis):
+    limiter = RateLimiter()
+    # mock_redis already has all methods configured
+    ...
+
+# ❌ BAD - Don't create inline mocks
+@pytest.fixture
+def mock_redis():
+    redis_mock = AsyncMock()
+    redis_mock.zadd = AsyncMock()
+    redis_mock.zcard = AsyncMock(return_value=0)
+    # ... 10 more lines of setup
+    return redis_mock
+```
+
+```python
+# ✅ GOOD - Use WebSocket mock factory
+from tests.mocks.websocket_mocks import create_mock_websocket
+
+async def test_websocket_handler():
+    mock_ws = create_mock_websocket()
+    # Already has send_json, send_response, accept, close, client.host, etc.
+    await handler.on_connect(mock_ws)
+
+# ❌ BAD - Don't create inline WebSocket mocks
+async def test_websocket_handler():
+    mock_ws = MagicMock()
+    mock_ws.send_json = AsyncMock()
+    mock_ws.send_response = AsyncMock()
+    # ... many more lines
+```
+
+```python
+# ✅ GOOD - Use Keycloak mock factory
+from tests.mocks.auth_mocks import create_mock_keycloak_manager
+
+async def test_authentication():
+    mock_kc = create_mock_keycloak_manager()
+    # Already configured with login and decode_token methods
+    with patch("app.auth.KeycloakManager", return_value=mock_kc):
+        ...
+
+# ❌ BAD - Don't create inline Keycloak mocks
+async def test_authentication():
+    mock_kc = MagicMock()
+    mock_kc.login = Mock(return_value={"access_token": "..."})
+    mock_kc.openid.decode_token = Mock(return_value={...})
+    # Duplicate setup across many test files
+```
+
+**Benefits of Centralized Mocks:**
+- ✅ **Consistency:** Same mock behavior across all tests
+- ✅ **Maintainability:** Update once in `tests/mocks/`, benefits all tests
+- ✅ **Less Code:** ~80 lines eliminated in just 4 refactored files
+- ✅ **Discoverability:** Easy to find and reuse existing mocks
+- ✅ **Type Safety:** Mocks use `spec` parameter for better IDE support
+
+**When Creating New Tests:**
+1. Check `tests/mocks/` first - the mock you need probably exists
+2. If creating a new mock, add it to the appropriate `tests/mocks/*.py` file
+3. Never create inline mocks - always use or extend centralized factories
+4. See refactored files for examples: `test_rate_limiting.py`, `test_websocket.py`, `test_auth_basic.py`
 
 ### Performance Profiling with Scalene
 

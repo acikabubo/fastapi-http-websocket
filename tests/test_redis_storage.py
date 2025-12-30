@@ -18,6 +18,7 @@ from app.storage.redis import (
     get_auth_redis_connection,
     get_redis_connection,
 )
+from tests.mocks.redis_mocks import create_mock_redis_connection
 
 
 @pytest.fixture
@@ -28,8 +29,7 @@ def mock_redis():
     Returns:
         AsyncMock: Mocked Redis instance
     """
-    redis_mock = AsyncMock()
-    redis_mock.set = AsyncMock()
+    redis_mock = create_mock_redis_connection()
     redis_mock.pexpire = AsyncMock()
     redis_mock.pubsub = AsyncMock()
     return redis_mock
