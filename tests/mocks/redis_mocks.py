@@ -37,6 +37,13 @@ def create_mock_redis_connection():
     redis_mock.smembers = AsyncMock(return_value=set())
     redis_mock.scard = AsyncMock(return_value=0)
 
+    # Sorted set operations (for rate limiting)
+    redis_mock.zadd = AsyncMock(return_value=1)
+    redis_mock.zcard = AsyncMock(return_value=0)
+    redis_mock.zremrangebyscore = AsyncMock(return_value=0)
+    redis_mock.zrange = AsyncMock(return_value=[])
+    redis_mock.zrem = AsyncMock(return_value=1)
+
     # Hash operations
     redis_mock.hset = AsyncMock(return_value=1)
     redis_mock.hget = AsyncMock(return_value=None)

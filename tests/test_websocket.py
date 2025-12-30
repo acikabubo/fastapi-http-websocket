@@ -6,7 +6,7 @@ message routing, handler dispatch, and error handling.
 """
 
 import uuid
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from starlette.authentication import UnauthenticatedUser
@@ -17,6 +17,10 @@ from app.api.ws.websocket import PackageAuthWebSocketEndpoint
 from app.routing import pkg_router
 from app.schemas.request import RequestModel
 from app.schemas.user import UserModel
+from tests.mocks.websocket_mocks import (
+    create_mock_connection_manager,
+    create_mock_websocket,
+)
 
 
 class TestWebSocketAuthentication:
@@ -39,9 +43,7 @@ class TestWebSocketAuthentication:
         )  # type: ignore
 
         # Mock the websocket
-        mock_websocket = MagicMock()
-        mock_websocket.accept = AsyncMock()
-        mock_websocket.close = AsyncMock()
+        mock_websocket = create_mock_websocket()
 
         # Mock Redis connection
         with patch(
@@ -74,9 +76,7 @@ class TestWebSocketAuthentication:
         )  # type: ignore
 
         # Mock the websocket
-        mock_websocket = MagicMock()
-        mock_websocket.accept = AsyncMock()
-        mock_websocket.close = AsyncMock()
+        mock_websocket = create_mock_websocket()
 
         # Mock Redis connection and connection manager
         mock_redis = AsyncMock()
@@ -87,13 +87,15 @@ class TestWebSocketAuthentication:
                 "app.api.ws.websocket.get_auth_redis_connection",
                 return_value=mock_redis,
             ),
-            patch("app.api.ws.websocket.connection_manager") as mock_cm,
+            patch(
+                "app.api.ws.websocket.connection_manager",
+                create_mock_connection_manager(),
+            ) as mock_cm,
             patch("app.api.ws.websocket.ws_clients", {}),
             patch(
                 "app.api.ws.websocket.connection_limiter"
             ) as mock_conn_limiter,
         ):
-            mock_cm.connect = MagicMock()
             mock_conn_limiter.add_connection = AsyncMock(return_value=True)
 
             # Call on_connect
@@ -124,11 +126,12 @@ class TestWebSocketAuthentication:
         )  # type: ignore
         endpoint.user = user
 
-        mock_websocket = MagicMock()
+        mock_websocket = create_mock_websocket()
 
-        with patch("app.api.ws.websocket.connection_manager") as mock_cm:
-            mock_cm.disconnect = MagicMock()
-
+        with patch(
+            "app.api.ws.websocket.connection_manager",
+            create_mock_connection_manager(),
+        ) as mock_cm:
             # Call on_disconnect
             await endpoint.on_disconnect(mock_websocket, 1000)
 
@@ -154,10 +157,7 @@ class TestWebSocketMessageHandling:
         }
 
         # Mock the websocket
-        mock_websocket = MagicMock()
-        mock_websocket.send_response = AsyncMock()
-        mock_websocket.client = MagicMock()
-        mock_websocket.client.host = "127.0.0.1"
+        mock_websocket = create_mock_websocket()
 
         # Create Web endpoint instance
         scope = {"type": "websocket", "user": mock_user}
@@ -201,10 +201,7 @@ class TestWebSocketMessageHandling:
         }
 
         # Mock the websocket
-        mock_websocket = MagicMock()
-        mock_websocket.close = AsyncMock()
-        mock_websocket.client = MagicMock()
-        mock_websocket.client.host = "127.0.0.1"
+        mock_websocket = create_mock_websocket()
 
         # Create Web endpoint instance
         scope = {"type": "websocket", "user": mock_user}
@@ -245,10 +242,7 @@ class TestWebSocketMessageHandling:
         }
 
         # Mock the websocket
-        mock_websocket = MagicMock()
-        mock_websocket.send_response = AsyncMock()
-        mock_websocket.client = MagicMock()
-        mock_websocket.client.host = "127.0.0.1"
+        mock_websocket = create_mock_websocket()
 
         # Create Web endpoint instance
         scope = {"type": "websocket", "user": limited_user}
@@ -408,11 +402,8 @@ class TestWebSocketBroadcast:
         )
 
         # Create mock websockets
-        mock_ws1 = MagicMock()
-        mock_ws1.send_json = AsyncMock()
-
-        mock_ws2 = MagicMock()
-        mock_ws2.send_json = AsyncMock()
+        mock_ws1 = create_mock_websocket()
+        mock_ws2 = create_mock_websocket()
 
         # Connect mock websockets
         connection_manager.connect(mock_ws1)
@@ -450,9 +441,7 @@ class TestWebSocketEdgeCases:
             scope=scope, receive=None, send=None
         )  # type: ignore
 
-        mock_websocket = MagicMock()
-        mock_websocket.accept = AsyncMock()
-        mock_websocket.close = AsyncMock()
+        mock_websocket = create_mock_websocket()
 
         with patch(
             "app.api.ws.websocket.get_auth_redis_connection"

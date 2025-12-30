@@ -9,6 +9,8 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
+from tests.mocks.redis_mocks import create_mock_redis_connection
+
 
 @pytest.fixture
 def mock_redis():
@@ -18,16 +20,7 @@ def mock_redis():
     Returns:
         AsyncMock: Mocked Redis connection
     """
-    redis_mock = AsyncMock()
-    redis_mock.zremrangebyscore = AsyncMock()
-    redis_mock.zcard = AsyncMock(return_value=0)
-    redis_mock.zadd = AsyncMock()
-    redis_mock.expire = AsyncMock()
-    redis_mock.delete = AsyncMock()
-    redis_mock.scard = AsyncMock(return_value=0)
-    redis_mock.sadd = AsyncMock()
-    redis_mock.srem = AsyncMock()
-    return redis_mock
+    return create_mock_redis_connection()
 
 
 @pytest.fixture

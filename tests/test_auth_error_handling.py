@@ -11,6 +11,13 @@ from jwcrypto.jwt import JWTExpired
 from keycloak.exceptions import KeycloakAuthenticationError
 
 from app.auth import AuthBackend, AuthenticationError
+from tests.mocks.auth_mocks import create_mock_keycloak_manager
+
+
+@pytest.fixture
+def mock_kc_manager():
+    """Provide a mock Keycloak manager for tests."""
+    return create_mock_keycloak_manager()
 
 
 class TestAuthenticationError:
@@ -39,7 +46,9 @@ class TestAuthBackendErrorHandling:
     """Test AuthBackend error handling with specific exceptions."""
 
     @pytest.mark.asyncio
-    async def test_expired_token_raises_authentication_error(self):
+    async def test_expired_token_raises_authentication_error(
+        self, mock_request, mock_kc_manager
+    ):
         """Test that expired JWT token raises AuthenticationError."""
         auth_backend = AuthBackend()
 
@@ -49,10 +58,7 @@ class TestAuthBackendErrorHandling:
         request.url.path = "/api/test"
         request.headers.get.return_value = "Bearer expired_token"
 
-        with patch("app.auth.KeycloakManager") as mock_kc_manager_class:
-            mock_kc_manager = MagicMock()
-            mock_kc_manager_class.return_value = mock_kc_manager
-
+        with patch("app.auth.KeycloakManager", return_value=mock_kc_manager):
             # Simulate JWT expired exception
             mock_kc_manager.openid.decode_token.side_effect = JWTExpired(
                 "Token expired"

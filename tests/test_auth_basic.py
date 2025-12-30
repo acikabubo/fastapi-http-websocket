@@ -1,6 +1,6 @@
 """Tests for basic authentication functions."""
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 from fastapi import HTTPException
@@ -9,6 +9,7 @@ from keycloak.exceptions import KeycloakAuthenticationError
 
 from app.auth import basic_auth_keycloak_user
 from app.schemas.user import UserModel
+from tests.mocks.auth_mocks import create_mock_keycloak_manager
 
 
 class TestBasicAuthKeycloakUser:
@@ -22,8 +23,7 @@ class TestBasicAuthKeycloakUser:
         )
 
         # Mock Keycloak manager
-        mock_kc_manager = MagicMock()
-        mock_kc_manager.login.return_value = {"access_token": "test-token"}
+        mock_kc_manager = create_mock_keycloak_manager()
         mock_kc_manager.openid.decode_token.return_value = mock_user_data
 
         with patch("app.auth.KeycloakManager", return_value=mock_kc_manager):
@@ -41,7 +41,7 @@ class TestBasicAuthKeycloakUser:
         )
 
         # Mock Keycloak manager to raise authentication error
-        mock_kc_manager = MagicMock()
+        mock_kc_manager = create_mock_keycloak_manager()
         mock_error = KeycloakAuthenticationError("Invalid credentials")
         mock_error.response_code = 401
         mock_kc_manager.login.side_effect = mock_error

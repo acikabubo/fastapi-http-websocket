@@ -22,6 +22,7 @@ def create_mock_websocket():
     ws_mock.send_json = AsyncMock()
     ws_mock.send_text = AsyncMock()
     ws_mock.send_bytes = AsyncMock()
+    ws_mock.send_response = AsyncMock()  # For WebSocket endpoint responses
 
     # Receive operations
     ws_mock.receive_json = AsyncMock(return_value={})
@@ -39,6 +40,11 @@ def create_mock_websocket():
     ws_mock.query_params = {}
     ws_mock.url = MagicMock()
     ws_mock.url.path = "/ws"
+
+    # Client info
+    ws_mock.client = MagicMock()
+    ws_mock.client.host = "127.0.0.1"
+    ws_mock.client.port = 8000
 
     return ws_mock
 
