@@ -1,3 +1,5 @@
+from typing import Any
+
 from keycloak import KeycloakOpenID
 
 from app.settings import app_settings
@@ -8,7 +10,8 @@ class KeycloakManager(metaclass=SingletonMeta):
     """
     Singleton manager for Keycloak authentication operations.
 
-    Provides OpenID Connect authentication and token management for the application.
+    Provides OpenID Connect authentication and token management for the
+    application using native async methods from python-keycloak library.
     """
 
     def __init__(self) -> None:
@@ -24,15 +27,49 @@ class KeycloakManager(metaclass=SingletonMeta):
             realm_name=app_settings.KEYCLOAK_REALM,
         )
 
-    def login(self, username: str, password: str) -> None:
+    async def login_async(
+        self, username: str, password: str
+    ) -> dict[str, Any]:
         """
-        Authenticate a user and obtain a token for subsequent API calls.
+        Authenticate a user asynchronously and obtain tokens.
 
-        Parameters:
-        username (str): The username of the user to authenticate.
-        password (str): The password of the user to authenticate.
+        Uses native async method from python-keycloak library to prevent
+        blocking the async event loop.
+
+        Args:
+            username: The username of the user to authenticate.
+            password: The password of the user to authenticate.
 
         Returns:
-        str: The access token obtained after successful authentication.
+            Token dictionary containing access_token, refresh_token,
+            expires_in, etc.
+
+        Raises:
+            KeycloakAuthenticationError: If authentication fails.
+
+        Example:
+            >>> kc_manager = KeycloakManager()
+            >>> token = await kc_manager.login_async("user", "pass")
+            >>> access_token = token["access_token"]
+        """
+        return await self.openid.a_token(username=username, password=password)
+
+    def login(self, username: str, password: str) -> dict[str, Any]:
+        """
+        Authenticate a user synchronously and obtain tokens.
+
+        .. deprecated::
+            Use :meth:`login_async` instead to avoid blocking the event loop.
+
+        Args:
+            username: The username of the user to authenticate.
+            password: The password of the user to authenticate.
+
+        Returns:
+            Token dictionary containing access_token, refresh_token,
+            expires_in, etc.
+
+        Raises:
+            KeycloakAuthenticationError: If authentication fails.
         """
         return self.openid.token(username=username, password=password)

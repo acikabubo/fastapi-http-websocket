@@ -22,16 +22,18 @@ class TestBasicAuthKeycloakUser:
             username="testuser", password="password"
         )
 
-        # Mock Keycloak manager
+        # Mock Keycloak manager with async methods
         mock_kc_manager = create_mock_keycloak_manager()
-        mock_kc_manager.openid.decode_token.return_value = mock_user_data
+        mock_kc_manager.openid.a_decode_token.return_value = mock_user_data
 
         with patch("app.auth.KeycloakManager", return_value=mock_kc_manager):
-            user = basic_auth_keycloak_user(credentials)
+            user = await basic_auth_keycloak_user(credentials)
 
         assert isinstance(user, UserModel)
         assert user.username == mock_user_data["preferred_username"]
-        mock_kc_manager.login.assert_called_once_with("testuser", "password")
+        mock_kc_manager.login_async.assert_called_once_with(
+            "testuser", "password"
+        )
 
     @pytest.mark.asyncio
     async def test_basic_auth_invalid_credentials(self):
@@ -44,11 +46,11 @@ class TestBasicAuthKeycloakUser:
         mock_kc_manager = create_mock_keycloak_manager()
         mock_error = KeycloakAuthenticationError("Invalid credentials")
         mock_error.response_code = 401
-        mock_kc_manager.login.side_effect = mock_error
+        mock_kc_manager.login_async.side_effect = mock_error
 
         with patch("app.auth.KeycloakManager", return_value=mock_kc_manager):
             with pytest.raises(HTTPException) as exc_info:
-                basic_auth_keycloak_user(credentials)
+                await basic_auth_keycloak_user(credentials)
 
         assert exc_info.value.status_code == 401
         assert "Invalid credentials" in exc_info.value.detail

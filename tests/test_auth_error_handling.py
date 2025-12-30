@@ -59,8 +59,8 @@ class TestAuthBackendErrorHandling:
         request.headers.get.return_value = "Bearer expired_token"
 
         with patch("app.auth.KeycloakManager", return_value=mock_kc_manager):
-            # Simulate JWT expired exception
-            mock_kc_manager.openid.decode_token.side_effect = JWTExpired(
+            # Simulate JWT expired exception using async method
+            mock_kc_manager.openid.a_decode_token.side_effect = JWTExpired(
                 "Token expired"
             )
 
@@ -85,7 +85,7 @@ class TestAuthBackendErrorHandling:
             mock_kc_manager_class.return_value = mock_kc_manager
 
             # Simulate Keycloak authentication error
-            mock_kc_manager.openid.decode_token.side_effect = (
+            mock_kc_manager.openid.a_decode_token.side_effect = (
                 KeycloakAuthenticationError("Invalid credentials")
             )
 
@@ -110,7 +110,7 @@ class TestAuthBackendErrorHandling:
             mock_kc_manager_class.return_value = mock_kc_manager
 
             # Simulate ValueError during token decode
-            mock_kc_manager.openid.decode_token.side_effect = ValueError(
+            mock_kc_manager.openid.a_decode_token.side_effect = ValueError(
                 "Malformed token"
             )
 
@@ -138,7 +138,7 @@ class TestAuthBackendErrorHandling:
             mock_kc_manager = MagicMock()
             mock_kc_manager_class.return_value = mock_kc_manager
 
-            mock_kc_manager.openid.decode_token.side_effect = JWTExpired(
+            mock_kc_manager.openid.a_decode_token.side_effect = JWTExpired(
                 "Token expired"
             )
 
@@ -161,16 +161,20 @@ class TestAuthBackendErrorHandling:
             mock_kc_manager = MagicMock()
             mock_kc_manager_class.return_value = mock_kc_manager
 
-            # Simulate successful token decode
-            mock_kc_manager.openid.decode_token.return_value = {
-                "sub": "user-id-123",
-                "exp": 1700000000,
-                "preferred_username": "testuser",
-                "email": "test@example.com",
-                "realm_access": {"roles": ["admin"]},
-                "azp": "test-client",
-                "resource_access": {"test-client": {"roles": ["admin"]}},
-            }
+            # Simulate successful token decode (async method)
+            from unittest.mock import AsyncMock
+
+            mock_kc_manager.openid.a_decode_token = AsyncMock(
+                return_value={
+                    "sub": "user-id-123",
+                    "exp": 1700000000,
+                    "preferred_username": "testuser",
+                    "email": "test@example.com",
+                    "realm_access": {"roles": ["admin"]},
+                    "azp": "test-client",
+                    "resource_access": {"test-client": {"roles": ["admin"]}},
+                }
+            )
 
             result = await auth_backend.authenticate(request)
 
@@ -214,7 +218,7 @@ class TestErrorHandlingIntegration:
             mock_kc_manager_class.return_value = mock_kc_manager
 
             error_message = "Detailed error: signature verification failed"
-            mock_kc_manager.openid.decode_token.side_effect = ValueError(
+            mock_kc_manager.openid.a_decode_token.side_effect = ValueError(
                 error_message
             )
 
@@ -245,7 +249,7 @@ class TestErrorHandlingIntegration:
         with patch("app.auth.KeycloakManager") as mock_kc_manager_class:
             mock_kc_manager = MagicMock()
             mock_kc_manager_class.return_value = mock_kc_manager
-            mock_kc_manager.openid.decode_token.side_effect = JWTExpired(
+            mock_kc_manager.openid.a_decode_token.side_effect = JWTExpired(
                 "expired"
             )
 
@@ -258,7 +262,7 @@ class TestErrorHandlingIntegration:
         with patch("app.auth.KeycloakManager") as mock_kc_manager_class:
             mock_kc_manager = MagicMock()
             mock_kc_manager_class.return_value = mock_kc_manager
-            mock_kc_manager.openid.decode_token.side_effect = (
+            mock_kc_manager.openid.a_decode_token.side_effect = (
                 KeycloakAuthenticationError("invalid")
             )
 
@@ -271,7 +275,7 @@ class TestErrorHandlingIntegration:
         with patch("app.auth.KeycloakManager") as mock_kc_manager_class:
             mock_kc_manager = MagicMock()
             mock_kc_manager_class.return_value = mock_kc_manager
-            mock_kc_manager.openid.decode_token.side_effect = ValueError(
+            mock_kc_manager.openid.a_decode_token.side_effect = ValueError(
                 "decode error"
             )
 

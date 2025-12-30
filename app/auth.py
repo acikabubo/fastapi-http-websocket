@@ -108,14 +108,14 @@ class AuthBackend(AuthenticationBackend):  # type: ignore[misc]
                     "DEBUG_AUTH is enabled - using debug credentials. "
                     "NEVER enable this in production!"
                 )
-                token = kc_manager.login(  # type: ignore[func-returns-value]
+                token = await kc_manager.login_async(
                     app_settings.DEBUG_AUTH_USERNAME,
                     app_settings.DEBUG_AUTH_PASSWORD,
                 )
                 access_token = token["access_token"]
 
-            # Decode access token and get user data
-            user_data = kc_manager.openid.decode_token(access_token)
+            # Decode access token and get user data (async to prevent event loop blocking)
+            user_data = await kc_manager.openid.a_decode_token(access_token)
 
             # Make logged in user object
             user: UserModel = UserModel(**user_data)
@@ -136,21 +136,44 @@ class AuthBackend(AuthenticationBackend):  # type: ignore[misc]
 
 
 # USED FOR DEVELOP
-def basic_auth_keycloak_user(
+async def basic_auth_keycloak_user(
     credentials: Annotated[HTTPBasicCredentials, Depends(HTTPBasic())],
 ) -> UserModel:
     """
-    Authenticates a user using Keycloak basic authentication credentials and returns a UserModel object.
+    Authenticate user using Keycloak basic auth credentials (async).
 
-    This function is used to authenticate a user by verifying their username and password against a Keycloak identity provider.
-    If the authentication is successful, it decodes the access token and creates a UserModel object from the user data.
+    This function authenticates a user by verifying their username and
+    password against a Keycloak identity provider. If authentication is
+    successful, it decodes the access token and creates a UserModel object.
 
-    If the authentication fails, it raises a HTTPException with a 401 Unauthorized status code and a "Invalid credentials" detail.
+    Uses native async methods from python-keycloak library to prevent
+    blocking the event loop.
+
+    Args:
+        credentials: HTTP Basic authentication credentials containing
+            username and password.
+
+    Returns:
+        UserModel: Authenticated user model with roles and claims.
+
+    Raises:
+        HTTPException: 401 Unauthorized if authentication fails.
+
+    Example:
+        >>> from fastapi.security import HTTPBasicCredentials
+        >>> credentials = HTTPBasicCredentials(
+        ...     username="user", password="pass"
+        ... )
+        >>> user = await basic_auth_keycloak_user(credentials)
     """
     try:
         kc_manager = KeycloakManager()
-        token = kc_manager.login(credentials.username, credentials.password)  # type: ignore[func-returns-value]
-        user_data = kc_manager.openid.decode_token(token["access_token"])
+        token = await kc_manager.login_async(
+            credentials.username, credentials.password
+        )
+        user_data = await kc_manager.openid.a_decode_token(
+            token["access_token"]
+        )
 
         user: UserModel = UserModel(**user_data)
 

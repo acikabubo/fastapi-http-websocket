@@ -23,12 +23,14 @@ def create_mock_auth_backend():
 
 def create_mock_keycloak_manager():
     """
-    Creates a mock KeycloakManager with common methods.
+    Creates a mock KeycloakManager with common sync and async methods.
 
     Returns:
-        Mock: Mocked KeycloakManager instance
+        Mock: Mocked KeycloakManager instance with both sync and async methods
     """
     manager_mock = Mock()
+
+    # Sync method (deprecated but kept for backward compatibility)
     manager_mock.login = Mock(
         return_value={
             "access_token": "mock_access_token",
@@ -37,7 +39,21 @@ def create_mock_keycloak_manager():
             "token_type": "Bearer",
         }
     )
+
+    # Async method (preferred)
+    manager_mock.login_async = AsyncMock(
+        return_value={
+            "access_token": "mock_access_token",
+            "refresh_token": "mock_refresh_token",
+            "expires_in": 300,
+            "token_type": "Bearer",
+        }
+    )
+
+    # OpenID client with both sync and async methods
     manager_mock.openid = Mock()
+
+    # Sync decode_token (deprecated)
     manager_mock.openid.decode_token = Mock(
         return_value={
             "sub": "user-id-123",
@@ -46,6 +62,17 @@ def create_mock_keycloak_manager():
             "realm_access": {"roles": ["admin", "user"]},
         }
     )
+
+    # Async a_decode_token (preferred)
+    manager_mock.openid.a_decode_token = AsyncMock(
+        return_value={
+            "sub": "user-id-123",
+            "preferred_username": "testuser",
+            "email": "test@example.com",
+            "realm_access": {"roles": ["admin", "user"]},
+        }
+    )
+
     manager_mock.admin = Mock()
     return manager_mock
 
