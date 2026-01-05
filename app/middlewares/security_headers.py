@@ -22,9 +22,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):  # type: ignore[misc]
     - Strict-Transport-Security: Enforces HTTPS connections
     - Referrer-Policy: Controls referrer information
     - Permissions-Policy: Controls browser features
-
-    Note: Content-Security-Policy should be configured per-application
-    based on specific requirements.
+    - Content-Security-Policy: Prevents XSS and injection attacks
     """
 
     def __init__(self, app: ASGIApp):
@@ -72,5 +70,21 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):  # type: ignore[misc]
         response.headers["Permissions-Policy"] = (
             "geolocation=(), microphone=(), camera=()"
         )
+
+        # Content Security Policy to prevent XSS and injection attacks
+        csp_directives = [
+            "default-src 'self'",  # Only allow resources from same origin
+            "script-src 'self'",  # No inline scripts
+            "style-src 'self' 'unsafe-inline'",  # Allow inline styles for API docs
+            "img-src 'self' data:",  # Allow images from same origin and data URIs
+            "font-src 'self'",  # Only load fonts from same origin
+            "connect-src 'self' ws: wss:",  # Allow WebSocket connections
+            "frame-ancestors 'none'",  # Equivalent to X-Frame-Options: DENY
+            "base-uri 'self'",  # Restrict base tag to same origin
+            "form-action 'self'",  # Only submit forms to same origin
+            "upgrade-insecure-requests",  # Automatically upgrade HTTP to HTTPS
+        ]
+
+        response.headers["Content-Security-Policy"] = "; ".join(csp_directives)
 
         return response

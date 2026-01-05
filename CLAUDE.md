@@ -496,6 +496,17 @@ python generate_ws_handler.py handler_name PKG_ID --overwrite
   - `Strict-Transport-Security: max-age=31536000; includeSubDomains` - Enforces HTTPS
   - `Referrer-Policy: strict-origin-when-cross-origin` - Controls referrer information
   - `Permissions-Policy: geolocation=(), microphone=(), camera=()` - Disables browser features
+  - `Content-Security-Policy` - Prevents XSS and injection attacks
+    - `default-src 'self'` - Only allow resources from same origin
+    - `script-src 'self'` - Block inline scripts and eval()
+    - `style-src 'self' 'unsafe-inline'` - Allow inline styles for API docs
+    - `img-src 'self' data:` - Allow images from same origin and data URIs
+    - `font-src 'self'` - Only load fonts from same origin
+    - `connect-src 'self' ws: wss:` - Allow WebSocket connections (critical for /web endpoint)
+    - `frame-ancestors 'none'` - Prevent clickjacking (reinforces X-Frame-Options)
+    - `base-uri 'self'` - Restrict base tag to same origin
+    - `form-action 'self'` - Only submit forms to same origin
+    - `upgrade-insecure-requests` - Automatically upgrade HTTP to HTTPS
 - `RequestSizeLimitMiddleware`: Protects against large payload attacks
   - Checks `Content-Length` header before processing request
   - Returns 413 Payload Too Large if size exceeds limit
