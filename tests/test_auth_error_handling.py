@@ -50,6 +50,8 @@ class TestAuthBackendErrorHandling:
         self, mock_request, mock_kc_manager
     ):
         """Test that expired JWT token raises AuthenticationError."""
+        from unittest.mock import AsyncMock
+
         auth_backend = AuthBackend()
 
         # Mock request object
@@ -60,8 +62,8 @@ class TestAuthBackendErrorHandling:
 
         with patch("app.auth.KeycloakManager", return_value=mock_kc_manager):
             # Simulate JWT expired exception using async method
-            mock_kc_manager.openid.a_decode_token.side_effect = JWTExpired(
-                "Token expired"
+            mock_kc_manager.openid.a_decode_token = AsyncMock(
+                side_effect=JWTExpired("Token expired")
             )
 
             with pytest.raises(AuthenticationError) as exc_info:
@@ -82,15 +84,12 @@ class TestAuthBackendErrorHandling:
         request.url.path = "/api/test"
         request.headers.get.return_value = "Bearer invalid_token"
 
-        with patch("app.auth.KeycloakManager") as mock_kc_manager_class:
-            mock_kc_manager = MagicMock()
-            mock_kc_manager_class.return_value = mock_kc_manager
+        mock_kc_manager = create_mock_keycloak_manager()
+        mock_kc_manager.openid.a_decode_token = AsyncMock(
+            side_effect=KeycloakAuthenticationError("Invalid credentials")
+        )
 
-            # Simulate Keycloak authentication error (use AsyncMock)
-            mock_kc_manager.openid.a_decode_token = AsyncMock(
-                side_effect=KeycloakAuthenticationError("Invalid credentials")
-            )
-
+        with patch("app.auth.KeycloakManager", return_value=mock_kc_manager):
             with pytest.raises(AuthenticationError) as exc_info:
                 await auth_backend.authenticate(request)
 
@@ -109,15 +108,12 @@ class TestAuthBackendErrorHandling:
         request.url.path = "/api/test"
         request.headers.get.return_value = "Bearer malformed_token"
 
-        with patch("app.auth.KeycloakManager") as mock_kc_manager_class:
-            mock_kc_manager = MagicMock()
-            mock_kc_manager_class.return_value = mock_kc_manager
+        mock_kc_manager = create_mock_keycloak_manager()
+        mock_kc_manager.openid.a_decode_token = AsyncMock(
+            side_effect=ValueError("Malformed token")
+        )
 
-            # Simulate ValueError during token decode (use AsyncMock)
-            mock_kc_manager.openid.a_decode_token = AsyncMock(
-                side_effect=ValueError("Malformed token")
-            )
-
+        with patch("app.auth.KeycloakManager", return_value=mock_kc_manager):
             with pytest.raises(AuthenticationError) as exc_info:
                 await auth_backend.authenticate(request)
 
@@ -140,15 +136,12 @@ class TestAuthBackendErrorHandling:
             "query_string": b"Authorization=Bearer%20expired_token",
         }
 
-        with patch("app.auth.KeycloakManager") as mock_kc_manager_class:
-            mock_kc_manager = MagicMock()
-            mock_kc_manager_class.return_value = mock_kc_manager
+        mock_kc_manager = create_mock_keycloak_manager()
+        mock_kc_manager.openid.a_decode_token = AsyncMock(
+            side_effect=JWTExpired("Token expired")
+        )
 
-            # Use AsyncMock for async method
-            mock_kc_manager.openid.a_decode_token = AsyncMock(
-                side_effect=JWTExpired("Token expired")
-            )
-
+        with patch("app.auth.KeycloakManager", return_value=mock_kc_manager):
             with pytest.raises(AuthenticationError) as exc_info:
                 await auth_backend.authenticate(request)
 
@@ -157,6 +150,8 @@ class TestAuthBackendErrorHandling:
     @pytest.mark.asyncio
     async def test_successful_authentication_no_error(self):
         """Test that successful authentication doesn't raise errors."""
+        from unittest.mock import AsyncMock
+
         auth_backend = AuthBackend()
 
         request = MagicMock()
@@ -164,25 +159,20 @@ class TestAuthBackendErrorHandling:
         request.url.path = "/api/test"
         request.headers.get.return_value = "Bearer valid_token"
 
-        with patch("app.auth.KeycloakManager") as mock_kc_manager_class:
-            mock_kc_manager = MagicMock()
-            mock_kc_manager_class.return_value = mock_kc_manager
+        mock_kc_manager = create_mock_keycloak_manager()
+        mock_kc_manager.openid.a_decode_token = AsyncMock(
+            return_value={
+                "sub": "user-id-123",
+                "exp": 1700000000,
+                "preferred_username": "testuser",
+                "email": "test@example.com",
+                "realm_access": {"roles": ["admin"]},
+                "azp": "test-client",
+                "resource_access": {"test-client": {"roles": ["admin"]}},
+            }
+        )
 
-            # Simulate successful token decode (async method)
-            from unittest.mock import AsyncMock
-
-            mock_kc_manager.openid.a_decode_token = AsyncMock(
-                return_value={
-                    "sub": "user-id-123",
-                    "exp": 1700000000,
-                    "preferred_username": "testuser",
-                    "email": "test@example.com",
-                    "realm_access": {"roles": ["admin"]},
-                    "azp": "test-client",
-                    "resource_access": {"test-client": {"roles": ["admin"]}},
-                }
-            )
-
+        with patch("app.auth.KeycloakManager", return_value=mock_kc_manager):
             result = await auth_backend.authenticate(request)
 
             # Should return AuthCredentials and UserModel
@@ -222,16 +212,13 @@ class TestErrorHandlingIntegration:
         request.url.path = "/api/test"
         request.headers.get.return_value = "Bearer test_token"
 
-        with patch("app.auth.KeycloakManager") as mock_kc_manager_class:
-            mock_kc_manager = MagicMock()
-            mock_kc_manager_class.return_value = mock_kc_manager
+        mock_kc_manager = create_mock_keycloak_manager()
+        error_message = "Detailed error: signature verification failed"
+        mock_kc_manager.openid.a_decode_token = AsyncMock(
+            side_effect=ValueError(error_message)
+        )
 
-            error_message = "Detailed error: signature verification failed"
-            # Use AsyncMock for async method
-            mock_kc_manager.openid.a_decode_token = AsyncMock(
-                side_effect=ValueError(error_message)
-            )
-
+        with patch("app.auth.KeycloakManager", return_value=mock_kc_manager):
             with pytest.raises(AuthenticationError) as exc_info:
                 await auth_backend.authenticate(request)
 
@@ -258,42 +245,33 @@ class TestErrorHandlingIntegration:
         errors_caught = []
 
         # Test expired token
-        with patch("app.auth.KeycloakManager") as mock_kc_manager_class:
-            mock_kc_manager = MagicMock()
-            mock_kc_manager_class.return_value = mock_kc_manager
-            # Use AsyncMock for async method
-            mock_kc_manager.openid.a_decode_token = AsyncMock(
-                side_effect=JWTExpired("expired")
-            )
-
+        mock_kc_manager = create_mock_keycloak_manager()
+        mock_kc_manager.openid.a_decode_token = AsyncMock(
+            side_effect=JWTExpired("expired")
+        )
+        with patch("app.auth.KeycloakManager", return_value=mock_kc_manager):
             try:
                 await auth_backend.authenticate(request)
             except AuthenticationError as e:
                 errors_caught.append(e.reason)
 
         # Test invalid credentials
-        with patch("app.auth.KeycloakManager") as mock_kc_manager_class:
-            mock_kc_manager = MagicMock()
-            mock_kc_manager_class.return_value = mock_kc_manager
-            # Use AsyncMock for async method
-            mock_kc_manager.openid.a_decode_token = AsyncMock(
-                side_effect=KeycloakAuthenticationError("invalid")
-            )
-
+        mock_kc_manager = create_mock_keycloak_manager()
+        mock_kc_manager.openid.a_decode_token = AsyncMock(
+            side_effect=KeycloakAuthenticationError("invalid")
+        )
+        with patch("app.auth.KeycloakManager", return_value=mock_kc_manager):
             try:
                 await auth_backend.authenticate(request)
             except AuthenticationError as e:
                 errors_caught.append(e.reason)
 
         # Test decode error
-        with patch("app.auth.KeycloakManager") as mock_kc_manager_class:
-            mock_kc_manager = MagicMock()
-            mock_kc_manager_class.return_value = mock_kc_manager
-            # Use AsyncMock for async method
-            mock_kc_manager.openid.a_decode_token = AsyncMock(
-                side_effect=ValueError("decode error")
-            )
-
+        mock_kc_manager = create_mock_keycloak_manager()
+        mock_kc_manager.openid.a_decode_token = AsyncMock(
+            side_effect=ValueError("decode error")
+        )
+        with patch("app.auth.KeycloakManager", return_value=mock_kc_manager):
             try:
                 await auth_backend.authenticate(request)
             except AuthenticationError as e:
