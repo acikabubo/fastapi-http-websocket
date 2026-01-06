@@ -233,6 +233,17 @@ auth_backend_requests_total = _get_or_create_counter(
     ["type", "outcome"],
 )
 
+# Token Cache Metrics
+token_cache_hits_total = _get_or_create_counter(
+    "token_cache_hits_total",
+    "Total JWT token cache hits",
+)
+
+token_cache_misses_total = _get_or_create_counter(
+    "token_cache_misses_total",
+    "Total JWT token cache misses",
+)
+
 # Application Metrics
 app_errors_total = _get_or_create_counter(
     "app_errors_total",

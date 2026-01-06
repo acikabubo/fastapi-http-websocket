@@ -93,6 +93,10 @@ class AuthBackend(AuthenticationBackend):  # type: ignore[misc]
             keycloak_operation_duration_seconds,
             keycloak_token_validation_total,
         )
+        from app.utils.token_cache import (
+            cache_token_claims,
+            get_cached_token_claims,
+        )
 
         logger.debug(f"Request type -> {request.scope['type']}")
 
@@ -127,8 +131,17 @@ class AuthBackend(AuthenticationBackend):  # type: ignore[misc]
                 )
                 access_token = token["access_token"]
 
-            # Decode access token and get user data (async to prevent event loop blocking)
-            user_data = await kc_manager.openid.a_decode_token(access_token)
+            # Check cache first for decoded token claims
+            user_data = await get_cached_token_claims(access_token)
+
+            if user_data is None:
+                # Cache miss - decode token from Keycloak
+                user_data = await kc_manager.openid.a_decode_token(
+                    access_token
+                )
+
+                # Cache the decoded claims for future requests
+                await cache_token_claims(access_token, user_data)
 
             # Make logged in user object
             user: UserModel = UserModel(**user_data)
