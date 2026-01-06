@@ -1,4 +1,4 @@
-from typing import Annotated
+from typing import Annotated, Any
 from urllib.parse import parse_qsl
 
 from fastapi import Depends, HTTPException
@@ -15,6 +15,7 @@ from {{cookiecutter.module_name}}.logging import logger
 from {{cookiecutter.module_name}}.managers.keycloak_manager import KeycloakManager
 from {{cookiecutter.module_name}}.schemas.user import UserModel
 from {{cookiecutter.module_name}}.settings import app_settings
+
 
 class AuthenticationError(Exception):
     """
@@ -41,7 +42,7 @@ class AuthenticationError(Exception):
         super().__init__(f"{reason}: {detail}")
 
 
-class AuthBackend(AuthenticationBackend):
+class AuthBackend(AuthenticationBackend):  # type: ignore[misc]
     """
     Authentication backend for handling both HTTP and WebSocket requests using Keycloak tokens.
 
@@ -58,22 +59,32 @@ class AuthBackend(AuthenticationBackend):
     3. Creating a UserModel from the decoded token data
     4. Returning authentication credentials and user object if successful
 
-    Authentication will fail silently (return None) in cases of:
-    - Expired JWT tokens
-    - Invalid Keycloak credentials
-    - Token decoding errors
+    Raises:
+        AuthenticationError: When authentication fails due to:
+            - Expired JWT tokens (reason='token_expired')
+            - Invalid Keycloak credentials (reason='invalid_credentials')
+            - Token decoding errors (reason='token_decode_error')
     """
 
-    def __init__(self, *args, **kwargs) -> None:
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         self.excluded_paths = app_settings.EXCLUDED_PATHS
 
-    async def authenticate(self, request):  # pragma: no cover
+    async def authenticate(self, request):  # type: ignore[no-untyped-def] # pragma: no cover
         """
         Authenticates a request by decoding the access token and retrieving the user data.
+
         This method is used to handle both HTTP and WebSocket requests, with different logic for each request type.
         It attempts to decode the access token using the KeycloakManager, and if successful, creates a UserModel object from the decoded user data.
-        If the access token is expired or invalid, it logs the error and returns without authentication.
+
+        Args:
+            request: The incoming request object (HTTP or WebSocket)
+
+        Returns:
+            Tuple of (AuthCredentials, UserModel) on success, None for excluded paths
+
+        Raises:
+            AuthenticationError: When authentication fails with specific reason codes
         """
         logger.debug(f"Request type -> {request.scope['type']}")
 
@@ -97,20 +108,20 @@ class AuthBackend(AuthenticationBackend):
                     "DEBUG_AUTH is enabled - using debug credentials. "
                     "NEVER enable this in production!"
                 )
-                token = kc_manager.login(
+                token = await kc_manager.login_async(
                     app_settings.DEBUG_AUTH_USERNAME,
                     app_settings.DEBUG_AUTH_PASSWORD,
                 )
                 access_token = token["access_token"]
 
-            # Decode access token and get user data
-            user_data = kc_manager.openid.decode_token(access_token)
+            # Decode access token and get user data (async to prevent event loop blocking)
+            user_data = await kc_manager.openid.a_decode_token(access_token)
 
             # Make logged in user object
             user: UserModel = UserModel(**user_data)
-            roles = user.roles if user.roles else []
 
-            return AuthCredentials(roles), user
+            return AuthCredentials(user.roles), user
+
         except JWTExpired as ex:
             logger.error(f"JWT token expired: {ex}")
             raise AuthenticationError("token_expired", str(ex))
@@ -125,21 +136,44 @@ class AuthBackend(AuthenticationBackend):
 
 
 # USED FOR DEVELOP
-def basic_auth_keycloak_user(
+async def basic_auth_keycloak_user(
     credentials: Annotated[HTTPBasicCredentials, Depends(HTTPBasic())],
 ) -> UserModel:
     """
-    Authenticates a user using Keycloak basic authentication credentials and returns a UserModel object.
+    Authenticate user using Keycloak basic auth credentials (async).
 
-    This function is used to authenticate a user by verifying their username and password against a Keycloak identity provider.
-    If the authentication is successful, it decodes the access token and creates a UserModel object from the user data.
+    This function authenticates a user by verifying their username and
+    password against a Keycloak identity provider. If authentication is
+    successful, it decodes the access token and creates a UserModel object.
 
-    If the authentication fails, it raises a HTTPException with a 401 Unauthorized status code and a "Invalid credentials" detail.
+    Uses native async methods from python-keycloak library to prevent
+    blocking the event loop.
+
+    Args:
+        credentials: HTTP Basic authentication credentials containing
+            username and password.
+
+    Returns:
+        UserModel: Authenticated user model with roles and claims.
+
+    Raises:
+        HTTPException: 401 Unauthorized if authentication fails.
+
+    Example:
+        >>> from fastapi.security import HTTPBasicCredentials
+        >>> credentials = HTTPBasicCredentials(
+        ...     username="user", password="pass"
+        ... )
+        >>> user = await basic_auth_keycloak_user(credentials)
     """
     try:
         kc_manager = KeycloakManager()
-        token = kc_manager.login(credentials.username, credentials.password)
-        user_data = kc_manager.openid.decode_token(token["access_token"])
+        token = await kc_manager.login_async(
+            credentials.username, credentials.password
+        )
+        user_data = await kc_manager.openid.a_decode_token(
+            token["access_token"]
+        )
 
         user: UserModel = UserModel(**user_data)
 
