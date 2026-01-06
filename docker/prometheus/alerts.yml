@@ -215,6 +215,104 @@ groups:
           summary: "Critical authentication failure rate - possible attack"
           description: "Auth failure rate: {{ $value | humanizePercentage }} (threshold: 50%)"
 
+      # High Keycloak authentication failure rate
+      - alert: HighKeycloakAuthFailureRate
+        expr: |
+          (
+            rate(keycloak_auth_attempts_total{status="failure"}[5m])
+            /
+            rate(keycloak_auth_attempts_total[5m])
+          ) > 0.20
+        for: 3m
+        labels:
+          severity: warning
+          component: keycloak_auth
+        annotations:
+          summary: "High Keycloak authentication failure rate"
+          description: "Keycloak auth failure rate: {{ $value | humanizePercentage }} (threshold: 20%)"
+
+      # Keycloak authentication errors (Keycloak unavailable)
+      - alert: KeycloakAuthErrors
+        expr: rate(keycloak_auth_attempts_total{status="error"}[5m]) > 1
+        for: 2m
+        labels:
+          severity: critical
+          component: keycloak_auth
+        annotations:
+          summary: "Keycloak authentication errors detected"
+          description: "Keycloak auth errors: {{ $value }}/s (threshold: 1/s). Keycloak may be unavailable."
+
+      # High token expiration rate
+      - alert: HighTokenExpirationRate
+        expr: |
+          (
+            rate(keycloak_token_validation_total{status="expired"}[5m])
+            /
+            rate(keycloak_token_validation_total[5m])
+          ) > 0.30
+        for: 5m
+        labels:
+          severity: info
+          component: keycloak_auth
+        annotations:
+          summary: "High token expiration rate"
+          description: "Token expiration rate: {{ $value | humanizePercentage }} (threshold: 30%)"
+
+      # High invalid token rate
+      - alert: HighInvalidTokenRate
+        expr: |
+          (
+            rate(keycloak_token_validation_total{status="invalid"}[5m])
+            /
+            rate(keycloak_token_validation_total[5m])
+          ) > 0.10
+        for: 3m
+        labels:
+          severity: warning
+          component: keycloak_auth
+        annotations:
+          summary: "High invalid token rate"
+          description: "Invalid token rate: {{ $value | humanizePercentage }} (threshold: 10%)"
+
+      # Slow Keycloak login operation
+      - alert: SlowKeycloakLogin
+        expr: |
+          histogram_quantile(0.95,
+            rate(keycloak_operation_duration_seconds_bucket{operation="login"}[5m])
+          ) > 2.0
+        for: 5m
+        labels:
+          severity: warning
+          component: keycloak_auth
+        annotations:
+          summary: "Slow Keycloak login operations"
+          description: "95th percentile login duration: {{ $value }}s (threshold: 2s)"
+
+      # Slow token validation
+      - alert: SlowTokenValidation
+        expr: |
+          histogram_quantile(0.95,
+            rate(keycloak_operation_duration_seconds_bucket{operation="validate_token"}[5m])
+          ) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+          component: keycloak_auth
+        annotations:
+          summary: "Slow token validation operations"
+          description: "95th percentile token validation duration: {{ $value }}s (threshold: 0.5s)"
+
+      # High authentication backend errors
+      - alert: HighAuthBackendErrors
+        expr: rate(auth_backend_requests_total{outcome="error"}[5m]) > 5
+        for: 2m
+        labels:
+          severity: critical
+          component: auth_backend
+        annotations:
+          summary: "High authentication backend error rate"
+          description: "Auth backend errors: {{ $value }}/s (threshold: 5/s)"
+
   - name: keycloak_alerts
     interval: 30s
     rules:

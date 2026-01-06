@@ -2113,6 +2113,12 @@ ws_message_processing_duration_seconds{pkg_id}
 app_info{version,python_version,environment}
 rate_limit_hits_total{limit_type}
 auth_attempts_total{status}
+
+# Keycloak Authentication Metrics
+keycloak_auth_attempts_total{status,method}  # status: success/failure/error, method: password/token
+keycloak_token_validation_total{status,reason}  # status: valid/invalid/expired/error
+keycloak_operation_duration_seconds{operation}  # operation: login/validate_token
+auth_backend_requests_total{type,outcome}  # type: http/websocket, outcome: success/denied/error
 ```
 
 **Setting up Prometheus (Docker):**
@@ -2262,6 +2268,13 @@ The application includes comprehensive Prometheus alerting rules for proactive m
 7. **Authentication Alerts** (`authentication_alerts` group):
    - `HighAuthFailureRate`: Auth failure rate > 20% for 3 minutes (warning)
    - `CriticalAuthFailureRate`: Auth failure rate > 50% for 1 minute (critical - possible attack)
+   - `HighKeycloakAuthFailureRate`: Keycloak auth failure rate > 20% for 3 minutes (warning)
+   - `KeycloakAuthErrors`: Keycloak auth errors > 1/s for 2 minutes (critical)
+   - `HighTokenExpirationRate`: Token expiration rate > 30% for 5 minutes (info)
+   - `HighInvalidTokenRate`: Invalid token rate > 10% for 3 minutes (warning)
+   - `SlowKeycloakLogin`: 95th percentile login duration > 2s for 5 minutes (warning)
+   - `SlowTokenValidation`: 95th percentile token validation > 0.5s for 5 minutes (warning)
+   - `HighAuthBackendErrors`: Auth backend errors > 5/s for 2 minutes (critical)
 
 8. **Keycloak Alerts** (`keycloak_alerts` group):
    - `KeycloakDown`: Keycloak unavailable for > 1 minute (critical)

@@ -86,7 +86,20 @@ class AuthBackend(AuthenticationBackend):  # type: ignore[misc]
         Raises:
             AuthenticationError: When authentication fails with specific reason codes
         """
+        import time
+
+        from app.utils.metrics import (
+            auth_backend_requests_total,
+            keycloak_operation_duration_seconds,
+            keycloak_token_validation_total,
+        )
+
         logger.debug(f"Request type -> {request.scope['type']}")
+
+        request_type = (
+            "websocket" if request.scope["type"] == "websocket" else "http"
+        )
+        start_time = time.time()
 
         if request.scope["type"] == "websocket":
             qs = dict(parse_qsl(request.scope["query_string"].decode("utf8")))
@@ -120,19 +133,69 @@ class AuthBackend(AuthenticationBackend):  # type: ignore[misc]
             # Make logged in user object
             user: UserModel = UserModel(**user_data)
 
+            # Track successful token validation
+            keycloak_token_validation_total.labels(
+                status="valid", reason="success"
+            ).inc()
+
+            # Track successful auth backend request
+            auth_backend_requests_total.labels(
+                type=request_type, outcome="success"
+            ).inc()
+
             return AuthCredentials(user.roles), user
 
         except JWTExpired as ex:
             logger.error(f"JWT token expired: {ex}")
+
+            # Track expired token
+            keycloak_token_validation_total.labels(
+                status="expired", reason="token_expired"
+            ).inc()
+
+            # Track failed auth backend request
+            auth_backend_requests_total.labels(
+                type=request_type, outcome="denied"
+            ).inc()
+
             raise AuthenticationError("token_expired", str(ex))
 
         except KeycloakAuthenticationError as ex:
             logger.error(f"Invalid credentials: {ex}")
+
+            # Track invalid token
+            keycloak_token_validation_total.labels(
+                status="invalid", reason="invalid_credentials"
+            ).inc()
+
+            # Track failed auth backend request
+            auth_backend_requests_total.labels(
+                type=request_type, outcome="denied"
+            ).inc()
+
             raise AuthenticationError("invalid_credentials", str(ex))
 
         except ValueError as ex:
             logger.error(f"Error occurred while decode auth token: {ex}")
+
+            # Track token decode error
+            keycloak_token_validation_total.labels(
+                status="error", reason="token_decode_error"
+            ).inc()
+
+            # Track error in auth backend request
+            auth_backend_requests_total.labels(
+                type=request_type, outcome="error"
+            ).inc()
+
             raise AuthenticationError("token_decode_error", str(ex))
+
+        finally:
+            # Track operation duration
+            duration = time.time() - start_time
+            keycloak_operation_duration_seconds.labels(
+                operation="validate_token"
+            ).observe(duration)
 
 
 # USED FOR DEVELOP

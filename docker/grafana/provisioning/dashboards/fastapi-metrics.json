@@ -444,6 +444,348 @@
       "fieldConfig": {
         "defaults": {
           "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "tooltip": false,
+              "viz": false,
+              "legend": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": true
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.1
+              },
+              {
+                "color": "red",
+                "value": 0.2
+              }
+            ]
+          },
+          "unit": "ops"
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 0,
+        "y": 12
+      },
+      "id": 19,
+      "options": {
+        "legend": {
+          "calcs": ["mean", "last"],
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "pluginVersion": "8.0.0",
+      "targets": [
+        {
+          "expr": "rate(keycloak_auth_attempts_total{status=\"success\"}[5m])",
+          "legendFormat": "Success",
+          "refId": "A"
+        },
+        {
+          "expr": "rate(keycloak_auth_attempts_total{status=\"failure\"}[5m])",
+          "legendFormat": "Failure (Invalid Credentials)",
+          "refId": "B"
+        },
+        {
+          "expr": "rate(keycloak_auth_attempts_total{status=\"error\"}[5m])",
+          "legendFormat": "Error (Keycloak Unavailable)",
+          "refId": "C"
+        }
+      ],
+      "title": "Keycloak Authentication Rate",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "tooltip": false,
+              "viz": false,
+              "legend": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": true
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "ops"
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 12,
+        "y": 12
+      },
+      "id": 20,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "pluginVersion": "8.0.0",
+      "targets": [
+        {
+          "expr": "rate(keycloak_token_validation_total{status=\"valid\"}[5m])",
+          "legendFormat": "Valid",
+          "refId": "A"
+        },
+        {
+          "expr": "rate(keycloak_token_validation_total{status=\"expired\"}[5m])",
+          "legendFormat": "Expired",
+          "refId": "B"
+        },
+        {
+          "expr": "rate(keycloak_token_validation_total{status=\"invalid\"}[5m])",
+          "legendFormat": "Invalid",
+          "refId": "C"
+        },
+        {
+          "expr": "rate(keycloak_token_validation_total{status=\"error\"}[5m])",
+          "legendFormat": "Error",
+          "refId": "D"
+        }
+      ],
+      "title": "Token Validation Rate",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "tooltip": false,
+              "viz": false,
+              "legend": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": true
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "ops"
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 0,
+        "y": 18
+      },
+      "id": 21,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "pluginVersion": "8.0.0",
+      "targets": [
+        {
+          "expr": "rate(auth_backend_requests_total{outcome=\"success\"}[5m])",
+          "legendFormat": "{{type}} - Success",
+          "refId": "A"
+        },
+        {
+          "expr": "rate(auth_backend_requests_total{outcome=\"denied\"}[5m])",
+          "legendFormat": "{{type}} - Denied",
+          "refId": "B"
+        },
+        {
+          "expr": "rate(auth_backend_requests_total{outcome=\"error\"}[5m])",
+          "legendFormat": "{{type}} - Error",
+          "refId": "C"
+        }
+      ],
+      "title": "Authentication Backend Requests (HTTP/WebSocket)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "tooltip": false,
+              "viz": false,
+              "legend": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": true
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.5
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "s"
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 12,
+        "y": 18
+      },
+      "id": 22,
+      "options": {
+        "legend": {
+          "calcs": ["mean", "max"],
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "pluginVersion": "8.0.0",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, rate(keycloak_operation_duration_seconds_bucket{operation=\"login\"}[5m]))",
+          "legendFormat": "Login - p95",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.50, rate(keycloak_operation_duration_seconds_bucket{operation=\"login\"}[5m]))",
+          "legendFormat": "Login - p50",
+          "refId": "B"
+        },
+        {
+          "expr": "histogram_quantile(0.95, rate(keycloak_operation_duration_seconds_bucket{operation=\"validate_token\"}[5m]))",
+          "legendFormat": "Token Validation - p95",
+          "refId": "C"
+        },
+        {
+          "expr": "histogram_quantile(0.50, rate(keycloak_operation_duration_seconds_bucket{operation=\"validate_token\"}[5m]))",
+          "legendFormat": "Token Validation - p50",
+          "refId": "D"
+        }
+      ],
+      "title": "Keycloak Operation Duration (p50/p95)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
             "mode": "thresholds"
           },
           "mappings": [],
@@ -462,7 +804,7 @@
         "h": 4,
         "w": 12,
         "x": 0,
-        "y": 12
+        "y": 24
       },
       "id": 7,
       "options": {
@@ -514,7 +856,7 @@
         "h": 4,
         "w": 12,
         "x": 12,
-        "y": 12
+        "y": 24
       },
       "id": 8,
       "options": {
@@ -593,7 +935,7 @@
         "h": 6,
         "w": 12,
         "x": 0,
-        "y": 16
+        "y": 28
       },
       "id": 9,
       "options": {
@@ -641,7 +983,7 @@
         "h": 6,
         "w": 12,
         "x": 12,
-        "y": 16
+        "y": 28
       },
       "id": 10,
       "options": {
@@ -720,7 +1062,7 @@
         "h": 6,
         "w": 12,
         "x": 0,
-        "y": 22
+        "y": 34
       },
       "id": 11,
       "options": {
@@ -789,7 +1131,7 @@
         "h": 6,
         "w": 12,
         "x": 12,
-        "y": 22
+        "y": 34
       },
       "id": 12,
       "options": {
@@ -866,7 +1208,7 @@
         "h": 6,
         "w": 8,
         "x": 0,
-        "y": 28
+        "y": 40
       },
       "id": 13,
       "options": {
@@ -935,7 +1277,7 @@
         "h": 6,
         "w": 8,
         "x": 8,
-        "y": 28
+        "y": 40
       },
       "id": 14,
       "options": {
@@ -1009,7 +1351,7 @@
         "h": 6,
         "w": 8,
         "x": 16,
-        "y": 28
+        "y": 40
       },
       "id": 15,
       "options": {
@@ -1043,7 +1385,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 34
+        "y": 46
       },
       "id": 16,
       "options": {
@@ -1081,7 +1423,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 42
+        "y": 54
       },
       "id": 17,
       "options": {
@@ -1119,7 +1461,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 42
+        "y": 54
       },
       "id": 18,
       "options": {

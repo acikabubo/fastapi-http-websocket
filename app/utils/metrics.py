@@ -200,6 +200,39 @@ auth_token_validations_total = _get_or_create_counter(
     ["status"],  # valid, invalid, expired
 )
 
+# Keycloak Authentication Metrics
+keycloak_auth_attempts_total = _get_or_create_counter(
+    "keycloak_auth_attempts_total",
+    "Total Keycloak authentication attempts",
+    [
+        "status",
+        "method",
+    ],  # status: success/failure/error, method: token/password
+)
+
+keycloak_token_validation_total = _get_or_create_counter(
+    "keycloak_token_validation_total",
+    "Total JWT token validation attempts",
+    [
+        "status",
+        "reason",
+    ],  # status: valid/invalid/expired/error, reason: expired/malformed/etc
+)
+
+keycloak_operation_duration_seconds = _get_or_create_histogram(
+    "keycloak_operation_duration_seconds",
+    "Keycloak operation duration in seconds",
+    ["operation"],  # operation: login/validate_token/refresh_token
+    buckets=(0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0),
+)
+
+auth_backend_requests_total = _get_or_create_counter(
+    "auth_backend_requests_total",
+    "Total authentication backend requests",
+    # Labels: type (http/websocket), outcome (success/error/denied)
+    ["type", "outcome"],
+)
+
 # Application Metrics
 app_errors_total = _get_or_create_counter(
     "app_errors_total",

@@ -52,7 +52,49 @@ class KeycloakManager(metaclass=SingletonMeta):
             >>> token = await kc_manager.login_async("user", "pass")
             >>> access_token = token["access_token"]
         """
-        return await self.openid.a_token(username=username, password=password)
+        import time
+
+        from keycloak.exceptions import KeycloakAuthenticationError
+
+        from app.utils.metrics import (
+            keycloak_auth_attempts_total,
+            keycloak_operation_duration_seconds,
+        )
+
+        start_time = time.time()
+
+        try:
+            result = await self.openid.a_token(
+                username=username, password=password
+            )
+
+            # Track successful login
+            keycloak_auth_attempts_total.labels(
+                status="success", method="password"
+            ).inc()
+
+            return result
+
+        except KeycloakAuthenticationError:
+            # Track failed login (invalid credentials)
+            keycloak_auth_attempts_total.labels(
+                status="failure", method="password"
+            ).inc()
+            raise
+
+        except Exception:
+            # Track error (Keycloak unavailable, network error, etc.)
+            keycloak_auth_attempts_total.labels(
+                status="error", method="password"
+            ).inc()
+            raise
+
+        finally:
+            # Track operation duration
+            duration = time.time() - start_time
+            keycloak_operation_duration_seconds.labels(
+                operation="login"
+            ).observe(duration)
 
     def login(self, username: str, password: str) -> dict[str, Any]:
         """
