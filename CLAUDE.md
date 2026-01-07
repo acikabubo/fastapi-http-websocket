@@ -122,6 +122,119 @@ When committing changes:
   ```
 - For worktree commits, clearly indicate it's syncing changes from the main project
 
+### Documentation Requirements for GitHub Issues
+
+**CRITICAL**: When creating GitHub issues, ALWAYS include documentation update requirements in the acceptance criteria.
+
+#### Required Documentation Checks
+
+For EVERY new GitHub issue, the acceptance criteria MUST include:
+
+1. **Documentation Impact Assessment**:
+   - [ ] Check if CLAUDE.md needs updates
+   - [ ] Check if docs_site/ needs updates
+   - [ ] Check if README.md needs updates
+   - [ ] Check if inline code comments need updates
+
+2. **Specific Documentation Tasks**:
+   - List specific files that need documentation updates
+   - Specify what sections need to be added/modified
+   - Include examples of correct vs incorrect documentation
+
+3. **Documentation Verification**:
+   - [ ] All code examples in documentation reflect actual implementation
+   - [ ] No outdated patterns or deprecated methods in docs
+   - [ ] Architecture diagrams updated if structural changes made
+
+#### Documentation Update Checklist by Change Type
+
+**For API Changes** (new endpoints, modified signatures):
+- [ ] Update `docs_site/api-reference/http-api.md` or `websocket-api.md`
+- [ ] Update CLAUDE.md examples if pattern is reusable
+- [ ] Add/update docstrings with examples
+
+**For Architecture Changes** (new patterns, refactored components):
+- [ ] Update `docs_site/architecture/overview.md`
+- [ ] Update CLAUDE.md architecture section
+- [ ] Update relevant design pattern guides
+- [ ] Update Mermaid diagrams if flow changes
+
+**For New Features** (handlers, middleware, utilities):
+- [ ] Add guide to `docs_site/guides/`
+- [ ] Update CLAUDE.md with usage examples
+- [ ] Update quickstart if feature is core functionality
+- [ ] Add configuration docs if feature is configurable
+
+**For Bug Fixes** (especially for common issues):
+- [ ] Update `docs_site/deployment/troubleshooting.md`
+- [ ] Add warning/note to relevant guide sections
+- [ ] Update FAQ if applicable
+
+**For Testing Changes** (new patterns, centralized mocks):
+- [ ] Update `docs_site/development/testing.md`
+- [ ] Update CLAUDE.md testing section
+- [ ] Document new test helpers/fixtures
+
+**For Configuration Changes** (new settings, changed defaults):
+- [ ] Update `docs_site/getting-started/configuration.md`
+- [ ] Update `.env.*.example` files
+- [ ] Add migration notes if breaking change
+
+#### Issue Template Example
+
+When creating issues, include this section in acceptance criteria:
+
+```markdown
+## Documentation Updates Required
+
+- [ ] Update CLAUDE.md section: [specify section and what to change]
+- [ ] Update docs_site file: [specify file path and changes]
+- [ ] Add code examples showing correct usage
+- [ ] Update architecture diagram: [if applicable]
+- [ ] Add troubleshooting entry: [if common issue]
+
+**Files to update**:
+1. `CLAUDE.md` lines XXX-YYY: [description]
+2. `docs_site/guides/feature-name.md`: [description]
+3. `app/path/to/file.py`: [update docstrings with examples]
+```
+
+#### Common Documentation Mistakes to Avoid
+
+❌ **Don't**:
+- Create issues without documentation requirements
+- Assume documentation is up-to-date after code changes
+- Use outdated patterns in examples (e.g., Active Record vs Repository)
+- Reference deleted files or deprecated methods
+- Skip updating examples when refactoring
+
+✅ **Do**:
+- Always check if code examples match actual implementation
+- Update documentation in the same commit/PR as code changes
+- Verify all file paths and method signatures are current
+- Include "before/after" examples for refactoring
+- Cross-reference related documentation sections
+
+#### Documentation Consistency Review
+
+Before closing ANY issue:
+1. Run grep to find all mentions of changed components in docs
+2. Verify code examples actually work (copy-paste test)
+3. Check that terminology is consistent across all docs
+4. Ensure architecture diagrams reflect current structure
+
+**Example verification commands**:
+```bash
+# Find all documentation references to changed component
+grep -r "MyChangedClass" CLAUDE.md docs_site/
+
+# Find potentially outdated CRUD patterns
+grep -r "Model\.create\|Model\.get_list" docs_site/ CLAUDE.md
+
+# Find references to deleted files
+grep -r "connection_registry\|ws_clients" docs_site/ CLAUDE.md
+```
+
 ## Project Overview
 
 This is a FastAPI application implementing both HTTP and WebSocket handlers with role-based access control (RBAC), Keycloak authentication, and PostgreSQL database integration. The architecture is designed around a package-based routing system where requests are routed through a custom `PackageRouter` that handles validation, permission checking, and handler dispatch.
