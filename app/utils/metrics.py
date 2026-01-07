@@ -180,6 +180,24 @@ redis_pool_info = _get_or_create_gauge(
     ],
 )
 
+redis_pool_connections_created_total = _get_or_create_counter(
+    "redis_pool_connections_created_total",
+    "Total connections created in Redis pool",
+    ["db"],
+)
+
+redis_pool_connections_in_use = _get_or_create_gauge(
+    "redis_pool_connections_in_use",
+    "Current number of connections in use from Redis pool",
+    ["db"],
+)
+
+redis_pool_connections_available = _get_or_create_gauge(
+    "redis_pool_connections_available",
+    "Current number of available connections in Redis pool",
+    ["db"],
+)
+
 # Rate Limiting Metrics
 rate_limit_hits_total = _get_or_create_counter(
     "rate_limit_hits_total",

@@ -20,6 +20,7 @@ from app.routing import collect_subrouters
 from app.settings import app_settings
 from app.storage.db import wait_and_init_db
 from app.tasks.kc_user_session import kc_user_session_task
+from app.tasks.redis_pool_metrics_task import redis_pool_metrics_task
 
 
 @asynccontextmanager
@@ -30,7 +31,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     Handles:
     - Startup validation (environment variables and service connections)
     - Database initialization with retries
-    - Background task startup (user session sync, audit log worker)
+    - Background task startup (user session sync, audit log worker, pool metrics)
     - Prometheus metrics initialization
     - Graceful shutdown with audit log flushing and task cancellation
 
@@ -39,6 +40,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     - Sets up the database and tables
     - Creates user session background task
     - Starts audit log background worker
+    - Starts Redis pool metrics collection task
     - Initializes Prometheus metrics
 
     Shutdown operations:
@@ -73,6 +75,12 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         create_task(audit_log_worker(), name="audit_worker")
     )
     logger.info("Started audit log background worker")
+
+    # Start Redis pool metrics collection task
+    background_tasks.append(
+        create_task(redis_pool_metrics_task(), name="redis_pool_metrics")
+    )
+    logger.info("Started Redis pool metrics collection task")
 
     # Initialize app info metric
     import sys

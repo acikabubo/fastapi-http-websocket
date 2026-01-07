@@ -158,6 +158,57 @@ class RedisPool:
             for db, pool in cls.__pools.items()
         }
 
+    @classmethod
+    def update_pool_metrics(cls) -> None:
+        """
+        Update Prometheus metrics for all Redis connection pools.
+
+        Collects current pool statistics and updates Prometheus gauges
+        for monitoring pool usage and detecting potential exhaustion.
+
+        Should be called periodically (e.g., every 10-30 seconds) to keep
+        metrics current.
+        """
+        from app.utils.metrics import (
+            redis_pool_connections_available,
+            redis_pool_connections_created_total,
+            redis_pool_connections_in_use,
+        )
+
+        for db, pool in cls.__pools.items():
+            db_label = str(db)
+
+            # Get pool statistics from internal connection pool
+            # Note: These are estimates based on pool's internal tracking
+            try:
+                # Number of connections currently checked out from pool
+                in_use = len(pool._in_use_connections)
+
+                # Total connections created (both in use and available)
+                created = pool._created_connections
+
+                # Available connections = created - in_use
+                available = created - in_use
+
+                # Update Prometheus gauges
+                redis_pool_connections_in_use.labels(db=db_label).set(in_use)
+                redis_pool_connections_available.labels(db=db_label).set(
+                    available
+                )
+
+                # Track total created (cumulative counter)
+                redis_pool_connections_created_total.labels(db=db_label).set(
+                    created
+                )
+
+            except AttributeError:
+                # Pool implementation may vary - fail gracefully
+                logger.debug(
+                    f"Could not access pool internal stats for db={db}"
+                )
+            except Exception as ex:
+                logger.error(f"Error updating pool metrics for db={db}: {ex}")
+
     @staticmethod
     async def add_kc_user_session(r: Redis, user: UserModel) -> None:
         user_session_key = (

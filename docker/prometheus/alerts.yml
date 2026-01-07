@@ -106,6 +106,49 @@ groups:
           summary: "Redis cache is down"
           description: "Redis instance {{ $labels.instance }} has been down for more than 1 minute"
 
+      # Redis connection pool near exhaustion
+      - alert: RedisPoolNearExhaustion
+        expr: |
+          (
+            redis_pool_connections_in_use
+            /
+            redis_pool_max_connections
+          ) > 0.80
+        for: 3m
+        labels:
+          severity: warning
+          component: redis_pool
+        annotations:
+          summary: "Redis connection pool usage above 80%"
+          description: "Redis pool (db={{ $labels.db }}) is using {{ $value | humanizePercentage }} of max connections (threshold: 80%)"
+
+      # Redis connection pool exhausted
+      - alert: RedisPoolExhausted
+        expr: |
+          (
+            redis_pool_connections_in_use
+            /
+            redis_pool_max_connections
+          ) >= 0.95
+        for: 1m
+        labels:
+          severity: critical
+          component: redis_pool
+        annotations:
+          summary: "Redis connection pool critically exhausted"
+          description: "Redis pool (db={{ $labels.db }}) is using {{ $value | humanizePercentage }} of max connections (threshold: 95%). Pool may be exhausted."
+
+      # No available connections in pool
+      - alert: RedisPoolNoAvailableConnections
+        expr: redis_pool_connections_available == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: redis_pool
+        annotations:
+          summary: "No available connections in Redis pool"
+          description: "Redis pool (db={{ $labels.db }}) has 0 available connections. All connections are in use."
+
   - name: websocket_alerts
     interval: 30s
     rules:

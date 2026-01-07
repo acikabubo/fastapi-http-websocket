@@ -488,6 +488,41 @@ python generate_ws_handler.py handler_name PKG_ID --overwrite
   - `WS_MAX_CONNECTIONS_PER_USER`: Max concurrent WebSocket connections (default: 5)
   - `WS_MESSAGE_RATE_LIMIT`: WebSocket messages per minute (default: 100)
 
+**Redis Connection Pool Monitoring (`app/storage/redis.py`, `app/tasks/redis_pool_metrics_task.py`):**
+- Real-time monitoring of Redis connection pool health and usage
+- Background task collects pool metrics every 15 seconds for all database pools
+- Prometheus metrics tracked:
+  - `redis_pool_max_connections`: Maximum connections allowed per pool
+  - `redis_pool_connections_in_use`: Current active connections (checked out)
+  - `redis_pool_connections_available`: Idle connections ready for use
+  - `redis_pool_connections_created_total`: Total connections created (cumulative)
+  - `redis_pool_info`: Pool configuration metadata (host, port, timeouts)
+- Enables detection of:
+  - Pool exhaustion (all connections in use)
+  - Connection leaks (connections not returned to pool)
+  - Under-provisioned pools (frequent exhaustion)
+  - Over-provisioned pools (many idle connections)
+- Prometheus alerts configured in `docker/prometheus/alerts.yml`:
+  - `RedisPoolNearExhaustion`: Pool usage > 80% for 3 minutes (warning)
+  - `RedisPoolExhausted`: Pool usage ≥ 95% for 1 minute (critical)
+  - `RedisPoolNoAvailableConnections`: Zero available connections for 1 minute (critical)
+- Grafana dashboard panels (IDs 25-27):
+  - Panel 25: Connections in use vs max connections (timeseries with thresholds)
+  - Panel 26: Available connections over time (timeseries)
+  - Panel 27: Pool usage percentage gauge (0-100% with color thresholds)
+- Pool configuration via `app/settings.py`:
+  - `REDIS_MAX_CONNECTIONS`: Max connections per pool (default: 50)
+  - `REDIS_SOCKET_TIMEOUT`: Socket operation timeout (default: 5s)
+  - `REDIS_CONNECT_TIMEOUT`: Connection establishment timeout (default: 5s)
+  - `REDIS_HEALTH_CHECK_INTERVAL`: Health check frequency (default: 30s)
+  - `MAIN_REDIS_DB`: Primary database index (default: 1)
+  - `AUTH_REDIS_DB`: Authentication database index (default: 10)
+- Use cases:
+  - Capacity planning: Determine optimal `REDIS_MAX_CONNECTIONS` setting
+  - Incident response: Identify pool exhaustion during outages
+  - Performance tuning: Detect connection bottlenecks
+  - Leak detection: Spot connections not being properly released
+
 **Prometheus Metrics (`app/utils/metrics.py`, `app/middlewares/prometheus.py`):**
 - Comprehensive metrics collection for monitoring and observability
 - `PrometheusMiddleware`: Automatically tracks HTTP request metrics
