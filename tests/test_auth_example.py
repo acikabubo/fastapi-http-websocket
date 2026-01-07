@@ -55,9 +55,13 @@ class TestMockAuthentication:
         Args:
             mock_user: Fixture providing UserModel with admin role
         """
+        from app.routing import pkg_router
+
         rbac = RBACManager()
 
-        has_permission = rbac.check_ws_permission(PkgID.GET_AUTHORS, mock_user)
+        has_permission = rbac.check_ws_permission(
+            PkgID.GET_AUTHORS, mock_user, pkg_router.permissions_registry
+        )
 
         assert has_permission is True
 
@@ -69,11 +73,13 @@ class TestMockAuthentication:
         Args:
             limited_user_data: Fixture providing user without admin role
         """
+        from app.routing import pkg_router
+
         limited_user = UserModel(**limited_user_data)
         rbac = RBACManager()
 
         has_permission = rbac.check_ws_permission(
-            PkgID.GET_AUTHORS, limited_user
+            PkgID.GET_AUTHORS, limited_user, pkg_router.permissions_registry
         )
 
         assert has_permission is False
@@ -152,12 +158,16 @@ class TestMockAuthentication:
         Args:
             limited_user_data: Fixture providing user with minimal roles
         """
+        from app.routing import pkg_router
+
         limited_user = UserModel(**limited_user_data)
         rbac = RBACManager()
 
         # Use a pkg_id that is not in actions.json (assuming 999 is not configured)
         # Since limited_user has no special roles, this tests default allow
-        has_permission = rbac.check_ws_permission(999, limited_user)
+        has_permission = rbac.check_ws_permission(
+            999, limited_user, pkg_router.permissions_registry
+        )
 
         # Should allow access since pkg_id 999 is not in actions.json
         assert has_permission is True

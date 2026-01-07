@@ -1,4 +1,5 @@
 from collections.abc import Awaitable, Callable
+from typing import Any
 
 from fastapi import HTTPException, Request, status
 from starlette.authentication import UnauthenticatedUser
@@ -43,24 +44,27 @@ class RBACManager(metaclass=SingletonMeta):
 
         return has_permission, missing_roles
 
-    def check_ws_permission(self, pkg_id: int, user: UserModel) -> bool:
+    def check_ws_permission(
+        self,
+        pkg_id: int,
+        user: UserModel,
+        permissions_registry: dict[Any, list[str]],
+    ) -> bool:
         """
         Checks if the user has the required roles to access the WebSocket endpoint.
 
-        Uses decorator-based permissions from pkg_router. If no roles are required,
+        Uses decorator-based permissions from permissions_registry. If no roles are required,
         endpoint is public and access is granted.
 
         Args:
             pkg_id: The ID of the package being accessed.
             user: The user making the request.
+            permissions_registry: Dictionary mapping package IDs to required roles.
 
         Returns:
             True if the user has all required roles or no roles required, False otherwise.
         """
-        # Import here to avoid circular dependency
-        from app.routing import pkg_router
-
-        required_roles = pkg_router.get_permissions(pkg_id)
+        required_roles = permissions_registry.get(pkg_id, [])
         has_permission, missing_roles = self.check_user_has_roles(
             user, required_roles
         )

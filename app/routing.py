@@ -127,7 +127,9 @@ class PackageRouter:
 
     def _check_permission(self, pkg_id: int, user: UserModel) -> bool:
         """Check if user has permission for the package ID."""
-        return self.rbac.check_ws_permission(pkg_id, user)
+        return self.rbac.check_ws_permission(
+            pkg_id, user, self.permissions_registry
+        )
 
     def _validate_request(
         self, request: RequestModel

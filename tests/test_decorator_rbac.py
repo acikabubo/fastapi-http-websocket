@@ -184,6 +184,7 @@ class TestRBACManagerIntegration:
     def test_rbac_manager_uses_decorator_permissions(self):
         """Test that RBACManager reads permissions from decorator."""
         from app.managers.rbac_manager import RBACManager
+        from app.routing import pkg_router
 
         # RBACManager is a singleton, it should use the global pkg_router
         rbac = RBACManager()
@@ -192,24 +193,30 @@ class TestRBACManagerIntegration:
         user = create_test_user("test_user", roles=["get-authors"])
 
         # PkgID.GET_AUTHORS has roles=["get-authors"] in the decorator
-        has_permission = rbac.check_ws_permission(PkgID.GET_AUTHORS, user)
+        has_permission = rbac.check_ws_permission(
+            PkgID.GET_AUTHORS, user, pkg_router.permissions_registry
+        )
         assert has_permission is True
 
     def test_rbac_manager_denies_without_role(self):
         """Test that RBACManager denies access without required role."""
         from app.managers.rbac_manager import RBACManager
+        from app.routing import pkg_router
 
         rbac = RBACManager()
 
         # User without get-authors role
         user = create_test_user("test_user", roles=["other-role"])
 
-        has_permission = rbac.check_ws_permission(PkgID.GET_AUTHORS, user)
+        has_permission = rbac.check_ws_permission(
+            PkgID.GET_AUTHORS, user, pkg_router.permissions_registry
+        )
         assert has_permission is False
 
     def test_rbac_manager_allows_public_endpoint(self):
         """Test that RBACManager allows access to public endpoints."""
         from app.managers.rbac_manager import RBACManager
+        from app.routing import pkg_router
 
         rbac = RBACManager()
 
@@ -220,7 +227,7 @@ class TestRBACManagerIntegration:
         # For this test, we're checking that RBACManager allows access to
         # endpoints not configured in actions.json (defaults to allow)
         has_permission = rbac.check_ws_permission(
-            PkgID.UNREGISTERED_HANDLER, user
+            PkgID.UNREGISTERED_HANDLER, user, pkg_router.permissions_registry
         )
         assert has_permission is True
 
