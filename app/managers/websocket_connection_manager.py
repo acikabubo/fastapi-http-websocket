@@ -12,45 +12,61 @@ class ConnectionManager:
     """
     Manager for active WebSocket connections.
 
-    Tracks connected WebSocket clients and provides broadcast capabilities
-    for sending messages to all active connections.
+    Tracks connected WebSocket clients using session keys for O(1) lookups
+    and provides broadcast capabilities for sending messages to all active
+    connections.
     """
 
     def __init__(self) -> None:
         """
         Initializes a new instance of the `ConnectionManager` class.
 
-        The `active_connections` attribute is a list that stores the active WebSocket connections managed by this instance.
+        The `connections` attribute is a dict mapping session keys to
+        WebSocket connections for efficient lookups.
         """
-        self.active_connections: list[WebSocket] = []
+        self.connections: dict[str, WebSocket] = {}
 
-    def connect(self, websocket: WebSocket) -> None:
+    def connect(self, session_key: str, websocket: WebSocket) -> None:
         """
-        Accepts a new WebSocket connection and adds it to the list of active connections managed by this `ConnectionManager` instance.
+        Adds a new WebSocket connection with associated session key.
 
         Args:
-            websocket (WebSocket): The WebSocket connection to be accepted and added to the list of active connections.
+            session_key: Unique identifier for this connection (e.g., user session).
+            websocket: The WebSocket connection to be added.
         """
-        self.active_connections.append(websocket)
+        self.connections[session_key] = websocket
         logger.debug(
-            f"websocket object ({id(websocket)}) added to active connections"
+            f"websocket object ({id(websocket)}) added to active connections "
+            f"with key {session_key}"
         )
 
-    def disconnect(self, websocket: WebSocket) -> None:
+    def disconnect(self, session_key: str) -> None:
         """
-        Removes the specified WebSocket connection from the list of active connections managed by this `ConnectionManager` instance.
+        Removes a WebSocket connection by session key.
 
         Args:
-            websocket (WebSocket): The WebSocket connection to be removed
-                from the list of active connections.
+            session_key: The session key of the connection to remove.
         """
-        if websocket not in self.active_connections:
+        if session_key not in self.connections:
             return
 
-        self.active_connections.remove(websocket)
+        websocket = self.connections.pop(session_key)
         logger.debug(
-            f"websocket objects ({id(websocket)}) removed from active connections"
+            f"websocket object ({id(websocket)}) removed from active connections "
+            f"for key {session_key}"
         )
+
+    def get_connection(self, session_key: str) -> WebSocket | None:
+        """
+        Get WebSocket connection by session key.
+
+        Args:
+            session_key: The session key to look up.
+
+        Returns:
+            WebSocket connection if found, None otherwise.
+        """
+        return self.connections.get(session_key)
 
     async def broadcast(self, message: BroadcastDataModel[Any]) -> None:
         """
@@ -63,18 +79,19 @@ class ConnectionManager:
             message (BroadcastDataModel[Any]): The message to be broadcast to all
                 active connections.
         """
-        if not self.active_connections:
+        if not self.connections:
             return
 
         # Create a snapshot of connections to avoid modification during iteration
-        connections_snapshot = list(self.active_connections)
+        connections_snapshot = list(self.connections.items())
 
-        async def safe_send(connection: WebSocket) -> None:
+        async def safe_send(session_key: str, connection: WebSocket) -> None:
             """
             Safely sends a message to a single connection with error handling.
 
             Args:
-                connection (WebSocket): The WebSocket connection to send to.
+                session_key: The session key for this connection.
+                connection: The WebSocket connection to send to.
             """
             try:
                 await connection.send_json(message.model_dump(mode="json"))
@@ -83,18 +100,20 @@ class ConnectionManager:
                 # ConnectionError: Network errors
                 # RuntimeError: WebSocket in invalid state
                 logger.warning(
-                    f"Failed to send to connection {id(connection)}: {e}"
+                    f"Failed to send to connection {id(connection)} "
+                    f"(key: {session_key}): {e}"
                 )
-                self.disconnect(connection)
+                self.disconnect(session_key)
             except Exception as e:
                 # Catch-all for unexpected send errors
                 logger.warning(
-                    f"Unexpected error sending to connection {id(connection)}: {e}"
+                    f"Unexpected error sending to connection {id(connection)} "
+                    f"(key: {session_key}): {e}"
                 )
-                self.disconnect(connection)
+                self.disconnect(session_key)
 
         await asyncio.gather(
-            *[safe_send(conn) for conn in connections_snapshot],
+            *[safe_send(key, conn) for key, conn in connections_snapshot],
             return_exceptions=True,
         )
 

@@ -91,7 +91,6 @@ class TestWebSocketAuthentication:
                 "app.api.ws.websocket.connection_manager",
                 create_mock_connection_manager(),
             ) as mock_cm,
-            patch("app.api.ws.websocket.ws_clients", {}),
             patch(
                 "app.api.ws.websocket.connection_limiter"
             ) as mock_conn_limiter,
@@ -108,7 +107,9 @@ class TestWebSocketAuthentication:
             mock_redis.add_kc_user_session.assert_called_once_with(user)
 
             # Verify connection was registered
-            mock_cm.connect.assert_called_once_with(mock_websocket)
+            mock_cm.connect.assert_called_once_with(
+                "session:testuser", mock_websocket
+            )
 
     @pytest.mark.asyncio
     async def test_websocket_disconnect_cleanup(self, mock_user_data):
@@ -125,6 +126,9 @@ class TestWebSocketAuthentication:
             scope=scope, receive=None, send=None
         )  # type: ignore
         endpoint.user = user
+        endpoint.session_key = (
+            "session:testuser"  # Set session key for disconnect
+        )
 
         mock_websocket = create_mock_websocket()
 
@@ -135,8 +139,8 @@ class TestWebSocketAuthentication:
             # Call on_disconnect
             await endpoint.on_disconnect(mock_websocket, 1000)
 
-            # Verify connection was removed
-            mock_cm.disconnect.assert_called_once_with(mock_websocket)
+            # Verify connection was removed with session key
+            mock_cm.disconnect.assert_called_once_with("session:testuser")
 
 
 class TestWebSocketMessageHandling:
@@ -406,8 +410,8 @@ class TestWebSocketBroadcast:
         mock_ws2 = create_mock_websocket()
 
         # Connect mock websockets
-        connection_manager.connect(mock_ws1)
-        connection_manager.connect(mock_ws2)
+        connection_manager.connect("session:test1", mock_ws1)
+        connection_manager.connect("session:test2", mock_ws2)
 
         # Create a broadcast message
         from app.schemas.response import BroadcastDataModel
@@ -426,8 +430,8 @@ class TestWebSocketBroadcast:
             mock_ws2.send_json.assert_called_once_with(expected_data)
         finally:
             # Cleanup
-            connection_manager.disconnect(mock_ws1)
-            connection_manager.disconnect(mock_ws2)
+            connection_manager.disconnect("session:test1")
+            connection_manager.disconnect("session:test2")
 
 
 class TestWebSocketEdgeCases:

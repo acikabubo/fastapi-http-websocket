@@ -9,7 +9,6 @@ from starlette.authentication import UnauthenticatedUser
 from starlette.endpoints import WebSocketEndpoint
 from starlette.websockets import WebSocket, WebSocketDisconnect
 
-from app.connection_registry import ws_clients
 from app.logging import logger
 from app.managers.websocket_connection_manager import connection_manager
 from app.schemas.response import BroadcastDataModel, ResponseModel
@@ -239,12 +238,13 @@ class PackageAuthWebSocketEndpoint(WebSocketEndpoint):  # type: ignore[misc]
         # Set user username in redis with TTL from expired seconds from keycloak
         await self.r.add_kc_user_session(self.user)  # type: ignore[union-attr]
 
-        # Map username with websocket instance
-        ws_clients[
+        # Store session key for later use
+        self.session_key = (
             app_settings.USER_SESSION_REDIS_KEY_PREFIX + self.user.username
-        ] = websocket
+        )
 
-        connection_manager.connect(websocket)
+        # Register connection in connection manager (replaces old ws_clients dict)
+        connection_manager.connect(self.session_key, websocket)
         ws_connections_total.labels(status="accepted").inc()
         ws_connections_active.inc()
         logger.debug(
@@ -263,7 +263,10 @@ class PackageAuthWebSocketEndpoint(WebSocketEndpoint):  # type: ignore[misc]
         """
 
         await super().on_disconnect(websocket, close_code)
-        connection_manager.disconnect(websocket)
+
+        # Remove from connection manager if connection was established
+        if hasattr(self, "session_key"):
+            connection_manager.disconnect(self.session_key)
 
         # Remove from connection limiter if connection was established
         if not isinstance(self.user, UnauthenticatedUser) and hasattr(

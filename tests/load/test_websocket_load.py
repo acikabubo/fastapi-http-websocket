@@ -47,12 +47,12 @@ class TestWebSocketConcurrentConnections:
 
         # Add all connections
         start_time = time.time()
-        for ws in mock_connections:
-            connection_manager.connect(ws)
+        for i, ws in enumerate(mock_connections):
+            connection_manager.connect(f"session:user{i}", ws)
         connection_time = time.time() - start_time
 
         # Verify all connections are tracked
-        assert len(connection_manager.active_connections) == 100, (
+        assert len(connection_manager.connections) == 100, (
             "Should track 100 connections"
         )
         assert connection_time < 1.0, (
@@ -90,12 +90,12 @@ class TestWebSocketConcurrentConnections:
 
         # Add all connections
         start_time = time.time()
-        for ws in mock_connections:
-            connection_manager.connect(ws)
+        for i, ws in enumerate(mock_connections):
+            connection_manager.connect(f"session:user{i}", ws)
         connection_time = time.time() - start_time
 
         # Verify all connections are tracked
-        assert len(connection_manager.active_connections) == 1000, (
+        assert len(connection_manager.connections) == 1000, (
             "Should track 1000 connections"
         )
         assert connection_time < 5.0, (
@@ -121,7 +121,7 @@ class TestWebSocketConcurrentConnections:
         )
 
         # Measure memory usage by checking active connections
-        assert len(connection_manager.active_connections) == 1000, (
+        assert len(connection_manager.connections) == 1000, (
             "All connections still tracked"
         )
 
@@ -142,12 +142,13 @@ class TestWebSocketConcurrentConnections:
             ws_mock.send_json = AsyncMock()
 
             # Connect
-            connection_manager.connect(ws_mock)
-            assert len(connection_manager.active_connections) == 1
+            session_key = f"session:churn{i}"
+            connection_manager.connect(session_key, ws_mock)
+            assert len(connection_manager.connections) == 1
 
             # Disconnect
-            connection_manager.disconnect(ws_mock)
-            assert len(connection_manager.active_connections) == 0
+            connection_manager.disconnect(session_key)
+            assert len(connection_manager.connections) == 0
 
         churn_time = time.time() - start_time
 
@@ -157,7 +158,7 @@ class TestWebSocketConcurrentConnections:
         )
 
         # No connections should remain
-        assert len(connection_manager.active_connections) == 0
+        assert len(connection_manager.connections) == 0
 
 
 class TestWebSocketMessageThroughput:
@@ -172,7 +173,7 @@ class TestWebSocketMessageThroughput:
             ws_mock = MagicMock()
             ws_mock.send_json = AsyncMock()
             mock_connections.append(ws_mock)
-            connection_manager.connect(ws_mock)
+            connection_manager.connect(f"session:broadcast{i}", ws_mock)
 
         # Send 100 broadcasts rapidly
         broadcasts = 100
@@ -208,7 +209,7 @@ class TestWebSocketMessageThroughput:
             ws_mock = MagicMock()
             ws_mock.send_json = AsyncMock()
             mock_connections.append(ws_mock)
-            connection_manager.connect(ws_mock)
+            connection_manager.connect(f"session:large{i}", ws_mock)
 
         # Create large payload (~100KB JSON)
         large_data = {
@@ -255,7 +256,7 @@ class TestWebSocketErrorResilience:
                 ws_mock.send_json = AsyncMock()
 
             mock_connections.append(ws_mock)
-            connection_manager.connect(ws_mock)
+            connection_manager.connect(f"session:fail{i}", ws_mock)
 
         # Broadcast message
         broadcast_msg = BroadcastDataModel(
@@ -265,15 +266,16 @@ class TestWebSocketErrorResilience:
         await connection_manager.broadcast(broadcast_msg)
 
         # Verify failed connections were removed
-        assert len(connection_manager.active_connections) == 80, (
+        assert len(connection_manager.connections) == 80, (
             "Failed connections should be removed"
         )
 
         # Verify successful connections still tracked
-        for ws in mock_connections:
+        for i, ws in enumerate(mock_connections):
             if ws not in failing_connections:
-                assert ws in connection_manager.active_connections, (
-                    "Successful connections should remain"
+                session_key = f"session:fail{i}"
+                assert session_key in connection_manager.connections, (
+                    f"Successful connection {session_key} should remain"
                 )
 
     @pytest.mark.asyncio
@@ -285,7 +287,7 @@ class TestWebSocketErrorResilience:
             ws_mock = MagicMock()
             ws_mock.send_json = AsyncMock()
             mock_connections.append(ws_mock)
-            connection_manager.connect(ws_mock)
+            connection_manager.connect(f"session:concurrent{i}", ws_mock)
 
         # Send 10 broadcasts concurrently
         async def send_broadcast(seq: int):

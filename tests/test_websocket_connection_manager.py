@@ -20,17 +20,18 @@ class TestConnectionManager:
     def test_init(self):
         """Test ConnectionManager initialization."""
         manager = ConnectionManager()
-        assert manager.active_connections == []
+        assert manager.connections == {}
 
     def test_connect(self):
         """Test adding WebSocket connection."""
         manager = ConnectionManager()
         mock_ws = MagicMock(spec=WebSocket)
 
-        manager.connect(mock_ws)
+        manager.connect("session:test1", mock_ws)
 
-        assert mock_ws in manager.active_connections
-        assert len(manager.active_connections) == 1
+        assert "session:test1" in manager.connections
+        assert manager.connections["session:test1"] is mock_ws
+        assert len(manager.connections) == 1
 
     def test_connect_multiple(self):
         """Test adding multiple WebSocket connections."""
@@ -39,42 +40,41 @@ class TestConnectionManager:
         mock_ws2 = MagicMock(spec=WebSocket)
         mock_ws3 = MagicMock(spec=WebSocket)
 
-        manager.connect(mock_ws1)
-        manager.connect(mock_ws2)
-        manager.connect(mock_ws3)
+        manager.connect("session:user1", mock_ws1)
+        manager.connect("session:user2", mock_ws2)
+        manager.connect("session:user3", mock_ws3)
 
-        assert len(manager.active_connections) == 3
-        assert mock_ws1 in manager.active_connections
-        assert mock_ws2 in manager.active_connections
-        assert mock_ws3 in manager.active_connections
+        assert len(manager.connections) == 3
+        assert manager.connections["session:user1"] is mock_ws1
+        assert manager.connections["session:user2"] is mock_ws2
+        assert manager.connections["session:user3"] is mock_ws3
 
     def test_disconnect(self):
         """Test removing WebSocket connection."""
         manager = ConnectionManager()
         mock_ws = MagicMock(spec=WebSocket)
 
-        manager.connect(mock_ws)
-        assert len(manager.active_connections) == 1
+        manager.connect("session:test1", mock_ws)
+        assert len(manager.connections) == 1
 
-        manager.disconnect(mock_ws)
-        assert len(manager.active_connections) == 0
-        assert mock_ws not in manager.active_connections
+        manager.disconnect("session:test1")
+        assert len(manager.connections) == 0
+        assert "session:test1" not in manager.connections
 
     def test_disconnect_nonexistent(self):
         """Test disconnecting non-existent WebSocket (should do nothing)."""
         manager = ConnectionManager()
         mock_ws1 = MagicMock(spec=WebSocket)
-        mock_ws2 = MagicMock(spec=WebSocket)
 
-        manager.connect(mock_ws1)
-        assert len(manager.active_connections) == 1
+        manager.connect("session:test1", mock_ws1)
+        assert len(manager.connections) == 1
 
         # Try to disconnect a connection that was never added
-        manager.disconnect(mock_ws2)
+        manager.disconnect("session:test2")
 
-        # Should not affect active_connections
-        assert len(manager.active_connections) == 1
-        assert mock_ws1 in manager.active_connections
+        # Should not affect connections
+        assert len(manager.connections) == 1
+        assert "session:test1" in manager.connections
 
     @pytest.mark.asyncio
     async def test_broadcast_no_connections(self):
@@ -99,7 +99,7 @@ class TestConnectionManager:
         mock_ws = MagicMock(spec=WebSocket)
         mock_ws.send_json = AsyncMock()
 
-        manager.connect(mock_ws)
+        manager.connect("session:test1", mock_ws)
 
         broadcast_msg = BroadcastDataModel(
             pkg_id=1,
@@ -127,9 +127,9 @@ class TestConnectionManager:
         mock_ws2.send_json = AsyncMock()
         mock_ws3.send_json = AsyncMock()
 
-        manager.connect(mock_ws1)
-        manager.connect(mock_ws2)
-        manager.connect(mock_ws3)
+        manager.connect("session:user1", mock_ws1)
+        manager.connect("session:user2", mock_ws2)
+        manager.connect("session:user3", mock_ws3)
 
         broadcast_msg = BroadcastDataModel(
             pkg_id=1,
@@ -157,8 +157,8 @@ class TestConnectionManager:
         )
         mock_ws2.send_json = AsyncMock()
 
-        manager.connect(mock_ws1)
-        manager.connect(mock_ws2)
+        manager.connect("session:test1", mock_ws1)
+        manager.connect("session:test2", mock_ws2)
 
         broadcast_msg = BroadcastDataModel(
             pkg_id=1,
@@ -170,8 +170,8 @@ class TestConnectionManager:
         await manager.broadcast(broadcast_msg)
 
         # Failed connection should be disconnected
-        assert mock_ws1 not in manager.active_connections
+        assert "session:test1" not in manager.connections
 
         # Second connection should still receive message
         mock_ws2.send_json.assert_called_once()
-        assert mock_ws2 in manager.active_connections
+        assert "session:test2" in manager.connections
