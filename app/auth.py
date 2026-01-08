@@ -46,7 +46,9 @@ class AuthBackend(AuthenticationBackend):  # type: ignore[misc]
         super().__init__(*args, **kwargs)
         self.excluded_paths = app_settings.EXCLUDED_PATHS
 
-    async def authenticate(self, request):  # type: ignore[no-untyped-def] # pragma: no cover
+    async def authenticate(
+        self, request: Any
+    ) -> tuple[AuthCredentials, UserModel] | None:
         """
         Authenticates a request by decoding the access token and retrieving the user data.
 
@@ -86,7 +88,7 @@ class AuthBackend(AuthenticationBackend):  # type: ignore[misc]
             auth_access_token = qs.get("Authorization", "")
         else:  # type -> http
             if self.excluded_paths.match(request.url.path):
-                return
+                return None
 
             auth_access_token = request.headers.get("authorization", "")
 
