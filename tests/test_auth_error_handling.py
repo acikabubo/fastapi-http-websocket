@@ -10,7 +10,8 @@ from unittest.mock import MagicMock, patch
 from jwcrypto.jwt import JWTExpired
 from keycloak.exceptions import KeycloakAuthenticationError
 
-from app.auth import AuthBackend, AuthenticationError
+from app.auth import AuthBackend
+from app.exceptions import AuthenticationError
 from tests.mocks.auth_mocks import create_mock_keycloak_manager
 
 
@@ -24,22 +25,21 @@ class TestAuthenticationError:
     """Test the AuthenticationError exception class."""
 
     def test_authentication_error_creation(self):
-        """Test creating AuthenticationError with reason and detail."""
-        error = AuthenticationError("token_expired", "JWT token has expired")
+        """Test creating AuthenticationError with message."""
+        error = AuthenticationError("token_expired: JWT token has expired")
 
-        assert error.reason == "token_expired"
-        assert error.detail == "JWT token has expired"
+        assert error.message == "token_expired: JWT token has expired"
         assert str(error) == "token_expired: JWT token has expired"
 
-    def test_authentication_error_different_reasons(self):
-        """Test AuthenticationError with different reason codes."""
-        error1 = AuthenticationError("invalid_credentials", "User not found")
+    def test_authentication_error_different_types(self):
+        """Test AuthenticationError with different error types."""
+        error1 = AuthenticationError("invalid_credentials: User not found")
         error2 = AuthenticationError(
-            "token_decode_error", "Invalid token format"
+            "token_decode_error: Invalid token format"
         )
 
-        assert error1.reason == "invalid_credentials"
-        assert error2.reason == "token_decode_error"
+        assert "invalid_credentials" in error1.message
+        assert "token_decode_error" in error2.message
 
 
 class TestAuthBackendErrorHandling:
@@ -69,8 +69,8 @@ class TestAuthBackendErrorHandling:
             with pytest.raises(AuthenticationError) as exc_info:
                 await auth_backend.authenticate(request)
 
-            assert exc_info.value.reason == "token_expired"
-            assert "Token expired" in exc_info.value.detail
+            assert "token_expired" in exc_info.value.message
+            assert "Token expired" in exc_info.value.message
 
     @pytest.mark.asyncio
     async def test_invalid_credentials_raises_authentication_error(self):
@@ -93,8 +93,8 @@ class TestAuthBackendErrorHandling:
             with pytest.raises(AuthenticationError) as exc_info:
                 await auth_backend.authenticate(request)
 
-            assert exc_info.value.reason == "invalid_credentials"
-            assert "Invalid credentials" in exc_info.value.detail
+            assert "invalid_credentials" in exc_info.value.message
+            assert "Invalid credentials" in exc_info.value.message
 
     @pytest.mark.asyncio
     async def test_token_decode_error_raises_authentication_error(self):
@@ -117,8 +117,8 @@ class TestAuthBackendErrorHandling:
             with pytest.raises(AuthenticationError) as exc_info:
                 await auth_backend.authenticate(request)
 
-            assert exc_info.value.reason == "token_decode_error"
-            assert "Malformed token" in exc_info.value.detail
+            assert "token_decode_error" in exc_info.value.message
+            assert "Malformed token" in exc_info.value.message
 
     @pytest.mark.asyncio
     async def test_websocket_expired_token_raises_authentication_error(
@@ -145,7 +145,7 @@ class TestAuthBackendErrorHandling:
             with pytest.raises(AuthenticationError) as exc_info:
                 await auth_backend.authenticate(request)
 
-            assert exc_info.value.reason == "token_expired"
+            assert "token_expired" in exc_info.value.message
 
     @pytest.mark.asyncio
     async def test_successful_authentication_no_error(self):
@@ -223,8 +223,8 @@ class TestErrorHandlingIntegration:
                 await auth_backend.authenticate(request)
 
             # Error should contain the detailed message
-            assert error_message in exc_info.value.detail
-            assert exc_info.value.reason == "token_decode_error"
+            assert error_message in exc_info.value.message
+            assert "token_decode_error" in exc_info.value.message
 
             # Error string representation should be helpful
             error_str = str(exc_info.value)
@@ -253,7 +253,7 @@ class TestErrorHandlingIntegration:
             try:
                 await auth_backend.authenticate(request)
             except AuthenticationError as e:
-                errors_caught.append(e.reason)
+                errors_caught.append(e.message)
 
         # Test invalid credentials
         mock_kc_manager = create_mock_keycloak_manager()
@@ -264,7 +264,7 @@ class TestErrorHandlingIntegration:
             try:
                 await auth_backend.authenticate(request)
             except AuthenticationError as e:
-                errors_caught.append(e.reason)
+                errors_caught.append(e.message)
 
         # Test decode error
         mock_kc_manager = create_mock_keycloak_manager()
@@ -275,10 +275,10 @@ class TestErrorHandlingIntegration:
             try:
                 await auth_backend.authenticate(request)
             except AuthenticationError as e:
-                errors_caught.append(e.reason)
+                errors_caught.append(e.message)
 
         # All three error types should be distinguishable
-        assert "token_expired" in errors_caught
-        assert "invalid_credentials" in errors_caught
-        assert "token_decode_error" in errors_caught
-        assert len(set(errors_caught)) == 3  # All unique
+        assert any("token_expired" in msg for msg in errors_caught)
+        assert any("invalid_credentials" in msg for msg in errors_caught)
+        assert any("token_decode_error" in msg for msg in errors_caught)
+        assert len(errors_caught) == 3  # All three caught

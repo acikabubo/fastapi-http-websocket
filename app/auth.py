@@ -11,35 +11,11 @@ from jwcrypto.jwt import JWTExpired
 from keycloak.exceptions import KeycloakAuthenticationError
 from starlette.authentication import AuthCredentials, AuthenticationBackend
 
+from app.exceptions import AuthenticationError
 from app.logging import logger
 from app.managers.keycloak_manager import KeycloakManager
 from app.schemas.user import UserModel
 from app.settings import app_settings
-
-
-class AuthenticationError(Exception):
-    """
-    Custom exception for authentication failures.
-
-    This exception provides structured error information for authentication failures,
-    allowing better error handling and debugging.
-
-    Attributes:
-        reason: A machine-readable error code (e.g., 'token_expired', 'invalid_credentials')
-        detail: Human-readable error details
-    """
-
-    def __init__(self, reason: str, detail: str) -> None:
-        """
-        Initialize the AuthenticationError.
-
-        Args:
-            reason: A machine-readable error code indicating the failure type
-            detail: Human-readable description of the error
-        """
-        self.reason = reason
-        self.detail = detail
-        super().__init__(f"{reason}: {detail}")
 
 
 class AuthBackend(AuthenticationBackend):  # type: ignore[misc]
@@ -61,9 +37,9 @@ class AuthBackend(AuthenticationBackend):  # type: ignore[misc]
 
     Raises:
         AuthenticationError: When authentication fails due to:
-            - Expired JWT tokens (reason='token_expired')
-            - Invalid Keycloak credentials (reason='invalid_credentials')
-            - Token decoding errors (reason='token_decode_error')
+            - Expired JWT tokens (message contains 'token_expired')
+            - Invalid Keycloak credentials (message contains 'invalid_credentials')
+            - Token decoding errors (message contains 'token_decode_error')
     """
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
@@ -171,7 +147,7 @@ class AuthBackend(AuthenticationBackend):  # type: ignore[misc]
                 type=request_type, outcome="denied"
             ).inc()
 
-            raise AuthenticationError("token_expired", str(ex))
+            raise AuthenticationError(f"token_expired: {ex}")
 
         except KeycloakAuthenticationError as ex:
             logger.error(f"Invalid credentials: {ex}")
@@ -186,7 +162,7 @@ class AuthBackend(AuthenticationBackend):  # type: ignore[misc]
                 type=request_type, outcome="denied"
             ).inc()
 
-            raise AuthenticationError("invalid_credentials", str(ex))
+            raise AuthenticationError(f"invalid_credentials: {ex}")
 
         except ValueError as ex:
             logger.error(f"Error occurred while decode auth token: {ex}")
@@ -201,7 +177,7 @@ class AuthBackend(AuthenticationBackend):  # type: ignore[misc]
                 type=request_type, outcome="error"
             ).inc()
 
-            raise AuthenticationError("token_decode_error", str(ex))
+            raise AuthenticationError(f"token_decode_error: {ex}")
 
         finally:
             # Track operation duration
