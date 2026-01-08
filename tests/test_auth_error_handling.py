@@ -60,7 +60,7 @@ class TestAuthBackendErrorHandling:
         request.url.path = "/api/test"
         request.headers.get.return_value = "Bearer expired_token"
 
-        with patch("app.auth.KeycloakManager", return_value=mock_kc_manager):
+        with patch("app.auth.keycloak_manager", mock_kc_manager):
             # Simulate JWT expired exception using async method
             mock_kc_manager.openid.a_decode_token = AsyncMock(
                 side_effect=JWTExpired("Token expired")
@@ -89,7 +89,7 @@ class TestAuthBackendErrorHandling:
             side_effect=KeycloakAuthenticationError("Invalid credentials")
         )
 
-        with patch("app.auth.KeycloakManager", return_value=mock_kc_manager):
+        with patch("app.auth.keycloak_manager", mock_kc_manager):
             with pytest.raises(AuthenticationError) as exc_info:
                 await auth_backend.authenticate(request)
 
@@ -113,7 +113,7 @@ class TestAuthBackendErrorHandling:
             side_effect=ValueError("Malformed token")
         )
 
-        with patch("app.auth.KeycloakManager", return_value=mock_kc_manager):
+        with patch("app.auth.keycloak_manager", mock_kc_manager):
             with pytest.raises(AuthenticationError) as exc_info:
                 await auth_backend.authenticate(request)
 
@@ -141,7 +141,7 @@ class TestAuthBackendErrorHandling:
             side_effect=JWTExpired("Token expired")
         )
 
-        with patch("app.auth.KeycloakManager", return_value=mock_kc_manager):
+        with patch("app.auth.keycloak_manager", mock_kc_manager):
             with pytest.raises(AuthenticationError) as exc_info:
                 await auth_backend.authenticate(request)
 
@@ -172,7 +172,7 @@ class TestAuthBackendErrorHandling:
             }
         )
 
-        with patch("app.auth.KeycloakManager", return_value=mock_kc_manager):
+        with patch("app.auth.keycloak_manager", mock_kc_manager):
             result = await auth_backend.authenticate(request)
 
             # Should return AuthCredentials and UserModel
@@ -218,7 +218,7 @@ class TestErrorHandlingIntegration:
             side_effect=ValueError(error_message)
         )
 
-        with patch("app.auth.KeycloakManager", return_value=mock_kc_manager):
+        with patch("app.auth.keycloak_manager", mock_kc_manager):
             with pytest.raises(AuthenticationError) as exc_info:
                 await auth_backend.authenticate(request)
 
@@ -249,7 +249,7 @@ class TestErrorHandlingIntegration:
         mock_kc_manager.openid.a_decode_token = AsyncMock(
             side_effect=JWTExpired("expired")
         )
-        with patch("app.auth.KeycloakManager", return_value=mock_kc_manager):
+        with patch("app.auth.keycloak_manager", mock_kc_manager):
             try:
                 await auth_backend.authenticate(request)
             except AuthenticationError as e:
@@ -260,7 +260,7 @@ class TestErrorHandlingIntegration:
         mock_kc_manager.openid.a_decode_token = AsyncMock(
             side_effect=KeycloakAuthenticationError("invalid")
         )
-        with patch("app.auth.KeycloakManager", return_value=mock_kc_manager):
+        with patch("app.auth.keycloak_manager", mock_kc_manager):
             try:
                 await auth_backend.authenticate(request)
             except AuthenticationError as e:
@@ -271,7 +271,7 @@ class TestErrorHandlingIntegration:
         mock_kc_manager.openid.a_decode_token = AsyncMock(
             side_effect=ValueError("decode error")
         )
-        with patch("app.auth.KeycloakManager", return_value=mock_kc_manager):
+        with patch("app.auth.keycloak_manager", mock_kc_manager):
             try:
                 await auth_backend.authenticate(request)
             except AuthenticationError as e:

@@ -6,16 +6,18 @@ from starlette.authentication import UnauthenticatedUser
 
 from app.logging import logger
 from app.schemas.user import UserModel
-from app.utils.singleton import SingletonMeta
 
 
-class RBACManager(metaclass=SingletonMeta):
+class RBACManager:
     """
-    Singleton manager for Role-Based Access Control (RBAC).
+    Manager for Role-Based Access Control (RBAC).
 
     Provides unified role-based permission checking for both WebSocket and HTTP endpoints.
     Uses decorator-based roles defined in pkg_router.register() for WebSocket and
     require_roles() method for HTTP FastAPI dependencies.
+
+    Note: This class is instantiated as a module-level singleton (rbac_manager) below.
+    Import and use rbac_manager instead of creating new instances.
     """
 
     @staticmethod
@@ -160,3 +162,7 @@ class RBACManager(metaclass=SingletonMeta):
                 )
 
         return check_roles
+
+
+# Module-level singleton instance
+rbac_manager = RBACManager()

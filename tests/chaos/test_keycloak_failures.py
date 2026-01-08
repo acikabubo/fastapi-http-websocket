@@ -16,19 +16,9 @@ from keycloak.exceptions import (
 )
 
 from app.managers.keycloak_manager import KeycloakManager
-from app.utils.singleton import SingletonMeta
 
 # Mark all tests in this module as chaos tests
 pytestmark = pytest.mark.chaos
-
-
-@pytest.fixture(autouse=True)
-def reset_keycloak_singleton():
-    """Reset KeycloakManager singleton between tests to avoid state pollution."""
-    yield
-    # Clear the singleton instance after each test
-    if KeycloakManager in SingletonMeta._instances:
-        del SingletonMeta._instances[KeycloakManager]
 
 
 class TestKeycloakConnectionFailures:

@@ -11,7 +11,6 @@ from app.constants import KC_SESSION_EXPIRY_BUFFER_SECONDS
 from app.logging import logger
 from app.schemas.user import UserModel
 from app.settings import app_settings
-from app.utils.singleton import SingletonMeta
 
 
 class RedisPool:
@@ -336,7 +335,16 @@ class RedisHandler:
         self.event_handlers[channel].add_callback((callback, kwargs))
 
 
-class RRedis(RedisHandler, metaclass=SingletonMeta):
-    """Singleton Redis handler for pub/sub operations."""
+class RRedis(RedisHandler):
+    """
+    Redis handler for pub/sub operations.
+
+    Note: This class is instantiated as a module-level singleton (r_redis) below.
+    Import and use r_redis instead of creating new instances.
+    """
 
     pass
+
+
+# Module-level singleton instance
+r_redis = RRedis()

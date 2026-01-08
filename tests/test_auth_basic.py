@@ -26,7 +26,7 @@ class TestBasicAuthKeycloakUser:
         mock_kc_manager = create_mock_keycloak_manager()
         mock_kc_manager.openid.a_decode_token.return_value = mock_user_data
 
-        with patch("app.auth.KeycloakManager", return_value=mock_kc_manager):
+        with patch("app.auth.keycloak_manager", mock_kc_manager):
             user = await basic_auth_keycloak_user(credentials)
 
         assert isinstance(user, UserModel)
@@ -48,7 +48,7 @@ class TestBasicAuthKeycloakUser:
         mock_error.response_code = 401
         mock_kc_manager.login_async.side_effect = mock_error
 
-        with patch("app.auth.KeycloakManager", return_value=mock_kc_manager):
+        with patch("app.auth.keycloak_manager", mock_kc_manager):
             with pytest.raises(HTTPException) as exc_info:
                 await basic_auth_keycloak_user(credentials)
 

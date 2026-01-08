@@ -317,9 +317,12 @@ class TestRedisHandler:
 class TestRRedis:
     """Tests for RRedis singleton."""
 
-    def test_rredis_singleton(self):
-        """Test that RRedis is a singleton."""
-        instance1 = RRedis()
-        instance2 = RRedis()
+    def test_rredis_module_instance(self):
+        """Test that r_redis is the module-level singleton instance."""
+        from app.storage.redis import r_redis
 
-        assert instance1 is instance2
+        # Import again to verify it's the same instance
+        from app.storage.redis import r_redis as r_redis2
+
+        assert r_redis is r_redis2
+        assert isinstance(r_redis, RRedis)

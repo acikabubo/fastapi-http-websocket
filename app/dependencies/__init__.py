@@ -28,8 +28,8 @@ from typing import Annotated, Any
 from fastapi import Depends
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.managers.keycloak_manager import KeycloakManager
-from app.managers.rbac_manager import RBACManager
+from app.managers.keycloak_manager import KeycloakManager, keycloak_manager
+from app.managers.rbac_manager import RBACManager, rbac_manager
 from app.storage.db import get_session
 
 # ============================================================================
@@ -47,29 +47,29 @@ SessionDep = Annotated[AsyncSession, Depends(get_session)]
 @lru_cache
 def get_rbac_manager() -> RBACManager:
     """
-    Get cached RBAC manager instance.
+    Get RBAC manager instance.
 
-    Uses @lru_cache to provide singleton-like behavior while maintaining
-    testability. Can be overridden in tests using app.dependency_overrides.
+    Returns the module-level singleton rbac_manager instance.
+    Can be overridden in tests using app.dependency_overrides.
 
     Returns:
-        Cached RBACManager instance.
+        RBACManager singleton instance.
     """
-    return RBACManager()
+    return rbac_manager
 
 
 @lru_cache
 def get_keycloak_manager() -> KeycloakManager:
     """
-    Get cached Keycloak manager instance.
+    Get Keycloak manager instance.
 
-    Uses @lru_cache to provide singleton-like behavior while maintaining
-    testability. Can be overridden in tests using app.dependency_overrides.
+    Returns the module-level singleton keycloak_manager instance.
+    Can be overridden in tests using app.dependency_overrides.
 
     Returns:
-        Cached KeycloakManager instance.
+        KeycloakManager singleton instance.
     """
-    return KeycloakManager()
+    return keycloak_manager
 
 
 RBACDep = Annotated[RBACManager, Depends(get_rbac_manager)]

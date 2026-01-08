@@ -13,7 +13,7 @@ from starlette.authentication import AuthCredentials, AuthenticationBackend
 
 from app.exceptions import AuthenticationError
 from app.logging import logger
-from app.managers.keycloak_manager import KeycloakManager
+from app.managers.keycloak_manager import keycloak_manager
 from app.schemas.user import UserModel
 from app.settings import app_settings
 
@@ -93,15 +93,13 @@ class AuthBackend(AuthenticationBackend):  # type: ignore[misc]
         _, access_token = get_authorization_scheme_param(auth_access_token)
 
         try:
-            kc_manager = KeycloakManager()
-
             # Debug mode: bypass token validation (ONLY for development)
             if app_settings.DEBUG_AUTH:
                 logger.warning(
                     "DEBUG_AUTH is enabled - using debug credentials. "
                     "NEVER enable this in production!"
                 )
-                token = await kc_manager.login_async(
+                token = await keycloak_manager.login_async(
                     app_settings.DEBUG_AUTH_USERNAME,
                     app_settings.DEBUG_AUTH_PASSWORD,
                 )
@@ -112,7 +110,7 @@ class AuthBackend(AuthenticationBackend):  # type: ignore[misc]
 
             if user_data is None:
                 # Cache miss - decode token from Keycloak
-                user_data = await kc_manager.openid.a_decode_token(
+                user_data = await keycloak_manager.openid.a_decode_token(
                     access_token
                 )
 
@@ -219,11 +217,10 @@ async def basic_auth_keycloak_user(
         >>> user = await basic_auth_keycloak_user(credentials)
     """
     try:
-        kc_manager = KeycloakManager()
-        token = await kc_manager.login_async(
+        token = await keycloak_manager.login_async(
             credentials.username, credentials.password
         )
-        user_data = await kc_manager.openid.a_decode_token(
+        user_data = await keycloak_manager.openid.a_decode_token(
             token["access_token"]
         )
 

@@ -2,14 +2,11 @@
 FastAPI dependencies for role-based access control.
 
 This module provides a convenient standalone function for enforcing
-role-based permissions on HTTP endpoints. It delegates to RBACManager
+role-based permissions on HTTP endpoints. It delegates to rbac_manager
 for unified permission checking across HTTP and WebSocket endpoints.
 """
 
-from app.managers.rbac_manager import RBACManager
-
-# Singleton RBACManager instance
-_rbac_manager = RBACManager()
+from app.managers.rbac_manager import rbac_manager
 
 
 def require_roles(*roles: str):  # type: ignore[no-untyped-def]
@@ -51,4 +48,4 @@ def require_roles(*roles: str):  # type: ignore[no-untyped-def]
     Raises:
         HTTPException: 401 if user is not authenticated, 403 if user lacks required roles.
     """
-    return _rbac_manager.require_roles(*roles)
+    return rbac_manager.require_roles(*roles)

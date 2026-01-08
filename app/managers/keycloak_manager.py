@@ -3,15 +3,17 @@ from typing import Any
 from keycloak import KeycloakOpenID
 
 from app.settings import app_settings
-from app.utils.singleton import SingletonMeta
 
 
-class KeycloakManager(metaclass=SingletonMeta):
+class KeycloakManager:
     """
-    Singleton manager for Keycloak authentication operations.
+    Manager for Keycloak authentication operations.
 
     Provides OpenID Connect authentication and token management for the
     application using native async methods from python-keycloak library.
+
+    Note: This class is instantiated as a module-level singleton (keycloak_manager) below.
+    Import and use keycloak_manager instead of creating new instances.
     """
 
     def __init__(self) -> None:
@@ -95,3 +97,7 @@ class KeycloakManager(metaclass=SingletonMeta):
             keycloak_operation_duration_seconds.labels(
                 operation="login"
             ).observe(duration)
+
+
+# Module-level singleton instance
+keycloak_manager = KeycloakManager()

@@ -8,7 +8,7 @@ from fastapi import APIRouter
 
 from app.api.ws.constants import PkgID, RSPCode
 from app.logging import logger
-from app.managers.rbac_manager import RBACManager
+from app.managers.rbac_manager import rbac_manager
 from app.schemas.generic_typing import (
     HandlerCallableType,
     JsonSchemaType,
@@ -40,7 +40,7 @@ class PackageRouter:
             PkgID, tuple[JsonSchemaType, ValidatorType]
         ] = {}
         self.permissions_registry: dict[PkgID, list[str]] = {}
-        self.rbac: RBACManager = RBACManager()
+        self.rbac = rbac_manager
 
     def register(
         self,
