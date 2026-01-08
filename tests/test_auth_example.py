@@ -196,7 +196,7 @@ class TestRealKeycloakAuthentication:
         kc = KeycloakManager()
 
         try:
-            token = kc.login("acika", "12345")
+            token = await kc.login_async("acika", "12345")
 
             assert "access_token" in token
             assert "refresh_token" in token

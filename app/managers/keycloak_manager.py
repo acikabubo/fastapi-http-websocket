@@ -95,23 +95,3 @@ class KeycloakManager(metaclass=SingletonMeta):
             keycloak_operation_duration_seconds.labels(
                 operation="login"
             ).observe(duration)
-
-    def login(self, username: str, password: str) -> dict[str, Any]:
-        """
-        Authenticate a user synchronously and obtain tokens.
-
-        .. deprecated::
-            Use :meth:`login_async` instead to avoid blocking the event loop.
-
-        Args:
-            username: The username of the user to authenticate.
-            password: The password of the user to authenticate.
-
-        Returns:
-            Token dictionary containing access_token, refresh_token,
-            expires_in, etc.
-
-        Raises:
-            KeycloakAuthenticationError: If authentication fails.
-        """
-        return self.openid.token(username=username, password=password)

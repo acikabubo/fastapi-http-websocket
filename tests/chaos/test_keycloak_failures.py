@@ -6,7 +6,7 @@ Tests application resilience when Keycloak is unavailable or fails.
 Run with: pytest tests/chaos/test_keycloak_failures.py -v -m chaos
 """
 
-from unittest.mock import Mock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 from keycloak.exceptions import (
@@ -34,11 +34,12 @@ def reset_keycloak_singleton():
 class TestKeycloakConnectionFailures:
     """Tests for Keycloak connection failure scenarios."""
 
-    def test_keycloak_server_unavailable(self):
+    @pytest.mark.asyncio
+    async def test_keycloak_server_unavailable(self):
         """Test authentication when Keycloak server is unavailable."""
         with patch("app.managers.keycloak_manager.KeycloakOpenID") as mock_kc:
             mock_openid = Mock()
-            mock_openid.token = Mock(
+            mock_openid.a_token = AsyncMock(
                 side_effect=KeycloakConnectionError("Connection refused")
             )
             mock_kc.return_value = mock_openid
@@ -47,13 +48,14 @@ class TestKeycloakConnectionFailures:
 
             # Login should raise connection error
             with pytest.raises(KeycloakConnectionError):
-                manager.login("testuser", "password")
+                await manager.login_async("testuser", "password")
 
-    def test_keycloak_timeout(self):
+    @pytest.mark.asyncio
+    async def test_keycloak_timeout(self):
         """Test authentication when Keycloak request times out."""
         with patch("app.managers.keycloak_manager.KeycloakOpenID") as mock_kc:
             mock_openid = Mock()
-            mock_openid.token = Mock(
+            mock_openid.a_token = AsyncMock(
                 side_effect=KeycloakConnectionError("Request timeout")
             )
             mock_kc.return_value = mock_openid
@@ -62,7 +64,7 @@ class TestKeycloakConnectionFailures:
 
             # Should raise timeout error
             with pytest.raises(KeycloakConnectionError):
-                manager.login("testuser", "password")
+                await manager.login_async("testuser", "password")
 
     def test_invalid_token_decode(self):
         """Test token decoding when Keycloak validation fails."""
@@ -83,11 +85,12 @@ class TestKeycloakConnectionFailures:
 class TestKeycloakAuthenticationErrors:
     """Tests for Keycloak authentication error scenarios."""
 
-    def test_invalid_credentials(self):
+    @pytest.mark.asyncio
+    async def test_invalid_credentials(self):
         """Test login with invalid credentials."""
         with patch("app.managers.keycloak_manager.KeycloakOpenID") as mock_kc:
             mock_openid = Mock()
-            mock_openid.token = Mock(
+            mock_openid.a_token = AsyncMock(
                 side_effect=KeycloakAuthenticationError(
                     "Invalid user credentials"
                 )
@@ -98,13 +101,14 @@ class TestKeycloakAuthenticationErrors:
 
             # Should raise authentication error
             with pytest.raises(KeycloakAuthenticationError):
-                manager.login("baduser", "badpass")
+                await manager.login_async("baduser", "badpass")
 
-    def test_user_account_disabled(self):
+    @pytest.mark.asyncio
+    async def test_user_account_disabled(self):
         """Test login when user account is disabled in Keycloak."""
         with patch("app.managers.keycloak_manager.KeycloakOpenID") as mock_kc:
             mock_openid = Mock()
-            mock_openid.token = Mock(
+            mock_openid.a_token = AsyncMock(
                 side_effect=KeycloakAuthenticationError("Account is disabled")
             )
             mock_kc.return_value = mock_openid
@@ -113,7 +117,7 @@ class TestKeycloakAuthenticationErrors:
 
             # Should raise authentication error
             with pytest.raises(KeycloakAuthenticationError):
-                manager.login("disabled_user", "password")
+                await manager.login_async("disabled_user", "password")
 
     def test_expired_token_introspection(self):
         """Test token introspection with expired token."""
@@ -132,11 +136,12 @@ class TestKeycloakAuthenticationErrors:
 class TestKeycloakIntermittentFailures:
     """Tests for intermittent Keycloak failures and recovery."""
 
-    def test_keycloak_flapping_availability(self):
+    @pytest.mark.asyncio
+    async def test_keycloak_flapping_availability(self):
         """Test authentication when Keycloak availability flaps (up/down/up)."""
         call_count = [0]
 
-        def mock_token(*args, **kwargs):
+        async def mock_token(*args, **kwargs):
             call_count[0] += 1
             if call_count[0] == 1:
                 # First call: Keycloak available
@@ -158,21 +163,21 @@ class TestKeycloakIntermittentFailures:
 
         with patch("app.managers.keycloak_manager.KeycloakOpenID") as mock_kc:
             mock_openid = Mock()
-            mock_openid.token = Mock(side_effect=mock_token)
+            mock_openid.a_token = AsyncMock(side_effect=mock_token)
             mock_kc.return_value = mock_openid
 
             manager = KeycloakManager()
 
             # First login: success
-            result1 = manager.login("user", "pass")
+            result1 = await manager.login_async("user", "pass")
             assert result1["access_token"] == "token1"
 
             # Second login: failure
             with pytest.raises(KeycloakConnectionError):
-                manager.login("user", "pass")
+                await manager.login_async("user", "pass")
 
             # Third login: recovered
-            result3 = manager.login("user", "pass")
+            result3 = await manager.login_async("user", "pass")
             assert result3["access_token"] == "token2"
 
     def test_token_refresh_after_keycloak_restart(self):
@@ -208,12 +213,14 @@ class TestKeycloakIntermittentFailures:
 class TestKeycloakNetworkPartitions:
     """Tests for Keycloak network partition scenarios."""
 
-    def test_slow_keycloak_response(self):
+    @pytest.mark.asyncio
+    async def test_slow_keycloak_response(self):
         """Test authentication when Keycloak responses are slow."""
+        import asyncio
         import time
 
-        def slow_token(*args, **kwargs):
-            time.sleep(1.0)  # 1 second delay
+        async def slow_token(*args, **kwargs):
+            await asyncio.sleep(1.0)  # 1 second delay
             return {
                 "access_token": "slow_token",
                 "refresh_token": "refresh",
@@ -222,13 +229,13 @@ class TestKeycloakNetworkPartitions:
 
         with patch("app.managers.keycloak_manager.KeycloakOpenID") as mock_kc:
             mock_openid = Mock()
-            mock_openid.token = Mock(side_effect=slow_token)
+            mock_openid.a_token = AsyncMock(side_effect=slow_token)
             mock_kc.return_value = mock_openid
 
             manager = KeycloakManager()
 
             start = time.time()
-            result = manager.login("user", "pass")
+            result = await manager.login_async("user", "pass")
             duration = time.time() - start
 
             # Login should complete but take longer
@@ -237,13 +244,14 @@ class TestKeycloakNetworkPartitions:
                 f"Login should take at least 1s, took {duration:.3f}s"
             )
 
-    def test_partial_keycloak_service_degradation(self):
+    @pytest.mark.asyncio
+    async def test_partial_keycloak_service_degradation(self):
         """Test when some Keycloak services work but others fail."""
         with patch("app.managers.keycloak_manager.KeycloakOpenID") as mock_kc:
             mock_openid = Mock()
 
             # Login works
-            mock_openid.token = Mock(
+            mock_openid.a_token = AsyncMock(
                 return_value={
                     "access_token": "token",
                     "refresh_token": "refresh",
@@ -260,7 +268,7 @@ class TestKeycloakNetworkPartitions:
             manager = KeycloakManager()
 
             # Login should succeed
-            result = manager.login("user", "pass")
+            result = await manager.login_async("user", "pass")
             assert result["access_token"] == "token"
 
             # But userinfo should fail
@@ -271,11 +279,12 @@ class TestKeycloakNetworkPartitions:
 class TestKeycloakConfigurationErrors:
     """Tests for Keycloak configuration error scenarios."""
 
-    def test_invalid_client_credentials(self):
+    @pytest.mark.asyncio
+    async def test_invalid_client_credentials(self):
         """Test when Keycloak client credentials are invalid."""
         with patch("app.managers.keycloak_manager.KeycloakOpenID") as mock_kc:
             mock_openid = Mock()
-            mock_openid.token = Mock(
+            mock_openid.a_token = AsyncMock(
                 side_effect=KeycloakAuthenticationError(
                     "Invalid client credentials"
                 )
@@ -286,7 +295,7 @@ class TestKeycloakConfigurationErrors:
 
             # Should raise authentication error
             with pytest.raises(KeycloakAuthenticationError):
-                manager.login("user", "pass")
+                await manager.login_async("user", "pass")
 
     def test_invalid_realm_configuration(self):
         """Test when Keycloak realm does not exist."""
