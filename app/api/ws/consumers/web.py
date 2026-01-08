@@ -12,6 +12,7 @@ from app.routing import pkg_router
 from app.schemas.proto import Request as ProtoRequest
 from app.schemas.request import RequestModel
 from app.settings import app_settings
+from app.types import RequestId, UserId, Username
 from app.utils.audit_logger import log_user_action
 from app.utils.metrics import (
     ws_message_processing_duration_seconds,
@@ -132,14 +133,18 @@ class Web(PackageAuthWebSocketEndpoint):
 
             # Log successful WebSocket action
             await log_user_action(
-                user_id=self.user.id,
-                username=self.user.username,
+                user_id=UserId(self.user.id),
+                username=Username(self.user.username),
                 user_roles=self.user.roles,
                 action_type=f"WS:{request.pkg_id.name}",
                 resource=f"WebSocket:{request.pkg_id.name}",
                 outcome="success" if response.status_code == 0 else "error",
                 ip_address=websocket.client.host if websocket.client else None,
-                request_id=self.correlation_id,
+                request_id=(
+                    RequestId(self.correlation_id)
+                    if self.correlation_id
+                    else None
+                ),
                 request_data=request.data,
                 response_status=response.status_code,
                 duration_ms=duration_ms,
@@ -153,14 +158,18 @@ class Web(PackageAuthWebSocketEndpoint):
 
             # Log validation error
             await log_user_action(
-                user_id=self.user.id,
-                username=self.user.username,
+                user_id=UserId(self.user.id),
+                username=Username(self.user.username),
                 user_roles=self.user.roles,
                 action_type="WS:INVALID_REQUEST",
                 resource="WebSocket",
                 outcome="error",
                 ip_address=websocket.client.host if websocket.client else None,
-                request_id=self.correlation_id,
+                request_id=(
+                    RequestId(self.correlation_id)
+                    if self.correlation_id
+                    else None
+                ),
                 error_message=f"Validation error: {str(e)}",
             )
 
