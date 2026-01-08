@@ -636,8 +636,16 @@ python generate_ws_handler.py handler_name PKG_ID --overwrite
   - Performance tuning: Detect connection bottlenecks
   - Leak detection: Spot connections not being properly released
 
-**Prometheus Metrics (`app/utils/metrics.py`, `app/middlewares/prometheus.py`):**
-- Comprehensive metrics collection for monitoring and observability
+**Prometheus Metrics (`app/utils/metrics/`, `app/middlewares/prometheus.py`):**
+- Comprehensive metrics collection for monitoring and observability organized by subsystem
+- Metrics are split into logical modules for better maintainability:
+  - `app/utils/metrics/http.py`: HTTP request metrics
+  - `app/utils/metrics/websocket.py`: WebSocket connection and message metrics
+  - `app/utils/metrics/database.py`: Database query and connection metrics
+  - `app/utils/metrics/redis.py`: Redis operations and pool metrics
+  - `app/utils/metrics/auth.py`: Authentication and Keycloak metrics
+  - `app/utils/metrics/audit.py`: Audit logging metrics
+  - `app/utils/metrics/__init__.py`: Re-exports all metrics for backward compatibility
 - `PrometheusMiddleware`: Automatically tracks HTTP request metrics
   - Request counts by method, endpoint, and status code
   - Request duration histograms with configurable buckets
@@ -715,7 +723,7 @@ python generate_ws_handler.py handler_name PKG_ID --overwrite
 - `app/managers/`: Singleton managers (RBAC, Keycloak, WebSocket connections)
 - `app/middlewares/`: Custom middleware (`RateLimitMiddleware`, `PrometheusMiddleware`)
 - `app/models/`: SQLModel database models
-- `app/utils/`: Utility modules (`rate_limiter.py`, `metrics.py`)
+- `app/utils/`: Utility modules (`rate_limiter.py`, `metrics/`)
 - `app/schemas/`: Pydantic models for request/response validation
 - `app/tasks/`: Background tasks (e.g., `kc_user_session_task`)
 - `app/storage/`: Database and Redis utilities
@@ -2332,7 +2340,7 @@ from app.utils.metrics import db_query_duration_seconds
 db_query_duration_seconds.labels(operation="select").observe(0.045)
 ```
 
-**IMPORTANT**: When adding new Prometheus metrics to `app/utils/metrics.py`, you must also update the Grafana dashboard at `docker/grafana/provisioning/dashboards/fastapi-metrics.json` to visualize the new metrics. This ensures monitoring dashboards stay in sync with available metrics.
+**IMPORTANT**: When adding new Prometheus metrics to `app/utils/metrics/`, you must also update the Grafana dashboard at `docker/grafana/provisioning/dashboards/fastapi-metrics.json` to visualize the new metrics. This ensures monitoring dashboards stay in sync with available metrics. Add metrics to the appropriate submodule based on their category (http.py, websocket.py, database.py, redis.py, auth.py, or audit.py).
 
 ### Monitoring Keycloak with Prometheus
 
