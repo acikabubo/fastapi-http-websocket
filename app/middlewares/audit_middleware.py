@@ -12,6 +12,7 @@ from starlette.types import ASGIApp
 
 from app.schemas.user import UserModel
 from app.settings import app_settings
+from app.types import AuditOutcome, RequestId, UserId, Username
 from app.utils.audit_logger import extract_ip_address, log_user_action
 
 
@@ -77,19 +78,21 @@ class AuditMiddleware(BaseHTTPMiddleware):  # type: ignore[misc]
 
             # Determine outcome based on status code
             # 2xx and 3xx are success, 4xx and 5xx are errors
-            outcome = "success" if response.status_code < 400 else "error"
+            outcome: AuditOutcome = (
+                "success" if response.status_code < 400 else "error"
+            )
 
             # Log request with appropriate outcome
             await log_user_action(
-                user_id=user.id,
-                username=user.username,
+                user_id=UserId(user.id),
+                username=Username(user.username),
                 user_roles=user.roles,
                 action_type=request.method,
                 resource=request.url.path,
                 outcome=outcome,
                 ip_address=ip_address,
                 user_agent=user_agent,
-                request_id=request_id,
+                request_id=RequestId(request_id) if request_id else None,
                 response_status=response.status_code,
                 duration_ms=duration_ms,
             )
@@ -102,15 +105,15 @@ class AuditMiddleware(BaseHTTPMiddleware):  # type: ignore[misc]
 
             # Log failed request
             await log_user_action(
-                user_id=user.id,
-                username=user.username,
+                user_id=UserId(user.id),
+                username=Username(user.username),
                 user_roles=user.roles,
                 action_type=request.method,
                 resource=request.url.path,
                 outcome="error",
                 ip_address=ip_address,
                 user_agent=user_agent,
-                request_id=request_id,
+                request_id=RequestId(request_id) if request_id else None,
                 error_message=str(e),
                 duration_ms=duration_ms,
             )

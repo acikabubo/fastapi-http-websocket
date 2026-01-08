@@ -19,6 +19,7 @@ from app.logging import logger
 from app.models.user_action import UserAction
 from app.settings import app_settings
 from app.storage.db import async_session
+from app.types import ActionType, AuditOutcome, RequestId, UserId, Username
 from app.utils.metrics import (
     audit_batch_size,
     audit_log_creation_duration_seconds,
@@ -239,15 +240,15 @@ def extract_ip_address(request: Request) -> str | None:
 
 
 async def log_user_action(
-    user_id: str,
-    username: str,
+    user_id: UserId,
+    username: Username,
     user_roles: list[str],
-    action_type: str,
+    action_type: ActionType | str,
     resource: str,
-    outcome: str,
+    outcome: AuditOutcome,
     ip_address: str | None = None,
     user_agent: str | None = None,
-    request_id: str | None = None,
+    request_id: RequestId | None = None,
     request_data: dict[str, Any] | None = None,
     response_status: int | None = None,
     error_message: str | None = None,
@@ -260,15 +261,15 @@ async def log_user_action(
     background processing, allowing the request to complete immediately.
 
     Args:
-        user_id: Keycloak user ID (sub claim).
-        username: Username (preferred_username claim).
+        user_id: Keycloak user ID (sub claim) - type-safe UserId.
+        username: Username (preferred_username claim) - type-safe Username.
         user_roles: List of user roles at time of action.
-        action_type: Type of action (HTTP method or WebSocket PkgID).
+        action_type: Type of action (HTTP method, WS, or WebSocket PkgID string).
         resource: Resource accessed (URL path or entity identifier).
-        outcome: Result of the action (success, error, permission_denied).
+        outcome: Result of the action - type-safe AuditOutcome literal.
         ip_address: Client IP address.
         user_agent: Browser/client user agent string.
-        request_id: Request UUID for correlation.
+        request_id: Request UUID for correlation - type-safe RequestId.
         request_data: Request payload (will be sanitized).
         response_status: HTTP status code or WebSocket response code.
         error_message: Error details if action failed.
