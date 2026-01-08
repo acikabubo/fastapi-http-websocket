@@ -41,6 +41,7 @@ from pydantic import BaseModel, Field
 from app.commands.base import BaseCommand
 from app.exceptions import ConflictError, NotFoundError
 from app.models.author import Author
+from app.protocols import Repository
 from app.repositories.author_repository import AuthorRepository
 
 
@@ -84,6 +85,9 @@ class GetAuthorsCommand(BaseCommand[GetAuthorsInput, list[Author]]):
 
     Supports filtering by ID, exact name match, or search term.
     If search_term is provided, it takes precedence over name filter.
+
+    Note: Uses concrete AuthorRepository type instead of Repository[Author]
+    protocol because it requires the search_by_name() extension method.
     """
 
     def __init__(self, repository: AuthorRepository):
@@ -136,6 +140,9 @@ class CreateAuthorCommand(BaseCommand[CreateAuthorInput, Author]):
     Command to create a new author.
 
     Validates that author name doesn't already exist before creating.
+
+    Note: Uses concrete AuthorRepository type because it requires the
+    get_by_name() extension method.
     """
 
     def __init__(self, repository: AuthorRepository):
@@ -237,14 +244,18 @@ class DeleteAuthorCommand(BaseCommand[int, None]):
     Command to delete an author.
 
     Validates that the author exists before deleting.
+
+    Uses Repository[Author] protocol for flexible dependency injection,
+    as it only requires standard get_by_id() and delete() methods.
     """
 
-    def __init__(self, repository: AuthorRepository):
+    def __init__(self, repository: Repository[Author]):
         """
         Initialize command with repository.
 
         Args:
-            repository: Author repository for data access.
+            repository: Author repository for data access (any implementation
+                of Repository[Author] protocol).
         """
         self.repository = repository
 

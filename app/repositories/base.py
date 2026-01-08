@@ -29,17 +29,21 @@ from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.logging import logger
+from app.protocols import Repository
 
 T = TypeVar("T")
 
 
-class BaseRepository(Generic[T]):
+class BaseRepository(Repository[T], Generic[T]):
     """
     Base repository providing common CRUD operations.
 
     This class provides generic CRUD operations that can be inherited
     by specific repository implementations. Each repository operates
     on a single model type.
+
+    Implements the Repository Protocol for structural subtyping, enabling
+    flexible dependency injection and type-safe repository usage.
 
     Type Parameters:
         T: The SQLModel type this repository manages.
