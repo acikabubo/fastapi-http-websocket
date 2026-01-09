@@ -67,6 +67,16 @@ test-coverage-parallel: ## Run tests in parallel with coverage
 	@echo "Running tests in parallel with coverage..."
 	@uv run pytest -n auto --cov=app --cov-report=term-missing --cov-report=html tests
 
+test-integration: ## Run integration tests with real Keycloak container (requires Docker, run OUTSIDE container)
+	@echo "Running integration tests with testcontainers..."
+	@echo "⚠️  IMPORTANT: Run this command OUTSIDE the Docker container (on host machine)"
+	@echo "Note: This will start a real Keycloak container (may take 30-60s)"
+	@uv run pytest -m integration tests/integration/ -v -s
+
+test-unit: ## Run only unit tests (skip integration, load, and chaos tests)
+	@echo "Running unit tests (excluding integration, load, and chaos tests)..."
+	@uv run pytest -m "not integration and not load and not chaos" tests
+
 ##@ WebSocket Handlers
 
 ws-handlers: ## Display table of PkgID's and related websocket handlers

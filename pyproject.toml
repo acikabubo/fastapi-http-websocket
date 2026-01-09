@@ -40,6 +40,7 @@ dev = [
     "rich>=13.0.0",
     "ruff>=0.14.11",
     "skjold>=0.6.2",
+    "testcontainers>=4.9.0",
     "typer>=0.21.1",
     "typos>=1.42.0",
     "vulture>=2.14",
