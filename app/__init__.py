@@ -2,6 +2,7 @@
 from asyncio import create_task, gather
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from typing import Any
 
 from fastapi import FastAPI
 from starlette.middleware.authentication import AuthenticationMiddleware
@@ -173,6 +174,39 @@ def application() -> FastAPI:
 
     # Collect routers
     app.include_router(collect_subrouters())
+
+    # Customize OpenAPI schema to add HTTPBearer security for Swagger UI
+    def custom_openapi() -> dict[str, Any]:
+        if app.openapi_schema:
+            return app.openapi_schema
+
+        from fastapi.openapi.utils import get_openapi
+
+        openapi_schema = get_openapi(
+            title=app.title,
+            version=app.version,
+            description=app.description,
+            routes=app.routes,
+        )
+
+        # Add HTTPBearer security scheme
+        openapi_schema.setdefault("components", {})
+        openapi_schema["components"].setdefault("securitySchemes", {})
+        openapi_schema["components"]["securitySchemes"]["HTTPBearer"] = {
+            "type": "http",
+            "scheme": "bearer",
+            "bearerFormat": "JWT",
+            "description": "Enter your JWT token from `python scripts/get_token.py <username> <password>`",
+        }
+
+        # Apply security globally to all endpoints (except excluded paths)
+        openapi_schema.setdefault("security", [])
+        openapi_schema["security"].append({"HTTPBearer": []})
+
+        app.openapi_schema = openapi_schema
+        return app.openapi_schema
+
+    app.openapi = custom_openapi
 
     # Middlewares (execute in REVERSE order of registration)
     # Execution flow: TrustedHostMiddleware → CorrelationIDMiddleware → LoggingContextMiddleware →
