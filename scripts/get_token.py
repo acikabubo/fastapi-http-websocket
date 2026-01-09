@@ -12,6 +12,7 @@ Options:
 """
 
 import argparse
+import asyncio
 import json
 import sys
 from pathlib import Path
@@ -19,10 +20,10 @@ from pathlib import Path
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from app.managers.keycloak_manager import KeycloakManager
+from app.managers.keycloak_manager import keycloak_manager
 
 
-def get_token(username: str, password: str, show_json: bool = False):
+async def get_token(username: str, password: str, show_json: bool = False):
     """
     Get access token from Keycloak for given credentials.
 
@@ -35,8 +36,7 @@ def get_token(username: str, password: str, show_json: bool = False):
         dict: Token response from Keycloak
     """
     try:
-        kc_manager = KeycloakManager()
-        token_response = kc_manager.login(username, password)
+        token_response = await keycloak_manager.login_async(username, password)
 
         if show_json:
             print(json.dumps(token_response, indent=2))
@@ -51,7 +51,7 @@ def get_token(username: str, password: str, show_json: bool = False):
             )
 
             # Decode and show user info
-            user_data = kc_manager.openid.decode_token(
+            user_data = await keycloak_manager.openid.a_decode_token(
                 token_response["access_token"]
             )
             print(f"\nUser: {user_data.get('preferred_username')}")
@@ -84,7 +84,9 @@ def main():
 
     args = parser.parse_args()
 
-    token_response = get_token(args.username, args.password, args.json)
+    token_response = asyncio.run(
+        get_token(args.username, args.password, args.json)
+    )
 
     if args.refresh and not args.json:
         print("\n=== Refresh Token ===")
