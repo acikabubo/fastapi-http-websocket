@@ -8,7 +8,8 @@ This guide explains how to debug and test the application after removing the har
 2. [Debug Mode (Development Only)](#debug-mode-development-only)
 3. [Manual Testing](#manual-testing)
 4. [Automated Testing with Pytest](#automated-testing-with-pytest)
-5. [Testing WebSocket Endpoints](#testing-websocket-endpoints)
+5. [Using Centralized Test Mocks](#using-centralized-test-mocks)
+6. [Testing WebSocket Endpoints](#testing-websocket-endpoints)
 
 ---
 
@@ -239,6 +240,176 @@ Run integration tests only:
 ```bash
 uv run pytest -m integration
 ```
+
+---
+
+## Using Centralized Test Mocks
+
+### Why Centralized Mocks?
+
+The project uses **centralized mock factories** located in `tests/mocks/` to promote consistency and reduce code duplication.
+
+**Benefits:**
+- ✅ **Consistency**: Same mock behavior across all tests
+- ✅ **Maintainability**: Update once in `tests/mocks/`, benefits all tests
+- ✅ **Less Code**: ~80 lines eliminated per test file
+- ✅ **Discoverability**: Easy to find and reuse existing mocks
+- ✅ **Type Safety**: Mocks use `spec` parameter for better IDE support
+
+### Available Mock Factories
+
+#### Redis Mocks (`tests/mocks/redis_mocks.py`)
+
+```python
+from tests.mocks.redis_mocks import (
+    create_mock_redis_connection,     # Full Redis connection with all operations
+    create_mock_rate_limiter,          # RateLimiter instance
+    create_mock_connection_limiter,    # ConnectionLimiter instance
+)
+
+# Example usage
+@pytest.fixture
+def mock_redis():
+    return create_mock_redis_connection()
+
+async def test_with_redis(mock_redis):
+    # Mock already has all methods configured
+    result = await mock_redis.get("key")
+```
+
+#### WebSocket Mocks (`tests/mocks/websocket_mocks.py`)
+
+```python
+from tests.mocks.websocket_mocks import (
+    create_mock_websocket,             # WebSocket connection with send/receive
+    create_mock_connection_manager,    # ConnectionManager with broadcast
+    create_mock_package_router,        # PackageRouter with handle_request
+    create_mock_broadcast_message,     # BroadcastDataModel factory
+)
+
+# Example usage
+async def test_websocket_handler():
+    mock_ws = create_mock_websocket()
+    # Already has send_json, send_response, accept, close, client.host, etc.
+    await handler.on_connect(mock_ws)
+```
+
+#### Auth Mocks (`tests/mocks/auth_mocks.py`)
+
+```python
+from tests.mocks.auth_mocks import (
+    create_mock_keycloak_manager,      # KeycloakManager with login/decode_token
+    create_mock_user_model,             # UserModel factory
+    create_mock_auth_backend,           # AuthBackend for middleware tests
+    create_mock_rbac_manager,           # RBACManager for permission tests
+)
+
+# Example usage
+async def test_authentication():
+    mock_kc = create_mock_keycloak_manager()
+    # Already configured with login and decode_token methods
+    with patch("app.auth.keycloak_manager", mock_kc):
+        result = await auth_backend.authenticate(request)
+```
+
+#### Repository Mocks (`tests/mocks/repository_mocks.py`)
+
+```python
+from tests.mocks.repository_mocks import (
+    create_mock_author_repository,     # AuthorRepository with CRUD ops
+    create_mock_crud_repository,        # Generic BaseRepository
+)
+
+# Example usage
+async def test_with_repo():
+    mock_repo = create_mock_author_repository()
+    # Configure mock behavior as needed
+    mock_repo.get_by_id.return_value = create_author_fixture(id=1)
+
+    author = await mock_repo.get_by_id(1)
+    assert author.id == 1
+```
+
+### Inline vs Centralized: Comparison
+
+**❌ BAD - Inline mock (hard to maintain)**
+
+```python
+@pytest.fixture
+def mock_redis():
+    redis_mock = AsyncMock()
+    redis_mock.zadd = AsyncMock()
+    redis_mock.zcard = AsyncMock(return_value=0)
+    redis_mock.zremrangebyscore = AsyncMock()
+    redis_mock.expire = AsyncMock()
+    redis_mock.pipeline = MagicMock()
+    redis_mock.pipeline.return_value.__aenter__ = AsyncMock()
+    redis_mock.pipeline.return_value.__aexit__ = AsyncMock()
+    # ... 10 more lines of setup
+    return redis_mock
+```
+
+**✅ GOOD - Use centralized mock**
+
+```python
+from tests.mocks.redis_mocks import create_mock_redis_connection
+
+@pytest.fixture
+def mock_redis():
+    return create_mock_redis_connection()
+```
+
+### When to Use Centralized vs Custom Mocks
+
+**Use Centralized Mocks When:**
+- ✅ Testing standard components (Redis, WebSocket, Auth, Repositories)
+- ✅ Mock needs common default behavior
+- ✅ Multiple tests need the same mock
+- ✅ Mock is reusable across test files
+
+**Create Custom Inline Mocks When:**
+- ⚠️ Testing very specific edge case behavior
+- ⚠️ Mock is used in only one test
+- ⚠️ Centralized mock doesn't exist yet (consider adding it!)
+
+### Adding New Centralized Mocks
+
+If you create a mock that could be reused, add it to `tests/mocks/`:
+
+1. **Choose the right file**: `redis_mocks.py`, `auth_mocks.py`, `websocket_mocks.py`, `repository_mocks.py`
+2. **Create factory function**: Use `create_mock_*` naming convention
+3. **Use `spec` parameter**: For better type safety
+4. **Add docstring**: Explain what the mock provides
+5. **Update conftest.py**: If it's a common fixture
+
+**Example:**
+
+```python
+# tests/mocks/redis_mocks.py
+def create_mock_redis_connection() -> AsyncMock:
+    """
+    Create a mock Redis connection with common operations configured.
+
+    Returns:
+        AsyncMock: Configured Redis connection mock
+    """
+    redis_mock = AsyncMock(spec=Redis)
+    redis_mock.get = AsyncMock(return_value=None)
+    redis_mock.set = AsyncMock(return_value=True)
+    redis_mock.zadd = AsyncMock(return_value=1)
+    # ... configure other methods
+    return redis_mock
+```
+
+### Examples in Action
+
+See these refactored test files for proper usage:
+- `tests/test_rate_limiting.py` - Redis mock usage
+- `tests/test_websocket.py` - WebSocket mock usage
+- `tests/test_auth_basic.py` - Keycloak mock usage
+- `tests/test_auth_backend.py` - Comprehensive auth testing
+
+**Reference**: See `CLAUDE.md` lines 1539-1650 for comprehensive mock documentation.
 
 ---
 
