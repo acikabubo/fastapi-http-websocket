@@ -1352,25 +1352,78 @@ class Book(BaseModel, table=True):
     author: Author = Relationship(back_populates="books")
 ```
 
-**Accessing Relationships:**
+**The N+1 Query Problem:**
 
-1. **Preferred: Eager Loading (Better Performance)**
+Without eager loading, accessing relationships in loops triggers the N+1 query problem:
+
+```python
+# ❌ BAD - N+1 queries
+async with async_session() as session:
+    authors = await session.exec(select(Author))  # 1 query
+
+    for author in authors:  # Loop through N authors
+        books = await author.awaitable_attrs.books  # N additional queries!
+        print(f"{author.name}: {len(books)} books")
+
+# Total: 1 + N queries (if you have 100 authors, that's 101 queries!)
+```
+
+**Accessing Relationships with Eager Loading:**
+
+1. **selectinload() - For One-to-Many and Many-to-Many (Recommended)**
    ```python
    from sqlalchemy.orm import selectinload
 
+   # ✅ GOOD - Only 2 queries total
    async with async_session() as session:
-       # Load author with all books in optimized queries
+       # Load authors with all books in 2 optimized queries
        stmt = select(Author).options(selectinload(Author.books))
        result = await session.execute(stmt)
-       author = result.scalar_one()
+       authors = result.scalars().all()
 
-       # Relationship already loaded, no await needed
-       books = author.books  # ✅ Already loaded!
-       for book in books:
-           print(book.title)
+       # Relationships already loaded, no await needed
+       for author in authors:
+           books = author.books  # ✅ Already loaded, no additional query!
+           print(f"{author.name}: {len(books)} books")
+
+   # Total: 2 queries (1 for authors, 1 for all books in bulk)
    ```
 
-2. **Alternative: Lazy Loading with awaitable_attrs**
+2. **joinedload() - For Many-to-One Relationships**
+   ```python
+   from sqlalchemy.orm import joinedload
+
+   # ✅ GOOD - Only 1 query with JOIN
+   async with async_session() as session:
+       stmt = select(Book).options(joinedload(Book.author))
+       result = await session.execute(stmt)
+       books = result.scalars().unique().all()  # unique() required with joins!
+
+       # Author already loaded for each book
+       for book in books:
+           author = book.author  # ✅ Already loaded!
+           print(f"{book.title} by {author.name}")
+
+   # Total: 1 query (single JOIN)
+   ```
+
+3. **Nested Eager Loading - For Deep Relationships**
+   ```python
+   # Load authors → books → reviews (3 levels deep)
+   stmt = select(Author).options(
+       selectinload(Author.books).selectinload(Book.reviews)
+   )
+   result = await session.execute(stmt)
+   authors = result.scalars().all()
+
+   for author in authors:
+       for book in author.books:
+           reviews = book.reviews  # All loaded!
+
+   # Total: 3 queries (authors, books, reviews)
+   ```
+
+4. **Lazy Loading with awaitable_attrs (Use Sparingly)**
    ```python
    async with async_session() as session:
        author = await session.get(Author, 1)
@@ -1381,29 +1434,36 @@ class Book(BaseModel, table=True):
            print(book.title)
    ```
 
-3. **Single Query with JOIN (joinedload)**
-   ```python
-   from sqlalchemy.orm import joinedload
+**Performance Comparison:**
 
-   async with async_session() as session:
-       stmt = select(Author).options(joinedload(Author.books))
-       result = await session.execute(stmt)
-       author = result.scalar_one()
+| Strategy | Query Count | Best For | Example Use Case |
+|----------|-------------|----------|------------------|
+| Lazy Loading (`awaitable_attrs`) | 1 + N | Single relationship access | Loading one author's books |
+| `selectinload()` | 2 | One-to-many, many-to-many | Authors → books, users → roles |
+| `joinedload()` | 1 (with JOIN) | Many-to-one | Books → author, orders → customer |
+| Nested eager loading | 1 per level | Deep relationships | Authors → books → reviews |
 
-       # Single query with JOIN, already loaded
-       books = author.books  # ✅ Already loaded!
-   ```
+**When to Use Each Strategy:**
 
-**Rule of Thumb:**
-- ✅ **Use eager loading** (`selectinload`, `joinedload`) for better performance
-- ✅ Use `selectinload` for one-to-many and many-to-many relationships
-- ✅ Use `joinedload` for many-to-one relationships
-- ⚠️ Use `awaitable_attrs` only for dynamic relationship access or when eager loading would load unnecessary data
+✅ **Use Eager Loading When:**
+- Accessing relationships in loops (list views, reports)
+- Loading multiple related objects at once
+- Building API responses with nested data
+- Displaying paginated lists with related entities
+- You know you'll need the relationship data
+
+⚠️ **Use Lazy Loading When:**
+- Relationship might not be accessed (conditional logic)
+- Loading single object with specific relationship
+- Relationship access is rare or dynamic
+- Eager loading would load too much unnecessary data
 
 **Important Notes:**
 - Models without relationships (e.g., `UserAction` audit logs) don't need to inherit from `BaseModel` and can use `SQLModel` directly
 - `AsyncAttrs` has no performance penalty if relationships are not used
 - Avoid accessing relationships directly without eager loading or `awaitable_attrs` - it will raise `MissingGreenlet` errors in async contexts
+- Always use `.unique()` when using `joinedload()` to remove duplicate rows from JOIN results
+- For repositories, prefer eager loading in `get_all()` methods to avoid N+1 queries in list endpoints
 
 ### Database Migrations
 
