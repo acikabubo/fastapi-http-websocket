@@ -529,6 +529,119 @@ python generate_ws_handler.py handler_name PKG_ID --overwrite
   - `invalid_credentials`: Invalid Keycloak credentials
   - `token_decode_error`: Token decoding/validation failed
 
+**WebSocket Authentication Security:**
+
+⚠️ **IMPORTANT**: WebSocket connections authenticate using JWT tokens in query parameters due to browser WebSocket API limitations (cannot send custom headers during handshake). This has security implications:
+
+**Security Risks:**
+- Tokens appear in server access logs
+- Tokens stored in browser history
+- Potential proxy caching of URLs with tokens
+- Risk of accidental token sharing via URLs
+
+**Required Mitigations (Already Implemented):**
+- ✅ Always use WSS (WebSocket over TLS) in production
+- ✅ Tokens are short-lived (Keycloak default: 5 minutes)
+- ✅ Referrer-Policy header prevents token leakage
+- ✅ Security headers middleware (Content-Security-Policy allows `ws:` and `wss:`)
+
+**Client-Side Best Practices:**
+
+1. **Always Use WSS in Production:**
+   ```javascript
+   // ❌ Development only
+   const ws = new WebSocket('ws://localhost:8000/web?Authorization=Bearer%20token');
+
+   // ✅ Production - always use wss://
+   const ws = new WebSocket('wss://api.example.com/web?Authorization=Bearer%20token');
+   ```
+
+2. **Encode Token Properly:**
+   ```javascript
+   const token = 'Bearer eyJhbGc...';
+   const wsUrl = `wss://api.example.com/web?Authorization=${encodeURIComponent(token)}`;
+   const ws = new WebSocket(wsUrl);
+   ```
+
+3. **Get Fresh Token Before Connecting:**
+   ```javascript
+   // Get fresh token immediately before WebSocket connection
+   const token = await getAccessToken();
+   const ws = new WebSocket(`wss://api.example.com/web?Authorization=${encodeURIComponent(token)}`);
+
+   // Clear token from memory after connection
+   token = null;
+   ```
+
+4. **Never Log Tokens:**
+   ```javascript
+   // ❌ Bad - logs token in URL
+   console.log('Connecting to:', wsUrl);
+
+   // ✅ Good - logs without token
+   console.log('WebSocket connecting...');
+   ```
+
+5. **Implement Token Refresh for Long Connections:**
+   ```javascript
+   // Reconnect with new token before expiration
+   setInterval(async () => {
+       ws.close();
+       const newToken = await refreshAccessToken();
+       ws = new WebSocket(`wss://api.example.com/web?Authorization=${encodeURIComponent(newToken)}`);
+   }, 4 * 60 * 1000); // Reconnect every 4 minutes (before 5-minute expiry)
+   ```
+
+**Server-Side Best Practices:**
+
+1. **Sanitize Access Logs:**
+   ```nginx
+   # Nginx example - log without query parameters
+   log_format websocket_safe '$remote_addr [$time_local] "$request_method $uri" $status';
+
+   location /web {
+       access_log /var/log/nginx/websocket.log websocket_safe;
+   }
+   ```
+
+2. **Use Short Token TTL:**
+   - Configure Keycloak access token lifespan to 5-15 minutes
+   - Balance between security and user experience
+   - Implement automatic reconnection logic in clients
+
+**Why Query Parameters?**
+
+WebSocket connections from JavaScript cannot send custom HTTP headers during the upgrade request:
+
+```javascript
+// ❌ Not supported by WebSocket API
+const ws = new WebSocket('ws://localhost:8000/web', {
+  headers: { 'Authorization': 'Bearer token' }
+});
+
+// ✅ Only option: query parameters
+const ws = new WebSocket('ws://localhost:8000/web?Authorization=Bearer%20token');
+```
+
+**Alternative Approaches (Future Consideration):**
+
+1. **WebSocket Subprotocols** (limited proxy support):
+   ```javascript
+   const ws = new WebSocket('ws://localhost:8000/web', ['bearer', token]);
+   ```
+
+2. **Immediate Token Exchange** (send token in first message after connection):
+   ```javascript
+   const ws = new WebSocket('ws://localhost:8000/web');
+   ws.onopen = () => ws.send(JSON.stringify({ type: 'auth', token }));
+   ```
+
+3. **Cookie-Based Authentication** (requires CORS configuration):
+   ```javascript
+   // Token in httpOnly cookie, no query params
+   const ws = new WebSocket('ws://localhost:8000/web'); // Credentials sent automatically
+   ```
+
 **Exception Handling (`app/exceptions.py`):**
 - Unified exception hierarchy extending `AppException` base class
 - `AuthenticationError`: Authentication failures (HTTP 401, WebSocket RSPCode.PERMISSION_DENIED)
