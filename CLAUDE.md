@@ -524,6 +524,29 @@ python generate_ws_handler.py handler_name PKG_ID --overwrite
 - `AuthBackend`: Decodes Keycloak JWT tokens from Authorization header (HTTP) or query string (WebSocket)
 - User data extracted into `UserModel` with roles
 - Excluded paths configured via `EXCLUDED_PATHS` regex in settings
+- Raises `AuthenticationError` (from `app/exceptions`) for authentication failures:
+  - `token_expired`: JWT token has expired
+  - `invalid_credentials`: Invalid Keycloak credentials
+  - `token_decode_error`: Token decoding/validation failed
+
+**Exception Handling (`app/exceptions.py`):**
+- Unified exception hierarchy extending `AppException` base class
+- `AuthenticationError`: Authentication failures (HTTP 401, WebSocket RSPCode.PERMISSION_DENIED)
+  - Used in `AuthBackend.authenticate()` for token validation failures
+  - Automatically formatted as error envelopes by error handlers
+  - Example usage:
+    ```python
+    from app.exceptions import AuthenticationError
+
+    # In authentication code
+    raise AuthenticationError(f"token_expired: {ex}")
+
+    # In error handlers (automatic)
+    # HTTP: Returns 401 with {"error": "authentication_failed", "message": "..."}
+    # WebSocket: Returns ResponseModel with status_code=RSPCode.PERMISSION_DENIED
+    ```
+- Other exceptions: `ValidationError`, `PermissionDeniedError`, `NotFoundError`, `DatabaseError`, etc.
+- See `app/utils/error_formatter.py` for error envelope mapping
 
 **RBAC (`app/managers/rbac_manager.py`):**
 - Singleton manager for role-based access control
