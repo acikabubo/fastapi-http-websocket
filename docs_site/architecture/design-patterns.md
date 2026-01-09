@@ -82,26 +82,17 @@ class Author(SQLModel, table=True):
 - Hard to swap data sources
 - Business logic tied to data structure
 
-#### ❌ Logic in Handlers
-```python
-# OLD: Direct model access from handlers
-@router.post("/authors")
-async def create_author(author: Author):
-    async with async_session() as session:
-        return await Author.create(session, author)  # No business logic!
-```
-
-**Problems:**
-- Duplicate code between HTTP and WebSocket
-- Can't reuse business logic
-- Testing requires full setup
-
-### ✅ Solutions with New Patterns
+### ✅ Current Pattern: Repository + Command + Dependency Injection
 
 ```python
-# NEW: Clean separation of concerns
+# Clean separation of concerns
 Repository (data access) → Command (business logic) → Handler (protocol)
 ```
+
+**Benefits:**
+- Reusable business logic across HTTP and WebSocket
+- Easy to test without database
+- Clear separation of concerns
 
 ---
 
@@ -604,16 +595,10 @@ Gradual migration approach:
 5. **Migrate clients** to use new endpoints
 6. **Remove old endpoints** once migration complete
 
-### Example Migration
+### Example Implementation
 
 ```python
-# BEFORE (old pattern)
-@router.get("/books-old")
-async def get_books_old():
-    async with async_session() as session:
-        return await Book.get_list(session)
-
-# AFTER (new pattern - runs alongside)
+# Current pattern: Repository + Command
 @router.get("/books")
 async def get_books(repo: BookRepoDep):
     command = GetBooksCommand(repo)

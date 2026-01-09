@@ -49,13 +49,14 @@ HTTP requests are **automatically logged** by `AuditMiddleware`. No manual loggi
 
 ```python
 from fastapi import APIRouter
+from app.dependencies import AuthorRepoDep
 
 router = APIRouter()
 
 @router.post("/authors")
-async def create_author(author: AuthorCreate):
+async def create_author(author: AuthorCreate, repo: AuthorRepoDep):
     # Middleware automatically logs this action
-    return await Author.create(...)
+    return await repo.create(author)
 ```
 
 ### In WebSocket Handlers
@@ -65,12 +66,16 @@ WebSocket actions require **manual logging**:
 ```python
 from app.utils.audit_logger import log_user_action
 from app.api.ws.models import RequestModel, ResponseModel
+from app.storage.db import async_session
+from app.repositories.author_repository import AuthorRepository
 
 @pkg_router.register(PkgID.CREATE_AUTHOR, json_schema=CreateAuthorSchema)
 async def create_author_handler(request: RequestModel) -> ResponseModel:
     try:
-        # Perform action
-        author = await Author.create(...)
+        # Perform action using Repository pattern
+        async with async_session() as session:
+            repo = AuthorRepository(session)
+            author = await repo.create(Author(**request.data))
 
         # Log successful action
         await log_user_action(

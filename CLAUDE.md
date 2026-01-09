@@ -1221,78 +1221,76 @@ async def dispatch(self, request: Request, call_next):  # ❌ Missing type
 
 ### Database Session Management
 
-**IMPORTANT**: Model methods should accept database sessions as parameters rather than creating their own sessions. This enables:
-- Multiple operations in a single transaction
-- Easier testing with mocked sessions
+**IMPORTANT**: Use the Repository pattern for all database operations. This enables:
+- Separation of concerns (models are pure data classes)
+- Easier testing with mocked repositories
 - Better transaction control
+- Reusable business logic via Commands
 
-**Pattern for model methods:**
+**Repository Pattern:**
 ```python
-from sqlmodel.ext.asyncio.session import AsyncSession
+from app.repositories.base import BaseRepository
 
-class MyModel(SQLModel, table=True):
-    @classmethod
-    async def create(
-        cls, session: AsyncSession, instance: "MyModel"
-    ) -> "MyModel":
-        """
-        Creates a new instance in the database.
+class MyModelRepository(BaseRepository[MyModel]):
+    async def get_by_name(self, name: str) -> MyModel | None:
+        """Get model by name."""
+        stmt = select(MyModel).where(MyModel.name == name)
+        result = await self.session.execute(stmt)
+        return result.scalar_one_or_none()
 
-        Args:
-            session: Database session to use for the operation.
-            instance: The instance to create.
-
-        Returns:
-            The created instance.
-        """
-        try:
-            session.add(instance)
-            await session.flush()
-            await session.refresh(instance)
-            return instance
-        except IntegrityError as e:
-            await session.rollback()
-            logger.error(f"Integrity error: {e}")
-            raise
-
-    @classmethod
-    async def get_list(
-        cls, session: AsyncSession, **filters
-    ) -> list["MyModel"]:
-        """Retrieves a list of instances based on filters."""
-        stmt = select(cls).where(
-            *[getattr(cls, k) == v for k, v in filters.items()]
-        )
-        return (await session.exec(stmt)).all()
+    async def search(self, query: str) -> list[MyModel]:
+        """Search models by query."""
+        stmt = select(MyModel).where(MyModel.name.contains(query))
+        result = await self.session.execute(stmt)
+        return list(result.scalars().all())
 ```
 
 **Usage in HTTP endpoints:**
 ```python
 from app.storage.db import async_session
+from app.dependencies import MyModelRepoDep  # Dependency injection
 
 @router.post("/my-models")
-async def create_model(instance: MyModel) -> MyModel:
-    async with async_session() as session:
-        async with session.begin():
-            return await MyModel.create(session, instance)
+async def create_model(
+    instance: MyModel,
+    repo: MyModelRepoDep  # Injected by FastAPI
+) -> MyModel:
+    return await repo.create(instance)
 
 @router.get("/my-models")
-async def get_models():
-    async with async_session() as session:
-        return await MyModel.get_list(session)
+async def get_models(repo: MyModelRepoDep) -> list[MyModel]:
+    return await repo.get_all()
+
+@router.get("/my-models/{id}")
+async def get_model(id: int, repo: MyModelRepoDep) -> MyModel:
+    model = await repo.get_by_id(id)
+    if not model:
+        raise HTTPException(status_code=404, detail="Not found")
+    return model
 ```
 
 **Usage in WebSocket handlers:**
 ```python
+from app.storage.db import async_session
+
 async def my_handler(request: RequestModel) -> ResponseModel:
     async with async_session() as session:
-        items = await MyModel.get_list(session, **request.data.get("filters", {}))
+        repo = MyModelRepository(session)
+        items = await repo.get_all()
         return ResponseModel.success(
             request.pkg_id,
             request.req_id,
             data=[item.model_dump() for item in items]
         )
 ```
+
+**Why Repository Pattern?**
+- **Testability**: Easy to mock repositories without database
+- **Reusability**: Same repository used in HTTP and WebSocket handlers
+- **Maintainability**: Business logic separated from data access
+- **Type Safety**: Full type hints with FastAPI's `Depends()`
+
+See [Design Patterns Guide](docs/architecture/DESIGN_PATTERNS_GUIDE.md) for complete examples.
 
 ### Async Relationships with AsyncAttrs
 

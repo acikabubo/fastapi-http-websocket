@@ -380,7 +380,8 @@ async def create_author(author: Author) -> Author:
 ```python
 async def my_handler(request: RequestModel) -> ResponseModel:
     async with async_session() as session:
-        items = await MyModel.get_list(session)
+        repo = MyModelRepository(session)
+        items = await repo.get_all()
         return ResponseModel.success(
             request.pkg_id,
             request.req_id,
@@ -455,12 +456,12 @@ results, meta = await get_paginated_results(
 **Cache Invalidation**:
 ```python
 from app.utils.pagination_cache import invalidate_count_cache
+from app.repositories.author_repository import AuthorRepository
 
-async def create_author(author: Author) -> Author:
-    async with async_session() as session:
-        result = await Author.create(session, author)
-        await invalidate_count_cache("Author")  # Invalidate cache
-        return result
+async def create_author(author: Author, repo: AuthorRepository) -> Author:
+    result = await repo.create(author)
+    await invalidate_count_cache("Author")  # Invalidate cache
+    return result
 ```
 
 **Performance Comparison**:

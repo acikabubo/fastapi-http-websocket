@@ -130,12 +130,13 @@ sequenceDiagram
     alt Validation error
         Handler-->>Client: 422 Validation Error
     else Valid data
-        Handler->>Session: async with async_session()
-        Session-->>Handler: Session context
+        Handler->>Repository: Inject AuthorRepository via Depends
+        Repository-->>Handler: Repository instance
 
-        Handler->>Handler: Author.create(session, author)
-        Handler->>Database: INSERT INTO author VALUES (...)
-        Database-->>Handler: Author with ID
+        Handler->>Repository: repo.create(author)
+        Repository->>Database: INSERT INTO author VALUES (...)
+        Database-->>Repository: Author with ID
+        Repository-->>Handler: Created Author
 
         Handler->>Database: COMMIT transaction
         Database-->>Handler: OK
