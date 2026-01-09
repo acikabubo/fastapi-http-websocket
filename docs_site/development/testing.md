@@ -1,6 +1,12 @@
 # Testing Guide
 
-This guide explains how to debug and test the application after removing the hardcoded authentication bypass.
+This guide explains how to test the application with proper authentication.
+
+## Quick Links
+
+- **Testing HTTP API with Swagger UI**: See [swagger-testing.md](swagger-testing.md) - Complete guide for testing with FastAPI's OpenAPI interface
+- **Automated Testing**: See sections below for pytest and mock usage
+- **WebSocket Testing**: See [Testing WebSocket Endpoints](#testing-websocket-endpoints) section
 
 ## Table of Contents
 
