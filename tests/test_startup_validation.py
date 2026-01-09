@@ -32,8 +32,6 @@ class TestValidateSettings:
             mock_settings.DB_PASSWORD.get_secret_value.return_value = (
                 "testpass"
             )
-            mock_settings.is_production = False
-            mock_settings.DEBUG_AUTH = False
 
             # Should not raise any exception
             await validate_settings()
@@ -75,51 +73,6 @@ class TestValidateSettings:
                 await validate_settings()
 
             assert "DB_USER" in str(exc_info.value)
-
-    @pytest.mark.asyncio
-    async def test_validate_settings_debug_auth_in_production(self):
-        """Test validation fails when DEBUG_AUTH enabled in production."""
-        with patch("app.startup_validation.app_settings") as mock_settings:
-            mock_settings.KEYCLOAK_REALM = "test-realm"
-            mock_settings.KEYCLOAK_CLIENT_ID = "test-client"
-            mock_settings.KEYCLOAK_BASE_URL = "http://localhost:8080"
-            mock_settings.KEYCLOAK_ADMIN_USERNAME = "admin"
-            mock_settings.KEYCLOAK_ADMIN_PASSWORD = "password"
-            mock_settings.DB_USER = "testuser"
-            mock_settings.DB_PASSWORD.get_secret_value.return_value = (
-                "testpass"
-            )
-            mock_settings.is_production = True
-            mock_settings.DEBUG_AUTH = True
-
-            with pytest.raises(StartupValidationError) as exc_info:
-                await validate_settings()
-
-            assert "DEBUG_AUTH" in str(exc_info.value)
-            assert "production" in str(exc_info.value).lower()
-
-    @pytest.mark.asyncio
-    async def test_validate_settings_debug_auth_missing_credentials(self):
-        """Test validation fails when DEBUG_AUTH enabled without creds."""
-        with patch("app.startup_validation.app_settings") as mock_settings:
-            mock_settings.KEYCLOAK_REALM = "test-realm"
-            mock_settings.KEYCLOAK_CLIENT_ID = "test-client"
-            mock_settings.KEYCLOAK_BASE_URL = "http://localhost:8080"
-            mock_settings.KEYCLOAK_ADMIN_USERNAME = "admin"
-            mock_settings.KEYCLOAK_ADMIN_PASSWORD = "password"
-            mock_settings.DB_USER = "testuser"
-            mock_settings.DB_PASSWORD.get_secret_value.return_value = (
-                "testpass"
-            )
-            mock_settings.is_production = False
-            mock_settings.DEBUG_AUTH = True
-            mock_settings.DEBUG_AUTH_USERNAME = ""
-            mock_settings.DEBUG_AUTH_PASSWORD = "password"
-
-            with pytest.raises(StartupValidationError) as exc_info:
-                await validate_settings()
-
-            assert "DEBUG_AUTH_USERNAME" in str(exc_info.value)
 
 
 class TestValidateDatabaseConnection:

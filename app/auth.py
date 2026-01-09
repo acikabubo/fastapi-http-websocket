@@ -95,18 +95,6 @@ class AuthBackend(AuthenticationBackend):  # type: ignore[misc]
         _, access_token = get_authorization_scheme_param(auth_access_token)
 
         try:
-            # Debug mode: bypass token validation (ONLY for development)
-            if app_settings.DEBUG_AUTH:
-                logger.warning(
-                    "DEBUG_AUTH is enabled - using debug credentials. "
-                    "NEVER enable this in production!"
-                )
-                token = await keycloak_manager.login_async(
-                    app_settings.DEBUG_AUTH_USERNAME,
-                    app_settings.DEBUG_AUTH_PASSWORD,
-                )
-                access_token = token["access_token"]
-
             # Check cache first for decoded token claims
             user_data = await get_cached_token_claims(access_token)
 

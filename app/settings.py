@@ -3,7 +3,7 @@ import re
 from enum import Enum
 from typing import Any, Literal
 
-from pydantic import SecretStr, field_validator
+from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -88,24 +88,6 @@ class Settings(BaseSettings):  # type: ignore[misc]
         "192.168.0.0/16",  # Private networks
     ]
 
-    # Debug mode settings (for local development/testing)
-    # Users should create a Keycloak account and put credentials here for testing
-    DEBUG_AUTH: bool = False
-    DEBUG_AUTH_USERNAME: str = ""  # Set your Keycloak username for local dev
-    DEBUG_AUTH_PASSWORD: str = ""  # Set your Keycloak password for local dev
-
-    @field_validator("DEBUG_AUTH")
-    @classmethod
-    def validate_debug_auth(cls, v: bool, info) -> bool:  # type: ignore[no-untyped-def]
-        """Prevent DEBUG_AUTH from being enabled in production."""
-        # Get ENV from validation context
-        env = info.data.get("ENV", Environment.DEV)
-        if v and env == Environment.PRODUCTION:
-            raise ValueError(
-                "DEBUG_AUTH cannot be enabled in production environment"
-            )
-        return v
-
     # Database initialization settings
     DB_INIT_RETRY_INTERVAL: int = 2
     DB_INIT_MAX_RETRIES: int = 5
@@ -169,10 +151,6 @@ class Settings(BaseSettings):  # type: ignore[misc]
         if self.ENV == Environment.PRODUCTION:
             # Production environment: strict security and performance
             # Override only if not explicitly set via environment variables
-
-            # Security: Disable debug auth in production
-            if os.getenv("DEBUG_AUTH") is None:
-                self.DEBUG_AUTH = False
 
             # Rate limiting: Fail closed in production (deny when Redis down)
             if os.getenv("RATE_LIMIT_FAIL_MODE") is None:

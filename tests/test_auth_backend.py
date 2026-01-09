@@ -73,38 +73,36 @@ class TestAuthBackendTokenCaching:
             return_value=mock_user_data
         )
 
-        with patch("app.auth.app_settings.DEBUG_AUTH", False):
-            with patch("app.auth.keycloak_manager", mock_kc_manager):
-                # Mock cache miss - returns None
+        with patch("app.auth.keycloak_manager", mock_kc_manager):
+            # Mock cache miss - returns None
+            with patch(
+                "app.utils.token_cache.get_cached_token_claims",
+                new_callable=AsyncMock,
+                return_value=None,
+            ):
+                # Mock cache_token_claims to verify it's called
                 with patch(
-                    "app.utils.token_cache.get_cached_token_claims",
+                    "app.utils.token_cache.cache_token_claims",
                     new_callable=AsyncMock,
-                    return_value=None,
-                ):
-                    # Mock cache_token_claims to verify it's called
-                    with patch(
-                        "app.utils.token_cache.cache_token_claims",
-                        new_callable=AsyncMock,
-                    ) as mock_cache:
-                        result = await auth_backend.authenticate(request)
+                ) as mock_cache:
+                    result = await auth_backend.authenticate(request)
 
-                        # Should return successful authentication
-                        assert result is not None
-                        credentials, user = result
-                        assert (
-                            user.username
-                            == mock_user_data["preferred_username"]
-                        )
+                    # Should return successful authentication
+                    assert result is not None
+                    credentials, user = result
+                    assert (
+                        user.username == mock_user_data["preferred_username"]
+                    )
 
-                        # Token decode SHOULD be called (cache miss)
-                        mock_kc_manager.openid.a_decode_token.assert_called_once_with(
-                            "uncached_token"
-                        )
+                    # Token decode SHOULD be called (cache miss)
+                    mock_kc_manager.openid.a_decode_token.assert_called_once_with(
+                        "uncached_token"
+                    )
 
-                        # Cache write SHOULD be called with decoded data
-                        mock_cache.assert_called_once_with(
-                            "uncached_token", mock_user_data
-                        )
+                    # Cache write SHOULD be called with decoded data
+                    mock_cache.assert_called_once_with(
+                        "uncached_token", mock_user_data
+                    )
 
 
 class TestAuthBackendMetrics:
@@ -279,32 +277,30 @@ class TestAuthBackendWebSocketSuccess:
             return_value=mock_user_data
         )
 
-        with patch("app.auth.app_settings.DEBUG_AUTH", False):
-            with patch("app.auth.keycloak_manager", mock_kc_manager):
+        with patch("app.auth.keycloak_manager", mock_kc_manager):
+            with patch(
+                "app.utils.token_cache.get_cached_token_claims",
+                new_callable=AsyncMock,
+                return_value=None,
+            ):
                 with patch(
-                    "app.utils.token_cache.get_cached_token_claims",
+                    "app.utils.token_cache.cache_token_claims",
                     new_callable=AsyncMock,
-                    return_value=None,
                 ):
-                    with patch(
-                        "app.utils.token_cache.cache_token_claims",
-                        new_callable=AsyncMock,
-                    ):
-                        result = await auth_backend.authenticate(request)
+                    result = await auth_backend.authenticate(request)
 
-                        # Should return successful authentication
-                        assert result is not None
-                        credentials, user = result
-                        assert (
-                            user.username
-                            == mock_user_data["preferred_username"]
-                        )
-                        assert user.id == mock_user_data["sub"]
+                    # Should return successful authentication
+                    assert result is not None
+                    credentials, user = result
+                    assert (
+                        user.username == mock_user_data["preferred_username"]
+                    )
+                    assert user.id == mock_user_data["sub"]
 
-                        # Token should be extracted from query param
-                        mock_kc_manager.openid.a_decode_token.assert_called_once_with(
-                            "ws_valid_token"
-                        )
+                    # Token should be extracted from query param
+                    mock_kc_manager.openid.a_decode_token.assert_called_once_with(
+                        "ws_valid_token"
+                    )
 
     @pytest.mark.asyncio
     async def test_websocket_auth_url_encoded_token(self, mock_user_data):
@@ -323,24 +319,23 @@ class TestAuthBackendWebSocketSuccess:
             return_value=mock_user_data
         )
 
-        with patch("app.auth.app_settings.DEBUG_AUTH", False):
-            with patch("app.auth.keycloak_manager", mock_kc_manager):
+        with patch("app.auth.keycloak_manager", mock_kc_manager):
+            with patch(
+                "app.utils.token_cache.get_cached_token_claims",
+                new_callable=AsyncMock,
+                return_value=None,
+            ):
                 with patch(
-                    "app.utils.token_cache.get_cached_token_claims",
+                    "app.utils.token_cache.cache_token_claims",
                     new_callable=AsyncMock,
-                    return_value=None,
                 ):
-                    with patch(
-                        "app.utils.token_cache.cache_token_claims",
-                        new_callable=AsyncMock,
-                    ):
-                        result = await auth_backend.authenticate(request)
+                    result = await auth_backend.authenticate(request)
 
-                        assert result is not None
-                        # Token should be properly decoded
-                        mock_kc_manager.openid.a_decode_token.assert_called_once_with(
-                            "token+with+plus"
-                        )
+                    assert result is not None
+                    # Token should be properly decoded
+                    mock_kc_manager.openid.a_decode_token.assert_called_once_with(
+                        "token+with+plus"
+                    )
 
 
 class TestAuthBackendEdgeCases:
