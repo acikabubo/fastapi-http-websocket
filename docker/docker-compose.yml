@@ -172,7 +172,7 @@ services:
     restart: unless-stopped
 
   hw-keycloak:
-    image: keycloak/keycloak:25.0
+    image: keycloak/keycloak:26.0.0
     hostname: hw-keycloak
     container_name: hw-keycloak
     networks:
@@ -259,7 +259,7 @@ services:
         condition: service_started
 
   prometheus:
-    image: prom/prometheus:latest
+    image: prom/prometheus:v3.1.0
     container_name: hw-prometheus
     hostname: prometheus
 
@@ -299,7 +299,7 @@ services:
     restart: unless-stopped
 
   grafana:
-    image: grafana/grafana:latest
+    image: grafana/grafana:11.4.0
     container_name: hw-grafana
     hostname: grafana
 
@@ -370,7 +370,7 @@ services:
     restart: unless-stopped
 
   loki:
-    image: grafana/loki:latest
+    image: grafana/loki:3.3.2
     container_name: hw-loki
     hostname: loki
 
@@ -404,7 +404,7 @@ services:
     restart: unless-stopped
 
   alloy:
-    image: grafana/alloy:latest
+    image: grafana/alloy:v1.5.1
     container_name: hw-alloy
     hostname: alloy
 
