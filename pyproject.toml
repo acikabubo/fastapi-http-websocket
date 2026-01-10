@@ -72,8 +72,6 @@ omit = [
     "*__init__*",
     "*__main__*",
     "*/tests/*",
-    "app/logging.py",
-    "app/routing.py",
     "app/settings.py",
     "app/storage/migrations/*",
     "app/protocols.py",
@@ -82,7 +80,7 @@ omit = [
 
 [tool.coverage.report]
 show_missing = true
-fail_under = 80  # Minimum coverage threshold
+fail_under = 81  # Minimum coverage threshold (increased from 80%)
 exclude_lines = [
     "pragma: no cover",
     "from",
