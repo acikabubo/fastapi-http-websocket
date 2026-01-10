@@ -286,8 +286,8 @@ services:
       # Service definition
       - "traefik.http.services.prometheus.loadbalancer.server.port=9090"
 
-      # Middleware chain
-      - "traefik.http.routers.prometheus.middlewares=secure-headers@file"
+      # Middleware chain (BasicAuth + Security Headers)
+      - "traefik.http.routers.prometheus.middlewares=observability-auth@file,secure-headers@file"
 
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
@@ -396,8 +396,8 @@ services:
       # Service definition
       - "traefik.http.services.loki.loadbalancer.server.port=3100"
 
-      # Middleware chain
-      - "traefik.http.routers.loki.middlewares=secure-headers@file"
+      # Middleware chain (BasicAuth + Security Headers)
+      - "traefik.http.routers.loki.middlewares=observability-auth@file,secure-headers@file"
 
     command: -config.file=/etc/loki/local-config.yaml
 
@@ -430,8 +430,8 @@ services:
       # Service definition
       - "traefik.http.services.alloy.loadbalancer.server.port=12345"
 
-      # Middleware chain
-      - "traefik.http.routers.alloy.middlewares=secure-headers@file"
+      # Middleware chain (BasicAuth + Security Headers)
+      - "traefik.http.routers.alloy.middlewares=observability-auth@file,secure-headers@file"
 
     command:
       - run

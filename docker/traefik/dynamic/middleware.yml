@@ -99,6 +99,13 @@ http:
         fallbackDuration: 30s
         recoveryDuration: 30s
 
+    # Basic Auth for Observability Services (Prometheus, Loki, Alloy)
+    # Credentials: admin / admin (CHANGE IN PRODUCTION!)
+    # Generate new password: docker run --rm httpd:2.4-alpine htpasswd -nbB admin newpassword | sed -e s/\\$/\\$\\$/g
+    observability-auth:
+      basicAuth:
+        usersFile: "/etc/traefik/dynamic/.htpasswd"  # admin:admin
+
     # Basic Auth (example - use for Traefik dashboard)
     # Generate password: echo $(htpasswd -nB admin) | sed -e s/\\$/\\$\\$/g
     # dashboard-auth:
