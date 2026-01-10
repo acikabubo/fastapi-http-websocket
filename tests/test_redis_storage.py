@@ -266,8 +266,15 @@ class TestRedisHandler:
         async def test_callback(ch, data):
             pass
 
-        with patch(
-            "app.storage.redis.get_redis_connection", return_value=mock_redis
+        with (
+            patch(
+                "app.storage.redis.get_redis_connection",
+                new_callable=AsyncMock,
+                return_value=mock_redis,
+            ),
+            patch(
+                "app.storage.redis.REventHandler.loop", new_callable=AsyncMock
+            ),
         ):
             handler = RedisHandler()
             handler.event_handlers = {}
