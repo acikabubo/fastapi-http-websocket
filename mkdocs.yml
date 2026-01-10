@@ -171,12 +171,16 @@ nav:
       - Testing: development/testing.md
       - Database Migrations: development/migrations.md
       - Code Quality: development/code-quality.md
+      - Protobuf Testing: development/protobuf-testing.md
+      - MyPy Type Ignores: development/mypy-type-ignores.md
+      - Swagger UI Testing: development/swagger-testing.md
       - Contributing: development/contributing.md
   - Deployment:
       - deployment/index.md
       - Docker Deployment: deployment/docker.md
       - Production Setup: deployment/production.md
       - Security Guide: deployment/security.md
+      - BasicAuth for Observability: deployment/basicauth.md
       - Monitoring & Observability: deployment/monitoring.md
       - Troubleshooting: deployment/troubleshooting.md
       - Backup & Recovery: deployment/backup-recovery.md
