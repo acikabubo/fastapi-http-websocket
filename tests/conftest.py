@@ -6,7 +6,7 @@ and other common testing utilities.
 """
 
 import os
-from unittest.mock import Mock, patch
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
 
@@ -20,6 +20,17 @@ os.environ.setdefault("KEYCLOAK_ADMIN_PASSWORD", "admin")
 # Database credentials (required after removing hardcoded defaults)
 os.environ.setdefault("DB_USER", "test-user")
 os.environ.setdefault("DB_PASSWORD", "test-password")
+
+# Import app modules after setting environment variables
+from keycloak import KeycloakAdmin
+from starlette.responses import Response
+from testcontainers.keycloak import KeycloakContainer
+
+from app.managers.keycloak_manager import KeycloakManager
+from app.models.author import Author
+from app.schemas.request import RequestModel
+from app.schemas.response import ResponseModel
+from app.schemas.user import UserModel
 
 
 @pytest.fixture
@@ -88,8 +99,6 @@ def mock_user(mock_user_data):
     Returns:
         UserModel: Mock user instance
     """
-    from app.schemas.user import UserModel
-
     return UserModel(**mock_user_data)
 
 
@@ -196,8 +205,6 @@ def mock_db_session():
     Returns:
         Mock: Mock AsyncSession instance
     """
-    from unittest.mock import AsyncMock
-
     return AsyncMock()
 
 
@@ -209,8 +216,6 @@ def mock_redis():
     Returns:
         AsyncMock: Mocked Redis connection with common methods
     """
-    from unittest.mock import AsyncMock
-
     redis_mock = AsyncMock()
     redis_mock.get = AsyncMock(return_value=None)
     redis_mock.set = AsyncMock(return_value=True)
@@ -233,8 +238,6 @@ def mock_websocket():
     Returns:
         Mock: Mocked WebSocket instance
     """
-    from unittest.mock import AsyncMock, MagicMock
-
     ws_mock = MagicMock()
     ws_mock.send_json = AsyncMock()
     ws_mock.send_text = AsyncMock()
@@ -254,8 +257,6 @@ def mock_request():
     Returns:
         Mock: Mocked Request instance
     """
-    from unittest.mock import MagicMock
-
     request_mock = MagicMock()
     request_mock.url.path = "/test"
     request_mock.method = "GET"
@@ -273,8 +274,6 @@ def mock_call_next():
     Returns:
         AsyncMock: Mocked call_next function
     """
-    from unittest.mock import AsyncMock
-    from starlette.responses import Response
 
     async def call_next_impl(request):
         return Response(status_code=200)
@@ -297,8 +296,6 @@ def create_author_fixture(
     Returns:
         Author: Author instance
     """
-    from app.models.author import Author
-
     return Author(id=id, name=name, bio=bio)
 
 
@@ -318,8 +315,6 @@ def create_request_model_fixture(
     Returns:
         RequestModel: Request model instance
     """
-    from app.schemas.request import RequestModel
-
     return RequestModel(pkg_id=pkg_id, req_id=req_id, data=data or {})
 
 
@@ -341,8 +336,6 @@ def create_response_model_fixture(
     Returns:
         ResponseModel: Response model instance
     """
-    from app.schemas.response import ResponseModel
-
     return ResponseModel(
         pkg_id=pkg_id, req_id=req_id, status_code=status_code, data=data or {}
     )
@@ -379,8 +372,6 @@ def keycloak_container():
             base_url = keycloak_container["base_url"]
             ...
     """
-    from testcontainers.keycloak import KeycloakContainer
-
     # Start Keycloak container with test realm
     # Using official Docker Hub image (faster and more reliable than quay.io)
     container = KeycloakContainer("keycloak/keycloak:26.0.0")
@@ -393,7 +384,6 @@ def keycloak_container():
         admin_password = container.password
 
         # Configure test realm
-        from keycloak import KeycloakAdmin
 
         admin_client = KeycloakAdmin(
             server_url=base_url,
@@ -565,9 +555,6 @@ def integration_keycloak_manager(keycloak_container):
             )
             assert "access_token" in token
     """
-    from app.managers.keycloak_manager import KeycloakManager
-    from unittest.mock import patch
-
     # Patch app_settings to use testcontainer Keycloak
     with patch("app.managers.keycloak_manager.app_settings") as mock_settings:
         mock_settings.KEYCLOAK_BASE_URL = keycloak_container["base_url"]

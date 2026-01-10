@@ -5,6 +5,7 @@ This module tests Redis connection pooling, pub/sub event handling,
 and Keycloak user session management.
 """
 
+from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -43,8 +44,6 @@ def mock_user():
     Returns:
         UserModel: Mock user instance
     """
-    from datetime import datetime
-
     # Create a future timestamp (current time + 300 seconds)
     future_exp = int(datetime.now().timestamp()) + 300
 

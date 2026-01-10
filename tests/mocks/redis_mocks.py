@@ -6,6 +6,8 @@ Provides pre-configured Redis mocks with common operations.
 
 from unittest.mock import AsyncMock, MagicMock
 
+from app.utils.rate_limiter import ConnectionLimiter, RateLimiter
+
 
 def create_mock_redis_connection():
     """
@@ -74,7 +76,6 @@ def create_mock_rate_limiter():
     Returns:
         MagicMock: Mocked RateLimiter instance
     """
-    from app.utils.rate_limiter import RateLimiter
 
     limiter_mock = MagicMock(spec=RateLimiter)
     limiter_mock.check_rate_limit = AsyncMock(return_value=(True, 10))
@@ -88,7 +89,6 @@ def create_mock_connection_limiter():
     Returns:
         MagicMock: Mocked ConnectionLimiter instance
     """
-    from app.utils.rate_limiter import ConnectionLimiter
 
     limiter_mock = MagicMock(spec=ConnectionLimiter)
     limiter_mock.add_connection = AsyncMock(return_value=True)

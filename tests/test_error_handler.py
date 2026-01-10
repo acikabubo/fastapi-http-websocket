@@ -6,6 +6,7 @@ to ensure proper exception handling and response formatting.
 """
 
 import json
+from uuid import uuid4
 
 import pytest
 from sqlalchemy.exc import IntegrityError
@@ -33,8 +34,6 @@ from app.utils.error_handler import (
 @pytest.fixture
 def sample_request():
     """Create a sample WebSocket request for testing."""
-    from uuid import uuid4
-
     return RequestModel(
         pkg_id=PkgID.GET_AUTHORS,
         req_id=uuid4(),

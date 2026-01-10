@@ -6,6 +6,12 @@ Provides mocks for WebSocket connections, consumers, and managers.
 
 from unittest.mock import AsyncMock, MagicMock
 
+from fastapi import WebSocket
+
+from app.managers.websocket_connection_manager import ConnectionManager
+from app.routing import PackageRouter
+from app.schemas.response import BroadcastDataModel
+
 
 def create_mock_websocket():
     """
@@ -14,7 +20,6 @@ def create_mock_websocket():
     Returns:
         MagicMock: Mocked WebSocket instance
     """
-    from fastapi import WebSocket
 
     ws_mock = MagicMock(spec=WebSocket)
 
@@ -77,7 +82,6 @@ def create_mock_connection_manager():
     Returns:
         MagicMock: Mocked ConnectionManager instance
     """
-    from app.managers.websocket_connection_manager import ConnectionManager
 
     manager_mock = MagicMock(spec=ConnectionManager)
     manager_mock.active_connections = []
@@ -99,7 +103,6 @@ def create_mock_package_router():
     Returns:
         MagicMock: Mocked PackageRouter instance
     """
-    from app.routing import PackageRouter
 
     router_mock = MagicMock(spec=PackageRouter)
 
@@ -129,7 +132,6 @@ def create_mock_broadcast_message(
     Returns:
         BroadcastDataModel: Mocked broadcast message
     """
-    from app.schemas.response import BroadcastDataModel
 
     return BroadcastDataModel(
         pkg_id=pkg_id, status_code=status_code, data=data or {}

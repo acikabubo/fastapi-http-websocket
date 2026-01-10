@@ -6,6 +6,10 @@ Provides mocks for Keycloak, AuthBackend, and related auth components.
 
 from unittest.mock import AsyncMock, Mock
 
+from app.auth import AuthBackend
+from app.managers.rbac_manager import RBACManager
+from app.schemas.user import UserModel
+
 
 def create_mock_auth_backend():
     """
@@ -14,7 +18,6 @@ def create_mock_auth_backend():
     Returns:
         AsyncMock: Mocked AuthBackend instance
     """
-    from app.auth import AuthBackend
 
     backend_mock = AsyncMock(spec=AuthBackend)
     backend_mock.authenticate = AsyncMock(return_value=None)
@@ -93,7 +96,6 @@ def create_mock_user_model(
     Returns:
         UserModel: Mocked UserModel instance
     """
-    from app.schemas.user import UserModel
 
     return UserModel(
         sub=user_id,
@@ -113,7 +115,6 @@ def create_mock_rbac_manager():
     Returns:
         Mock: Mocked RBACManager instance
     """
-    from app.managers.rbac_manager import RBACManager
 
     manager_mock = Mock(spec=RBACManager)
     manager_mock.check_ws_permission = Mock(return_value=True)

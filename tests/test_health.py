@@ -6,6 +6,8 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from app.api.http.health import router
+
 
 @pytest.fixture
 def app():
@@ -15,8 +17,6 @@ def app():
     Returns:
         FastAPI: FastAPI application instance.
     """
-    from app.api.http.health import router
-
     test_app = FastAPI()
     test_app.include_router(router)
     return test_app

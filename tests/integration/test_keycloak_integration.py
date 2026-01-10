@@ -10,7 +10,12 @@ Run with:
     make test-integration
 """
 
+import time
+
 import pytest
+from keycloak.exceptions import KeycloakAuthenticationError
+
+from app.schemas.user import UserModel
 
 
 @pytest.mark.integration
@@ -49,8 +54,6 @@ async def test_login_with_invalid_credentials(integration_keycloak_manager):
     - Login fails with incorrect password
     - Appropriate exception is raised
     """
-    from keycloak.exceptions import KeycloakAuthenticationError
-
     with pytest.raises(KeycloakAuthenticationError):
         await integration_keycloak_manager.login_async(
             "testuser", "wrongpassword"
@@ -152,8 +155,6 @@ async def test_token_expiration_claim(
     - Expiration is in the future
     - Expiration follows configured token lifetime
     """
-    import time
-
     # Login to get real token
     token_response = await integration_keycloak_manager.login_async(
         keycloak_container["test_username"],
@@ -225,8 +226,6 @@ async def test_user_model_creation_from_real_token(
     - All required fields are present
     - UserModel instance is valid
     """
-    from app.schemas.user import UserModel
-
     # Login and decode token
     token_response = await integration_keycloak_manager.login_async(
         keycloak_container["test_username"],

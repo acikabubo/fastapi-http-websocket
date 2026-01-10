@@ -9,6 +9,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
+from app.utils.rate_limiter import ConnectionLimiter, RateLimiter
 from tests.mocks.redis_mocks import create_mock_redis_connection
 
 
@@ -34,8 +35,6 @@ def rate_limiter_with_mock_redis(mock_redis):
     Yields:
         RateLimiter: Rate limiter with mocked Redis
     """
-    from app.utils.rate_limiter import RateLimiter
-
     with patch(
         "app.utils.rate_limiter.get_redis_connection"
     ) as mock_get_redis:
@@ -59,8 +58,6 @@ def connection_limiter_with_mock_redis(mock_redis):
     Yields:
         ConnectionLimiter: Connection limiter with mocked Redis
     """
-    from app.utils.rate_limiter import ConnectionLimiter
-
     with patch(
         "app.utils.rate_limiter.get_redis_connection"
     ) as mock_get_redis:

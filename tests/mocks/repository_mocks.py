@@ -6,6 +6,9 @@ Provides pre-configured repository mocks with common method stubs.
 
 from unittest.mock import AsyncMock
 
+from app.repositories.author_repository import AuthorRepository
+from app.repositories.base_repository import BaseRepository
+
 
 def create_mock_author_repository():
     """
@@ -14,8 +17,6 @@ def create_mock_author_repository():
     Returns:
         AsyncMock: Mocked AuthorRepository instance
     """
-    from app.repositories.author_repository import AuthorRepository
-
     repo_mock = AsyncMock(spec=AuthorRepository)
     repo_mock.get_by_id = AsyncMock(return_value=None)
     repo_mock.get_all = AsyncMock(return_value=[])
@@ -33,8 +34,6 @@ def create_mock_base_repository():
     Returns:
         AsyncMock: Mocked BaseRepository instance
     """
-    from app.repositories.base_repository import BaseRepository
-
     repo_mock = AsyncMock(spec=BaseRepository)
     repo_mock.get_by_id = AsyncMock(return_value=None)
     repo_mock.get_all = AsyncMock(return_value=[])
