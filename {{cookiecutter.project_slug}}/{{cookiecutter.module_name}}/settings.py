@@ -54,9 +54,9 @@ class Settings(BaseSettings):  # type: ignore[misc]
     # Database settings (credentials MUST be provided via environment)
     DB_USER: str
     DB_PASSWORD: SecretStr
-    DB_HOST: str = "hw-db"
+    DB_HOST: str = "{{cookiecutter.project_slug}}-db"
     DB_PORT: int = 5432
-    DB_NAME: str = "hw-db"
+    DB_NAME: str = "{{cookiecutter.project_slug}}-db"
     DB_POOL_SIZE: int = 20
     DB_MAX_OVERFLOW: int = 10
     DB_POOL_RECYCLE: int = 3600
