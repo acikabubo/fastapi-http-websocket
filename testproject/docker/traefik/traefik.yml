@@ -1,0 +1,104 @@
+# Traefik Static Configuration
+# This file configures the core Traefik behavior and providers
+
+# Global Configuration
+global:
+  checkNewVersion: true
+  sendAnonymousUsage: false
+
+# Entry Points - Define ports where Traefik listens
+entryPoints:
+  # HTTP entry point (port 80)
+  web:
+    address: ":80"
+
+  # HTTPS entry point (port 443)
+  websecure:
+    address: ":443"
+    http:
+      tls:
+        certResolver: letsencrypt
+
+  # Traefik dashboard (port 8080)
+  traefik:
+    address: ":8080"
+
+# API and Dashboard Configuration
+api:
+  dashboard: true
+  insecure: true  # Allow insecure dashboard access (development only)
+  debug: false
+
+# Log Configuration
+log:
+  level: INFO  # DEBUG, INFO, WARN, ERROR, FATAL, PANIC
+  format: json
+  filePath: /var/log/traefik/traefik.log
+
+# Access Logs
+accessLog:
+  format: json
+  filePath: /var/log/traefik/access.log
+  bufferingSize: 100
+  filters:
+    statusCodes:
+      - "200"
+      - "300-302"
+      - "400-599"
+    retryAttempts: true
+    minDuration: 10ms
+
+# Providers Configuration
+providers:
+  # Docker Provider - Automatic service discovery
+  docker:
+    endpoint: "unix:///var/run/docker.sock"
+    exposedByDefault: false  # Require explicit traefik.enable=true label
+    network: testproject-network  # Use this network for backend connections
+    watch: true  # Watch for Docker events
+
+  # File Provider - For dynamic configuration
+  file:
+    directory: /etc/traefik/dynamic
+    watch: true
+
+# Certificate Resolvers - SSL/TLS Configuration
+certificatesResolvers:
+  # Let's Encrypt resolver for production
+  letsencrypt:
+    acme:
+      email: admin@example.com
+      storage: /letsencrypt/acme.json
+      httpChallenge:
+        entryPoint: web
+
+  # Self-signed certificates for local development
+  selfsigned:
+    acme:
+      email: admin@example.com
+      storage: /letsencrypt/acme-dev.json
+      tlsChallenge: {}
+
+# Metrics Configuration (Prometheus)
+metrics:
+  prometheus:
+    addEntryPointsLabels: true
+    addRoutersLabels: true
+    addServicesLabels: true
+    entryPoint: traefik
+    buckets:
+      - 0.1
+      - 0.3
+      - 1.2
+      - 5.0
+
+# Tracing Configuration (optional)
+# tracing:
+#   serviceName: traefik
+#   jaeger:
+#     samplingServerURL: http://jaeger:5778/sampling
+#     localAgentHostPort: jaeger:6831
+
+# Ping Configuration (Health Check)
+ping:
+  entryPoint: traefik

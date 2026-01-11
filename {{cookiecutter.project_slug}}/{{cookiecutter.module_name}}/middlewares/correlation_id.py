@@ -17,7 +17,7 @@ from starlette.types import ASGIApp
 correlation_id: ContextVar[str] = ContextVar("correlation_id", default="")
 
 
-class CorrelationIDMiddleware(BaseHTTPMiddleware):
+class CorrelationIDMiddleware(BaseHTTPMiddleware):  # type: ignore[misc]
     """
     Middleware to add correlation IDs to requests for distributed tracing.
 
@@ -29,7 +29,7 @@ class CorrelationIDMiddleware(BaseHTTPMiddleware):
     - Adds correlation ID to response headers for client tracking
 
     The correlation ID can be accessed anywhere in the request context using:
-        from app.middlewares.correlation_id import get_correlation_id
+        from {{cookiecutter.module_name}}.middlewares.correlation_id import get_correlation_id
         cid = get_correlation_id()
     """
 
@@ -73,7 +73,7 @@ def get_correlation_id() -> str:
         The correlation ID string, or empty string if not set.
 
     Example:
-        >>> from app.middlewares.correlation_id import get_correlation_id
+        >>> from {{cookiecutter.module_name}}.middlewares.correlation_id import get_correlation_id
         >>> cid = get_correlation_id()
         >>> logger.info(f"Processing request {cid}")
     """

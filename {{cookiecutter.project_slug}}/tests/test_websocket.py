@@ -6,7 +6,7 @@ message routing, handler dispatch, and error handling.
 """
 
 import uuid
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from starlette.authentication import UnauthenticatedUser
@@ -17,6 +17,10 @@ from {{cookiecutter.module_name}}.api.ws.websocket import PackageAuthWebSocketEn
 from {{cookiecutter.module_name}}.routing import pkg_router
 from {{cookiecutter.module_name}}.schemas.request import RequestModel
 from {{cookiecutter.module_name}}.schemas.user import UserModel
+from tests.mocks.websocket_mocks import (
+    create_mock_connection_manager,
+    create_mock_websocket,
+)
 
 
 class TestWebSocketAuthentication:
@@ -34,12 +38,12 @@ class TestWebSocketAuthentication:
         """
         # Create a mock websocket endpoint with proper scope
         scope = {"type": "websocket", "user": UnauthenticatedUser()}
-        endpoint = PackageAuthWebSocketEndpoint(scope=scope, receive=None, send=None)  # type: ignore
+        endpoint = PackageAuthWebSocketEndpoint(
+            scope=scope, receive=None, send=None
+        )  # type: ignore
 
         # Mock the websocket
-        mock_websocket = MagicMock()
-        mock_websocket.accept = AsyncMock()
-        mock_websocket.close = AsyncMock()
+        mock_websocket = create_mock_websocket()
 
         # Mock Redis connection
         with patch(
@@ -67,24 +71,30 @@ class TestWebSocketAuthentication:
 
         # Create a mock websocket endpoint with proper scope
         scope = {"type": "websocket", "user": user}
-        endpoint = PackageAuthWebSocketEndpoint(scope=scope, receive=None, send=None)  # type: ignore
+        endpoint = PackageAuthWebSocketEndpoint(
+            scope=scope, receive=None, send=None
+        )  # type: ignore
 
         # Mock the websocket
-        mock_websocket = MagicMock()
-        mock_websocket.accept = AsyncMock()
-        mock_websocket.close = AsyncMock()
+        mock_websocket = create_mock_websocket()
 
         # Mock Redis connection and connection manager
         mock_redis = AsyncMock()
         mock_redis.add_kc_user_session = AsyncMock()
 
-        with patch(
-            "{{cookiecutter.module_name}}.api.ws.websocket.get_auth_redis_connection",
-            return_value=mock_redis,
-        ), patch("{{cookiecutter.module_name}}.api.ws.websocket.connection_manager") as mock_cm, patch(
-            "{{cookiecutter.module_name}}.api.ws.websocket.ws_clients", {}
-        ), patch("{{cookiecutter.module_name}}.api.ws.websocket.connection_limiter") as mock_conn_limiter:
-            mock_cm.connect = MagicMock()
+        with (
+            patch(
+                "{{cookiecutter.module_name}}.api.ws.websocket.get_auth_redis_connection",
+                return_value=mock_redis,
+            ),
+            patch(
+                "{{cookiecutter.module_name}}.api.ws.websocket.connection_manager",
+                create_mock_connection_manager(),
+            ) as mock_cm,
+            patch(
+                "{{cookiecutter.module_name}}.api.ws.websocket.connection_limiter"
+            ) as mock_conn_limiter,
+        ):
             mock_conn_limiter.add_connection = AsyncMock(return_value=True)
 
             # Call on_connect
@@ -97,7 +107,9 @@ class TestWebSocketAuthentication:
             mock_redis.add_kc_user_session.assert_called_once_with(user)
 
             # Verify connection was registered
-            mock_cm.connect.assert_called_once_with(mock_websocket)
+            mock_cm.connect.assert_called_once_with(
+                "session:testuser", mock_websocket
+            )
 
     @pytest.mark.asyncio
     async def test_websocket_disconnect_cleanup(self, mock_user_data):
@@ -110,19 +122,25 @@ class TestWebSocketAuthentication:
         user = UserModel(**mock_user_data)
 
         scope = {"type": "websocket", "user": user}
-        endpoint = PackageAuthWebSocketEndpoint(scope=scope, receive=None, send=None)  # type: ignore
+        endpoint = PackageAuthWebSocketEndpoint(
+            scope=scope, receive=None, send=None
+        )  # type: ignore
         endpoint.user = user
+        endpoint.session_key = (
+            "session:testuser"  # Set session key for disconnect
+        )
 
-        mock_websocket = MagicMock()
+        mock_websocket = create_mock_websocket()
 
-        with patch("{{cookiecutter.module_name}}.api.ws.websocket.connection_manager") as mock_cm:
-            mock_cm.disconnect = MagicMock()
-
+        with patch(
+            "{{cookiecutter.module_name}}.api.ws.websocket.connection_manager",
+            create_mock_connection_manager(),
+        ) as mock_cm:
             # Call on_disconnect
             await endpoint.on_disconnect(mock_websocket, 1000)
 
-            # Verify connection was removed
-            mock_cm.disconnect.assert_called_once_with(mock_websocket)
+            # Verify connection was removed with session key
+            mock_cm.disconnect.assert_called_once_with("session:testuser")
 
 
 class TestWebSocketMessageHandling:
@@ -143,10 +161,7 @@ class TestWebSocketMessageHandling:
         }
 
         # Mock the websocket
-        mock_websocket = MagicMock()
-        mock_websocket.send_response = AsyncMock()
-        mock_websocket.client = MagicMock()
-        mock_websocket.client.host = "127.0.0.1"
+        mock_websocket = create_mock_websocket()
 
         # Create Web endpoint instance
         scope = {"type": "websocket", "user": mock_user}
@@ -154,7 +169,7 @@ class TestWebSocketMessageHandling:
         web.user = mock_user
         web.correlation_id = "test-1234"  # Mock correlation_id
 
-        # Call on_receive
+        # Call on_receive (test_handler doesn't use database)
         await web.on_receive(mock_websocket, request_data)
 
         # Verify response was sent
@@ -183,10 +198,7 @@ class TestWebSocketMessageHandling:
         }
 
         # Mock the websocket
-        mock_websocket = MagicMock()
-        mock_websocket.close = AsyncMock()
-        mock_websocket.client = MagicMock()
-        mock_websocket.client.host = "127.0.0.1"
+        mock_websocket = create_mock_websocket()
 
         # Create Web endpoint instance
         scope = {"type": "websocket", "user": mock_user}
@@ -195,8 +207,12 @@ class TestWebSocketMessageHandling:
         web.correlation_id = "test-1234"  # Mock correlation_id
 
         # Mock rate limiter to avoid Redis connection issues
-        with patch("{{cookiecutter.module_name}}.api.ws.consumers.web.rate_limiter") as mock_rate_limiter:
-            mock_rate_limiter.check_rate_limit = AsyncMock(return_value=(True, 100))
+        with patch(
+            "{{cookiecutter.module_name}}.api.ws.consumers.web.rate_limiter"
+        ) as mock_rate_limiter:
+            mock_rate_limiter.check_rate_limit = AsyncMock(
+                return_value=(True, 100)
+            )
 
             # Call on_receive with invalid data
             await web.on_receive(mock_websocket, invalid_data)
@@ -223,10 +239,7 @@ class TestWebSocketMessageHandling:
         }
 
         # Mock the websocket
-        mock_websocket = MagicMock()
-        mock_websocket.send_response = AsyncMock()
-        mock_websocket.client = MagicMock()
-        mock_websocket.client.host = "127.0.0.1"
+        mock_websocket = create_mock_websocket()
 
         # Create Web endpoint instance
         scope = {"type": "websocket", "user": limited_user}
@@ -235,8 +248,12 @@ class TestWebSocketMessageHandling:
         web.correlation_id = "test-1234"  # Mock correlation_id
 
         # Mock rate limiter to avoid Redis connection issues
-        with patch("{{cookiecutter.module_name}}.api.ws.consumers.web.rate_limiter") as mock_rate_limiter:
-            mock_rate_limiter.check_rate_limit = AsyncMock(return_value=(True, 100))
+        with patch(
+            "{{cookiecutter.module_name}}.api.ws.consumers.web.rate_limiter"
+        ) as mock_rate_limiter:
+            mock_rate_limiter.check_rate_limit = AsyncMock(
+                return_value=(True, 100)
+            )
 
             # Call on_receive
             await web.on_receive(mock_websocket, request_data)
@@ -274,7 +291,9 @@ class TestPackageRouter:
         assert "No handler found" in response.data.get("msg", "")
 
     @pytest.mark.asyncio
-    async def test_handler_permission_check(self, mock_user, limited_user_data):
+    async def test_handler_permission_check(
+        self, mock_user, limited_user_data
+    ):
         """
         Test permission checking for different users.
 
@@ -305,23 +324,30 @@ class TestPackageRouter:
     @pytest.mark.asyncio
     async def test_handler_data_validation(self, mock_user):
         """
-        Test that handler accepts valid request data.
+        Test that handler without schema skips validation.
 
         Args:
             mock_user: Fixture providing UserModel instance
         """
-        # Test with valid data
+        # TEST_HANDLER has no json_schema parameter, so validation is skipped
+        # Any data should be accepted and passed to the handler
         request = RequestModel(
             pkg_id=PkgID.TEST_HANDLER,
             req_id=str(uuid.uuid4()),
-            data={"any_field": "is_accepted"},
+            data={
+                "filters": {
+                    "id": 123,
+                    "invalid_field": "this_is_ok_without_schema",
+                }
+            },
         )
 
         response = await pkg_router.handle_request(mock_user, request)
 
-        # The test handler accepts any data and returns OK
+        # Without schema validation, the handler should execute successfully
+        # (TEST_HANDLER just returns OK with test data)
         assert response.status_code == RSPCode.OK
-        assert response.data is not None
+        assert response.data == {"message": "test response"}
 
     @pytest.mark.asyncio
     async def test_handler_successful_execution(self, mock_user):
@@ -337,12 +363,13 @@ class TestPackageRouter:
             data={},
         )
 
+        # Mock the database call
         response = await pkg_router.handle_request(mock_user, request)
 
         assert response.status_code == RSPCode.OK
         assert response.pkg_id == PkgID.TEST_HANDLER
         assert response.req_id == request.req_id
-        assert response.data is not None
+        assert isinstance(response.data, dict)
 
 
 class TestWebSocketBroadcast:
@@ -356,15 +383,12 @@ class TestWebSocketBroadcast:
         )
 
         # Create mock websockets
-        mock_ws1 = MagicMock()
-        mock_ws1.send_json = AsyncMock()
-
-        mock_ws2 = MagicMock()
-        mock_ws2.send_json = AsyncMock()
+        mock_ws1 = create_mock_websocket()
+        mock_ws2 = create_mock_websocket()
 
         # Connect mock websockets
-        connection_manager.connect(mock_ws1)
-        connection_manager.connect(mock_ws2)
+        connection_manager.connect("session:test1", mock_ws1)
+        connection_manager.connect("session:test2", mock_ws2)
 
         # Create a broadcast message
         from {{cookiecutter.module_name}}.schemas.response import BroadcastDataModel
@@ -383,8 +407,8 @@ class TestWebSocketBroadcast:
             mock_ws2.send_json.assert_called_once_with(expected_data)
         finally:
             # Cleanup
-            connection_manager.disconnect(mock_ws1)
-            connection_manager.disconnect(mock_ws2)
+            connection_manager.disconnect("session:test1")
+            connection_manager.disconnect("session:test2")
 
 
 class TestWebSocketEdgeCases:
@@ -394,11 +418,11 @@ class TestWebSocketEdgeCases:
     async def test_websocket_with_null_user(self):
         """Test WebSocket behavior when user is None."""
         scope = {"type": "websocket", "user": None}
-        endpoint = PackageAuthWebSocketEndpoint(scope=scope, receive=None, send=None)  # type: ignore
+        endpoint = PackageAuthWebSocketEndpoint(
+            scope=scope, receive=None, send=None
+        )  # type: ignore
 
-        mock_websocket = MagicMock()
-        mock_websocket.accept = AsyncMock()
-        mock_websocket.close = AsyncMock()
+        mock_websocket = create_mock_websocket()
 
         with patch(
             "{{cookiecutter.module_name}}.api.ws.websocket.get_auth_redis_connection"
@@ -409,33 +433,4 @@ class TestWebSocketEdgeCases:
 
             # Should close connection for None user
             mock_websocket.close.assert_called_once()
-
-    @pytest.mark.asyncio
-    async def test_handler_exception_handling(self, mock_user):
-        """
-        Test that handler database exceptions are properly caught and reported.
-
-        Args:
-            mock_user: Fixture providing UserModel instance
-        """
-        from sqlalchemy.exc import SQLAlchemyError
-
-        request = RequestModel(
-            pkg_id=PkgID.TEST_HANDLER,
-            req_id=str(uuid.uuid4()),
-            data={},
-        )
-
-        # Mock pkg_router to raise a SQLAlchemy exception
-        with patch.object(
-            pkg_router, 'handle_request', side_effect=SQLAlchemyError("Database error")
-        ):
-            try:
-                response = await pkg_router.handle_request(mock_user, request)
-                # If we get here without exception, check error response
-                assert response.status_code == RSPCode.ERROR
-                assert "Database error" in str(response.data.get("msg", ""))
-            except SQLAlchemyError:
-                # Exception was raised as expected
-                pass
 

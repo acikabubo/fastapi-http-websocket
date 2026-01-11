@@ -10,6 +10,7 @@ Example:
     from {{cookiecutter.module_name}}.protocols import Repository
     from {{cookiecutter.module_name}}.models.author import Author
 
+
     def process_data(repo: Repository[Author]) -> None:
         # Works with any repository implementation
         author = await repo.get_by_id(1)

@@ -5,13 +5,12 @@ from json import loads
 from typing import Any, Callable
 
 from redis.asyncio import ConnectionPool, Redis
+from redis.exceptions import RedisError
 
 from {{cookiecutter.module_name}}.constants import KC_SESSION_EXPIRY_BUFFER_SECONDS
 from {{cookiecutter.module_name}}.logging import logger
-from {{cookiecutter.module_name}}.schemas.types import RedisPoolStats
 from {{cookiecutter.module_name}}.schemas.user import UserModel
 from {{cookiecutter.module_name}}.settings import app_settings
-from {{cookiecutter.module_name}}.utils.singleton import SingletonMeta
 
 
 class RedisPool:
@@ -23,7 +22,9 @@ class RedisPool:
     """
 
     __instances: dict[int, Redis] = {}
-    __pools: dict[int, ConnectionPool] = {}  # Store pools for metrics and shutdown
+    __pools: dict[
+        int, ConnectionPool
+    ] = {}  # Store pools for metrics and shutdown
 
     @classmethod
     async def get_instance(cls, db: int = 1) -> Redis:
@@ -67,7 +68,10 @@ class RedisPool:
         cls.__pools[db] = pool
 
         # Update Prometheus metrics for this pool
-        from {{cookiecutter.module_name}}.utils.metrics import redis_pool_info, redis_pool_max_connections
+        from {{cookiecutter.module_name}}.utils.metrics import (
+            redis_pool_info,
+            redis_pool_max_connections,
+        )
 
         redis_pool_max_connections.labels(db=str(db)).set(pool.max_connections)
         redis_pool_info.labels(
@@ -76,7 +80,9 @@ class RedisPool:
             port=str(app_settings.REDIS_PORT),
             socket_timeout=str(app_settings.REDIS_SOCKET_TIMEOUT),
             connect_timeout=str(app_settings.REDIS_CONNECT_TIMEOUT),
-            health_check_interval=str(app_settings.REDIS_HEALTH_CHECK_INTERVAL),
+            health_check_interval=str(
+                app_settings.REDIS_HEALTH_CHECK_INTERVAL
+            ),
         ).set(1)
 
         redis_instance = await Redis.from_pool(pool)
@@ -101,8 +107,13 @@ class RedisPool:
             try:
                 await pool.disconnect()
                 logger.info(f"Closed Redis pool for database {db}")
-            except Exception as ex:
-                logger.error(f"Error closing Redis pool for database {db}: {ex}")
+            except (RedisError, ConnectionError, RuntimeError) as ex:
+                # RedisError: Redis operation errors
+                # ConnectionError: Network issues
+                # RuntimeError: Async context issues
+                logger.error(
+                    f"Error closing Redis pool for database {db}: {ex}"
+                )
 
         cls.__pools.clear()
         cls.__instances.clear()
@@ -135,7 +146,7 @@ class RedisPool:
 
         # Return stats for all pools
         return {
-            db: {
+            db: {  # type: ignore[misc]
                 "max_connections": pool.max_connections,
                 "connection_kwargs": {
                     "socket_timeout": app_settings.REDIS_SOCKET_TIMEOUT,
@@ -145,6 +156,57 @@ class RedisPool:
             }
             for db, pool in cls.__pools.items()
         }
+
+    @classmethod
+    def update_pool_metrics(cls) -> None:
+        """
+        Update Prometheus metrics for all Redis connection pools.
+
+        Collects current pool statistics and updates Prometheus gauges
+        for monitoring pool usage and detecting potential exhaustion.
+
+        Should be called periodically (e.g., every 10-30 seconds) to keep
+        metrics current.
+        """
+        from {{cookiecutter.module_name}}.utils.metrics import (
+            redis_pool_connections_available,
+            redis_pool_connections_created_total,
+            redis_pool_connections_in_use,
+        )
+
+        for db, pool in cls.__pools.items():
+            db_label = str(db)
+
+            # Get pool statistics from internal connection pool
+            # Note: These are estimates based on pool's internal tracking
+            try:
+                # Number of connections currently checked out from pool
+                in_use = len(pool._in_use_connections)
+
+                # Total connections created (both in use and available)
+                created = pool._created_connections
+
+                # Available connections = created - in_use
+                available = created - in_use
+
+                # Update Prometheus gauges
+                redis_pool_connections_in_use.labels(db=db_label).set(in_use)
+                redis_pool_connections_available.labels(db=db_label).set(
+                    available
+                )
+
+                # Track total created (cumulative counter)
+                redis_pool_connections_created_total.labels(db=db_label).set(
+                    created
+                )
+
+            except AttributeError:
+                # Pool implementation may vary - fail gracefully
+                logger.debug(
+                    f"Could not access pool internal stats for db={db}"
+                )
+            except Exception as ex:
+                logger.error(f"Error updating pool metrics for db={db}: {ex}")
 
     @staticmethod
     async def add_kc_user_session(r: Redis, user: UserModel) -> None:
@@ -159,11 +221,18 @@ class RedisPool:
         logger.debug(f"Added user session in redis for: {user.username}")
 
 
-async def get_redis_connection(db: int = app_settings.MAIN_REDIS_DB) -> Redis | None:
+async def get_redis_connection(
+    db: int = app_settings.MAIN_REDIS_DB,
+) -> Redis | None:
     try:
         return await RedisPool.get_instance(db)
+    except (ConnectionError, TimeoutError, OSError) as ex:
+        logger.error(f"Redis connection/network error: {ex}")
+        return None
     except Exception as ex:
-        logger.error(f"Error getting Redis connection: {ex}")
+        # Catch-all for graceful degradation
+        logger.error(f"Unexpected Redis error: {ex}")
+        return None
 
 
 async def get_auth_redis_connection() -> Redis | None:
@@ -185,9 +254,11 @@ class REventHandler:
         self.channel = channel
         self.redis = redis
         self.rch: Any = None
-        self.callbacks: list[tuple[Callable, dict[str, Any]]] = []
+        self.callbacks: list[tuple[Callable[..., Any], dict[str, Any]]] = []
 
-    def add_callback(self, callback: tuple[Callable, dict[str, Any]]) -> None:
+    def add_callback(
+        self, callback: tuple[Callable[..., Any], dict[str, Any]]
+    ) -> None:
         if callback not in self.callbacks:
             self.callbacks.append(callback)
 
@@ -195,8 +266,16 @@ class REventHandler:
         for callback, kw in self.callbacks:
             try:
                 await callback(ch_name, loads(data), **kw)
-            except Exception as ex:
+            except (ValueError, TypeError) as ex:
+                # ValueError: JSON decode error
+                # TypeError: Invalid callback arguments
                 self.get_logger().error(f"Callback {callback} failed: {ex}")
+                break
+            except Exception as ex:
+                # Catch-all for callback errors (don't fail the loop)
+                self.get_logger().error(
+                    f"Unexpected error in callback {callback}: {ex}"
+                )
                 break
 
     async def loop(self) -> None:
@@ -217,14 +296,17 @@ class REventHandler:
                     f"REventHandler on {self.channel} cancelled!"
                 )
                 break
-            except Exception as ex:
+            except (RedisError, ConnectionError, TimeoutError) as ex:
+                # RedisError: Redis operation errors
+                # ConnectionError: Network issues
+                # TimeoutError: Message timeout
                 self.get_logger().error(
                     f"Error in REventHandler {self.channel}: {ex}"
                 )
                 await asyncio.sleep(0.5)
 
 
-class RedisHandler(object):
+class RedisHandler:
     """
     Handler for Redis pub/sub subscriptions.
 
@@ -235,7 +317,9 @@ class RedisHandler(object):
     event_handlers: dict[str, REventHandler] = {}
     tasks: list[asyncio.Task[None]] = []
 
-    async def subscribe(self, channel: str, callback: Callable, **kwargs: Any) -> None:
+    async def subscribe(
+        self, channel: str, callback: Callable[..., Any], **kwargs: Any
+    ) -> None:
         if not asyncio.iscoroutinefunction(callback):
             raise ValueError("Callback argument must be a coroutine")
 
@@ -251,7 +335,16 @@ class RedisHandler(object):
         self.event_handlers[channel].add_callback((callback, kwargs))
 
 
-class RRedis(RedisHandler, metaclass=SingletonMeta):
-    """Singleton Redis handler for pub/sub operations."""
+class RRedis(RedisHandler):
+    """
+    Redis handler for pub/sub operations.
+
+    Note: This class is instantiated as a module-level singleton (r_redis) below.
+    Import and use r_redis instead of creating new instances.
+    """
 
     pass
+
+
+# Module-level singleton instance
+r_redis = RRedis()

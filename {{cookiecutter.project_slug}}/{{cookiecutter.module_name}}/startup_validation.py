@@ -72,27 +72,6 @@ async def validate_settings() -> None:
             "DB_PASSWORD environment variable is required"
         )
 
-    # Validate DEBUG_AUTH is disabled in production
-    if app_settings.is_production and app_settings.DEBUG_AUTH:
-        raise StartupValidationError(
-            "DEBUG_AUTH cannot be enabled in production environment"
-        )
-
-    # Validate DEBUG_AUTH credentials if enabled
-    if app_settings.DEBUG_AUTH:
-        if not app_settings.DEBUG_AUTH_USERNAME:
-            raise StartupValidationError(
-                "DEBUG_AUTH_USERNAME is required when DEBUG_AUTH is enabled"
-            )
-        if not app_settings.DEBUG_AUTH_PASSWORD:
-            raise StartupValidationError(
-                "DEBUG_AUTH_PASSWORD is required when DEBUG_AUTH is enabled"
-            )
-        logger.warning(
-            "DEBUG_AUTH is enabled - bypass authentication is active. "
-            "This should ONLY be used for local development!"
-        )
-
     logger.info("Application settings validation passed")
 
 

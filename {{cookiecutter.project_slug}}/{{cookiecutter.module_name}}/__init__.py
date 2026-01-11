@@ -1,38 +1,47 @@
 # Uvicorn application factory <https://www.uvicorn.org/#application-factories>
 from asyncio import create_task, gather
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from typing import Any
 
 from fastapi import FastAPI
 from starlette.middleware.authentication import AuthenticationMiddleware
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from {{cookiecutter.module_name}}.auth import AuthBackend
 from {{cookiecutter.module_name}}.logging import logger
-{% if cookiecutter.enable_audit_logging == "yes" %}from {{cookiecutter.module_name}}.middlewares.audit_middleware import AuditMiddleware
-{% endif %}from {{cookiecutter.module_name}}.middlewares.correlation_id import (
-    CorrelationIDMiddleware,
-)
+from {{cookiecutter.module_name}}.middlewares.audit_middleware import AuditMiddleware
+from {{cookiecutter.module_name}}.middlewares.correlation_id import CorrelationIDMiddleware
+from {{cookiecutter.module_name}}.middlewares.logging_context import LoggingContextMiddleware
 from {{cookiecutter.module_name}}.middlewares.prometheus import PrometheusMiddleware
 from {{cookiecutter.module_name}}.middlewares.rate_limit import RateLimitMiddleware
+from {{cookiecutter.module_name}}.middlewares.request_size_limit import RequestSizeLimitMiddleware
+from {{cookiecutter.module_name}}.middlewares.security_headers import SecurityHeadersMiddleware
 from {{cookiecutter.module_name}}.routing import collect_subrouters
+from {{cookiecutter.module_name}}.settings import app_settings
 from {{cookiecutter.module_name}}.storage.db import wait_and_init_db
 from {{cookiecutter.module_name}}.tasks.kc_user_session import kc_user_session_task
+from {{cookiecutter.module_name}}.tasks.redis_pool_metrics_task import redis_pool_metrics_task
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """
     FastAPI lifespan context manager for startup and shutdown.
 
     Handles:
+    - Startup validation (environment variables and service connections)
     - Database initialization with retries
-    - Background task startup (user session sync, audit log worker)
+    - Background task startup (user session sync, audit log worker, pool metrics)
     - Prometheus metrics initialization
     - Graceful shutdown with audit log flushing and task cancellation
 
     Startup operations:
+    - Validates required settings and service connections (fail-fast)
     - Sets up the database and tables
     - Creates user session background task
     - Starts audit log background worker
+    - Starts Redis pool metrics collection task
     - Initializes Prometheus metrics
 
     Shutdown operations:
@@ -42,6 +51,11 @@ async def lifespan(app: FastAPI):
     """
     # Startup
     logger.info("Application startup: initializing resources")
+
+    # Run startup validations (fail-fast if configuration is invalid)
+    from {{cookiecutter.module_name}}.startup_validation import run_all_validations
+
+    await run_all_validations()
 
     # Create the database and tables
     await wait_and_init_db()
@@ -54,7 +68,7 @@ async def lifespan(app: FastAPI):
         create_task(kc_user_session_task(), name="kc_session_sync")
     )
     logger.info("Created task for user session")
-{% if cookiecutter.enable_audit_logging == "yes" %}
+
     # Start audit log background worker
     from {{cookiecutter.module_name}}.utils.audit_logger import audit_log_worker
 
@@ -62,7 +76,13 @@ async def lifespan(app: FastAPI):
         create_task(audit_log_worker(), name="audit_worker")
     )
     logger.info("Started audit log background worker")
-{% endif %}
+
+    # Start Redis pool metrics collection task
+    background_tasks.append(
+        create_task(redis_pool_metrics_task(), name="redis_pool_metrics")
+    )
+    logger.info("Started Redis pool metrics collection task")
+
     # Initialize app info metric
     import sys
 
@@ -81,26 +101,30 @@ async def lifespan(app: FastAPI):
 
     # Shutdown
     logger.info("Application shutdown: cleaning up resources")
-{% if cookiecutter.enable_audit_logging == "yes" %}
+
     # Flush remaining audit logs
     try:
         from {{cookiecutter.module_name}}.utils.audit_logger import flush_audit_queue
 
         flushed_count = await flush_audit_queue()
         if flushed_count > 0:
-            logger.info(
-                f"Flushed {flushed_count} audit logs during shutdown"
-            )
-    except Exception as ex:
+            logger.info(f"Flushed {flushed_count} audit logs during shutdown")
+    except (ImportError, RuntimeError, OSError) as ex:
+        # ImportError: Module not available
+        # RuntimeError: Async context issues
+        # OSError: Database connection/write errors
         logger.error(f"Error flushing audit logs: {ex}")
-{% endif %}
+
     # Close Redis connection pools
     try:
         from {{cookiecutter.module_name}}.storage.redis import RedisPool
 
         await RedisPool.close_all()
         logger.info("Closed Redis connection pools")
-    except Exception as ex:
+    except (ImportError, RuntimeError, ConnectionError) as ex:
+        # ImportError: Module not available
+        # RuntimeError: Async context issues
+        # ConnectionError: Redis connection errors
         logger.error(f"Error closing Redis connection pools: {ex}")
 
     # Cancel background tasks
@@ -151,15 +175,55 @@ def application() -> FastAPI:
     # Collect routers
     app.include_router(collect_subrouters())
 
+    # Customize OpenAPI schema to add HTTPBearer security for Swagger UI
+    def custom_openapi() -> dict[str, Any]:
+        if app.openapi_schema:
+            return app.openapi_schema
+
+        from fastapi.openapi.utils import get_openapi
+
+        openapi_schema = get_openapi(
+            title=app.title,
+            version=app.version,
+            description=app.description,
+            routes=app.routes,
+        )
+
+        # Add HTTPBearer security scheme
+        openapi_schema.setdefault("components", {})
+        openapi_schema["components"].setdefault("securitySchemes", {})
+        openapi_schema["components"]["securitySchemes"]["HTTPBearer"] = {
+            "type": "http",
+            "scheme": "bearer",
+            "bearerFormat": "JWT",
+            "description": "Enter your JWT token from `python scripts/get_token.py <username> <password>`",
+        }
+
+        # Apply security globally to all endpoints (except excluded paths)
+        openapi_schema.setdefault("security", [])
+        openapi_schema["security"].append({"HTTPBearer": []})
+
+        app.openapi_schema = openapi_schema
+        return app.openapi_schema
+
+    app.openapi = custom_openapi
+
     # Middlewares (execute in REVERSE order of registration)
-{% if cookiecutter.enable_audit_logging == "yes" %}    # Execution flow: CorrelationIDMiddleware → AuthenticationMiddleware → RateLimitMiddleware → AuditMiddleware → PrometheusMiddleware
-{% else %}    # Execution flow: CorrelationIDMiddleware → AuthenticationMiddleware → RateLimitMiddleware → PrometheusMiddleware
-{% endif %}    # Note: RBAC is now handled via FastAPI dependencies (require_roles) instead of middleware
+    # Execution flow: TrustedHostMiddleware → CorrelationIDMiddleware → LoggingContextMiddleware →
+    # AuthenticationMiddleware → RateLimitMiddleware → RequestSizeLimitMiddleware → AuditMiddleware →
+    # SecurityHeadersMiddleware → PrometheusMiddleware
+    # Note: RBAC is now handled via FastAPI dependencies (require_roles) instead of middleware
     app.add_middleware(PrometheusMiddleware)
-{% if cookiecutter.enable_audit_logging == "yes" %}    app.add_middleware(AuditMiddleware)
-{% endif %}    app.add_middleware(RateLimitMiddleware)
+    app.add_middleware(SecurityHeadersMiddleware)
+    app.add_middleware(AuditMiddleware)
+    app.add_middleware(RequestSizeLimitMiddleware)
+    app.add_middleware(RateLimitMiddleware)
     app.add_middleware(AuthenticationMiddleware, backend=AuthBackend())
+    app.add_middleware(LoggingContextMiddleware)
     app.add_middleware(CorrelationIDMiddleware)
+    app.add_middleware(
+        TrustedHostMiddleware, allowed_hosts=app_settings.ALLOWED_HOSTS
+    )
 
     return app
 

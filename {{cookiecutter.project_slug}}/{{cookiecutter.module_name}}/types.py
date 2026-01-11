@@ -9,9 +9,11 @@ Example:
     ```python
     from {{cookiecutter.module_name}}.types import UserId, PkgId
 
+
     def get_user(user_id: UserId) -> User:
         # Type checker ensures only UserId is passed, not raw int
         ...
+
 
     def handle_package(pkg_id: PkgId) -> None:
         # Can't accidentally pass UserId here
@@ -32,7 +34,7 @@ Username = NewType("Username", str)
 RequestId = NewType("RequestId", str)
 """Type-safe request correlation ID (UUID string)."""
 
-# Note: PkgId is already defined as IntEnum in {{cookiecutter.module_name}}.api.ws.constants
+# Note: PkgId is already defined as IntEnum in app/api/ws/constants.py
 # We don't redefine it here to avoid conflicts. Use the enum directly.
 
 # Audit outcome types

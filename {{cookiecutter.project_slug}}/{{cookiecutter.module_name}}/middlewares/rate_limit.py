@@ -11,10 +11,11 @@ from starlette.types import ASGIApp
 from {{cookiecutter.module_name}}.logging import logger
 from {{cookiecutter.module_name}}.schemas.user import UserModel
 from {{cookiecutter.module_name}}.settings import app_settings
+from {{cookiecutter.module_name}}.utils.ip_utils import get_client_ip
 from {{cookiecutter.module_name}}.utils.rate_limiter import rate_limiter
 
 
-class RateLimitMiddleware(BaseHTTPMiddleware):
+class RateLimitMiddleware(BaseHTTPMiddleware):  # type: ignore[misc]
     """
     Middleware to enforce rate limits on HTTP requests.
 
@@ -34,9 +35,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         self.rate_limit = app_settings.RATE_LIMIT_PER_MINUTE
         self.burst_limit = app_settings.RATE_LIMIT_BURST
 
-    async def dispatch(
-        self, request: Request, call_next: ASGIApp
-    ) -> Response:
+    async def dispatch(self, request: Request, call_next: ASGIApp) -> Response:
         """
         Process the request and enforce rate limits.
 
@@ -96,7 +95,8 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         """
         Get the rate limit key from the request.
 
-        Prefers user ID from authentication, falls back to client IP.
+        Prefers user ID from authentication, falls back to safely extracted
+        client IP address (with protection against IP spoofing).
 
         Args:
             request: The HTTP request.
@@ -105,11 +105,11 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             Rate limit key string.
         """
         # Try to get user from request (set by authentication middleware)
-        user: UserModel = getattr(request, "user", None)
+        user: UserModel = getattr(request, "user", None)  # type: ignore[assignment]
 
         if user and user.username:
             return f"user:{user.username}"
 
-        # Fallback to client IP
-        client_host = request.client.host if request.client else "unknown"
-        return f"ip:{client_host}"
+        # Fallback to client IP (safely extracted with spoofing protection)
+        client_ip = get_client_ip(request)
+        return f"ip:{client_ip}"

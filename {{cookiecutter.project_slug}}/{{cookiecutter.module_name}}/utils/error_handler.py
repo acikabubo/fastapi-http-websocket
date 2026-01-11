@@ -13,7 +13,6 @@ import inspect
 from functools import wraps
 from typing import Any, Callable
 
-from fastapi import HTTPException
 from fastapi.responses import JSONResponse
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -31,7 +30,7 @@ from {{cookiecutter.module_name}}.utils.error_formatter import (
 )
 
 
-def handle_http_errors(func: Callable) -> Callable:
+def handle_http_errors(func: Callable[..., Any]) -> Callable[..., Any]:
     """
     Decorator for HTTP endpoints to convert AppException to unified error envelope.
 
@@ -46,10 +45,12 @@ def handle_http_errors(func: Callable) -> Callable:
 
     Example:
         ```python
-        @router.post("/items")
+        @router.post("/authors")
         @handle_http_errors
-        async def create_item(data: CreateItemInput, repo: ItemRepoDep) -> Item:
-            command = CreateItemCommand(repo)
+        async def create_author(
+            data: CreateAuthorInput, repo: AuthorRepoDep
+        ) -> Author:
+            command = CreateAuthorCommand(repo)
             return await command.execute(data)  # No try/except needed!
         ```
 
@@ -58,7 +59,7 @@ def handle_http_errors(func: Callable) -> Callable:
         {
             "error": {
                 "code": "validation_error",
-                "message": "Item name is required",
+                "message": "Author name is required",
                 "details": {"field": "name"}
             }
         }
@@ -96,7 +97,7 @@ def handle_http_errors(func: Callable) -> Callable:
     return wrapper
 
 
-def handle_ws_errors(func: Callable) -> Callable:
+def handle_ws_errors(func: Callable[..., Any]) -> Callable[..., Any]:
     """
     Decorator for WebSocket handlers to convert AppException to unified error envelope.
 
@@ -111,23 +112,31 @@ def handle_ws_errors(func: Callable) -> Callable:
 
     Example:
         ```python
-        @pkg_router.register(PkgID.TEST_HANDLER, roles=["test-role"])
+        @pkg_router.register(PkgID.CREATE_AUTHOR, roles=["create-author"])
         @handle_ws_errors
-        async def test_handler(request: RequestModel) -> ResponseModel:
+        async def create_author_handler(
+            request: RequestModel,
+        ) -> ResponseModel[Any]:
             async with async_session() as session:
-                # Handler logic here
-                return ResponseModel.success(request.pkg_id, request.req_id, data={})
+                repo = AuthorRepository(session)
+                command = CreateAuthorCommand(repo)
+                author = await command.execute(
+                    CreateAuthorInput(**request.data)
+                )
+                return ResponseModel.success(
+                    request.pkg_id, request.req_id, data=author.model_dump()
+                )
         ```
 
         Error response format:
         ```json
         {
-            "pkg_id": 1,
+            "pkg_id": 3,
             "req_id": "123e4567-e89b-12d3-a456-426614174000",
             "status_code": 2,
             "data": {
                 "code": "validation_error",
-                "message": "Invalid data provided",
+                "message": "Author name is required",
                 "details": {"field": "name"}
             }
         }
@@ -135,7 +144,9 @@ def handle_ws_errors(func: Callable) -> Callable:
     """
 
     @wraps(func)
-    async def wrapper(request: RequestModel, *args: Any, **kwargs: Any) -> ResponseModel:
+    async def wrapper(
+        request: RequestModel, *args: Any, **kwargs: Any
+    ) -> ResponseModel[Any]:
         try:
             return await func(request, *args, **kwargs)
         except AppException as ex:
@@ -181,7 +192,7 @@ def handle_ws_errors(func: Callable) -> Callable:
     return wrapper
 
 
-def handle_errors(func: Callable) -> Callable:
+def handle_errors(func: Callable[..., Any]) -> Callable[..., Any]:
     """
     Auto-detecting decorator that applies appropriate error handling.
 
@@ -201,15 +212,15 @@ def handle_errors(func: Callable) -> Callable:
     Example:
         ```python
         # HTTP Endpoint
-        @router.post("/items")
+        @router.post("/authors")
         @handle_errors
-        async def create_item(data: CreateItemInput, repo: ItemRepoDep) -> Item:
+        async def create_author(...) -> Author:
             ...
 
         # WebSocket Handler
-        @pkg_router.register(PkgID.TEST_HANDLER)
+        @pkg_router.register(PkgID.CREATE_AUTHOR)
         @handle_errors
-        async def test_handler(request: RequestModel) -> ResponseModel:
+        async def create_author_handler(request: RequestModel) -> ResponseModel[Any]:
             ...
         ```
     """

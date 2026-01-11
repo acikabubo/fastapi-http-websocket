@@ -5,6 +5,7 @@ repos:
     rev: v2.3.0
     hooks:
       - id: check-yaml
+        exclude: ^mkdocs\.yml$  # Exclude MkDocs config (uses Python tags)
       - id: end-of-file-fixer
       - id: trailing-whitespace
 
@@ -32,25 +33,26 @@ repos:
           - '--exclude=.worktree'
           - '--exclude=tests'
           - '--exclude=scripts'
-          - '--exclude=app/settings.py'
-          - '--exclude=app/logging.py'
-          - '--exclude=app/schemas'
+          - '--exclude={{cookiecutter.module_name}}/settings.py'
+          - '--exclude={{cookiecutter.module_name}}/logging.py'
+          - '--exclude={{cookiecutter.module_name}}/schemas'
         pass_filenames: false
 
   # Python linter and formatter
   - repo: 'https://github.com/astral-sh/ruff-pre-commit'
-    rev: v0.8.4
+    rev: v0.14.10
     hooks:
       - id: ruff
       - id: ruff-format
 
   # Static type checker
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: ''  # Use the sha / tag you want to point at
+    rev: 'v1.19.1'  # Use the sha / tag you want to point at
     hooks:
       - id: mypy
         name: "mypy: Static type checker"
-        args: [--strict, --ignore-missing-imports]
+        args: [--strict, --ignore-missing-imports, --config-file=pyproject.toml]
+        exclude: ^({{cookiecutter.module_name}}/schemas/proto/.*_pb2\.pyi?|get_token\.py|tests/.*|scripts/.*|examples/.*|cli\.py|test_protobuf_websocket\.py)$
 
   # Security vulnerability scanner for dependencies
   - repo: https://github.com/twu/skjold
@@ -63,22 +65,23 @@ repos:
         language_version: python3
         files: ^(uv.lock)$
 
-  # Local security vulnerability scanner using Bandit
+  # Security vulnerability scanner using Bandit
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.9.1
+    hooks:
+      - id: bandit
+        name: "bandit: Security vulnerability scanner"
+        args: [-lll]
+        files: \.py$
+        exclude: ^(tests/|scripts/|examples/|\.worktree/)
+
+  # Code coverage checker
   - repo: local
     hooks:
-      - id: bandit-vulnerability-check
-        name: "bandit: Local security vulnerability scanner"
-        entry: uvx bandit
-        # args: [-r, -x, /tests/]
-        args: [-lll, --recursive, .]
-        language: system
-        files: ''
-        exclude: ^(/tests/)$
-
-      - id: test-migrations
-        name: "Test database migrations (upgrade/downgrade)"
-        entry: python scripts/test_migrations.py
+      - id: pytest-coverage
+        name: "pytest-cov: Code coverage checker"
+        entry: uv run pytest --cov=app --cov-report=term-missing --cov-fail-under=80
         language: system
         pass_filenames: false
-        files: '^{{cookiecutter.module_name}}/storage/migrations/versions/.*\.py$'
-        stages: [commit]
+        files: ^({{cookiecutter.module_name}}/.*\.py|tests/.*\.py)$
+        stages: [pre-push]  # Only run on push, not on every commit

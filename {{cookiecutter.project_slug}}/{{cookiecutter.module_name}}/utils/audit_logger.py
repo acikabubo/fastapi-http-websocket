@@ -5,9 +5,6 @@ This module provides utilities for logging user actions to the database
 for security, compliance, debugging, and analytics purposes.
 
 Uses an async queue and background worker for non-blocking audit log writes.
-
-Note: This module expects a UserAction model to be defined in your project.
-See app/models/user_action.py for the expected schema.
 """
 
 import asyncio
@@ -19,8 +16,10 @@ from sqlalchemy.exc import SQLAlchemyError
 from starlette.requests import Request
 
 from {{cookiecutter.module_name}}.logging import logger
+from {{cookiecutter.module_name}}.models.user_action import UserAction
 from {{cookiecutter.module_name}}.settings import app_settings
 from {{cookiecutter.module_name}}.storage.db import async_session
+from {{cookiecutter.module_name}}.types import ActionType, AuditOutcome, RequestId, UserId, Username
 from {{cookiecutter.module_name}}.utils.metrics import (
     audit_batch_size,
     audit_log_creation_duration_seconds,
@@ -51,10 +50,10 @@ SENSITIVE_FIELDS = {
 }
 
 # Global queue for audit logs (initialized lazily)
-_audit_queue: Any = None
+_audit_queue: asyncio.Queue[UserAction] | None = None
 
 
-def get_audit_queue() -> Any:
+def get_audit_queue() -> asyncio.Queue[UserAction]:
     """
     Get or create the global audit log queue.
 
@@ -74,20 +73,13 @@ async def audit_log_worker() -> None:
     Collects audit log entries from the queue and writes them to the database
     in batches to improve performance. Runs continuously until application
     shutdown.
-
-    Note: Requires UserAction model to be defined in your project.
-    Import it in this function before using.
     """
     queue = get_audit_queue()
     logger.info("Audit log background worker started")
 
-    # Import UserAction model here to avoid circular imports
-    # You must create this model in your project
-    # from {{cookiecutter.module_name}}.models.user_action import UserAction
-
     while True:
         try:
-            batch: list[Any] = []
+            batch: list[UserAction] = []
 
             # Collect batch of logs (up to AUDIT_BATCH_SIZE or timeout)
             try:
@@ -158,11 +150,9 @@ async def flush_audit_queue() -> int:
 
     Returns:
         Number of logs flushed.
-
-    Note: Requires UserAction model to be defined in your project.
     """
     queue = get_audit_queue()
-    remaining_logs: list[Any] = []
+    remaining_logs: list[UserAction] = []
 
     logger.info(f"Flushing {queue.qsize()} remaining audit logs")
 
@@ -250,40 +240,36 @@ def extract_ip_address(request: Request) -> str | None:
 
 
 async def log_user_action(
-    user_id: str,
-    username: str,
+    user_id: UserId,
+    username: Username,
     user_roles: list[str],
-    action_type: str,
+    action_type: ActionType | str,
     resource: str,
-    outcome: str,
+    outcome: AuditOutcome,
     ip_address: str | None = None,
     user_agent: str | None = None,
-    request_id: str | None = None,
+    request_id: RequestId | None = None,
     request_data: dict[str, Any] | None = None,
     response_status: int | None = None,
     error_message: str | None = None,
     duration_ms: int | None = None,
-) -> Any:
+) -> UserAction | None:
     """
     Queue a user action for asynchronous logging to the database.
 
     This function is non-blocking - it adds the log entry to a queue for
     background processing, allowing the request to complete immediately.
 
-    Note: This function requires UserAction model to be defined in your project.
-    Create the model in {{cookiecutter.module_name}}/models/user_action.py with
-    the fields used below.
-
     Args:
-        user_id: Keycloak user ID (sub claim).
-        username: Username (preferred_username claim).
+        user_id: Keycloak user ID (sub claim) - type-safe UserId.
+        username: Username (preferred_username claim) - type-safe Username.
         user_roles: List of user roles at time of action.
-        action_type: Type of action (HTTP method or WebSocket PkgID).
+        action_type: Type of action (HTTP method, WS, or WebSocket PkgID string).
         resource: Resource accessed (URL path or entity identifier).
-        outcome: Result of the action (success, error, permission_denied).
+        outcome: Result of the action - type-safe AuditOutcome literal.
         ip_address: Client IP address.
         user_agent: Browser/client user agent string.
-        request_id: Request UUID for correlation.
+        request_id: Request UUID for correlation - type-safe RequestId.
         request_data: Request payload (will be sanitized).
         response_status: HTTP status code or WebSocket response code.
         error_message: Error details if action failed.
@@ -293,10 +279,6 @@ async def log_user_action(
         The created UserAction instance (not yet persisted), or None if queueing failed.
     """
     try:
-        # Import UserAction model here to avoid circular imports
-        # You must create this model in your project
-        from {{cookiecutter.module_name}}.models.user_action import UserAction
-
         # Sanitize request data to remove sensitive information
         sanitized_data = sanitize_data(request_data)
 
@@ -335,11 +317,10 @@ async def log_user_action(
             )
             return None
 
-    except (ValueError, TypeError, AttributeError, ImportError) as e:
+    except (ValueError, TypeError, AttributeError) as e:
         # ValueError: Invalid data format
         # TypeError: Wrong data type
         # AttributeError: Missing expected attributes
-        # ImportError: UserAction model not found
         # Record audit log error
         audit_log_errors_total.labels(error_type=type(e).__name__).inc()
 

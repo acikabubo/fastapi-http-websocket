@@ -9,7 +9,8 @@ Example:
     ```python
     from {{cookiecutter.module_name}}.schemas.types import FilterDict, PaginationParams
 
-    def search_items(params: PaginationParams) -> list[Item]:
+
+    def search_authors(params: PaginationParams) -> list[Author]:
         # Type checker ensures params has correct structure
         page = params["page"]
         filters = params.get("filters", {})

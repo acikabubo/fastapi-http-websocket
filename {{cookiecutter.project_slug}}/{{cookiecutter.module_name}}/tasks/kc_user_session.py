@@ -1,30 +1,38 @@
 from asyncio import CancelledError, TimeoutError, sleep
 
-from {{cookiecutter.module_name}}.connection_registry import ws_clients
-from {{cookiecutter.module_name}}.constants import REDIS_MESSAGE_TIMEOUT_SECONDS, TASK_SLEEP_INTERVAL_SECONDS
+from redis.exceptions import RedisError
+
+from {{cookiecutter.module_name}}.constants import (
+    REDIS_MESSAGE_TIMEOUT_SECONDS,
+    TASK_SLEEP_INTERVAL_SECONDS,
+)
 from {{cookiecutter.module_name}}.logging import logger
+from {{cookiecutter.module_name}}.managers.websocket_connection_manager import connection_manager
 from {{cookiecutter.module_name}}.settings import app_settings
 from {{cookiecutter.module_name}}.storage.redis import get_auth_redis_connection
 
 
-async def kc_user_session_task():
+async def kc_user_session_task() -> None:
     """
     Runs a task that monitors the expiration of user sessions stored in Redis.
 
     This task subscribes to the Redis `__keyevent@*__:expired` channel to listen for expired keys.
     When an expired key is detected that matches the `app_settings.USER_SESSION_REDIS_KEY_PREFIX`,
-    the task closes the associated WebSocket connection (if it exists) and removes the user from the `ws_clients` dictionary.
+    the task closes the associated WebSocket connection (if it exists) and removes the user from
+    the connection manager.
 
-    This ensures that when a user's session expires, their WebSocket connection is properly closed and cleaned up.
+    This ensures that when a user's session expires, their WebSocket connection is properly closed
+    and cleaned up.
     """
     # Get auth redis instance
     r = await get_auth_redis_connection()
+
     rch = None
 
     while True:
         try:
             if not rch:
-                rch = r.pubsub()
+                rch = r.pubsub()  # type: ignore[union-attr]
                 await rch.psubscribe("__keyevent@*__:expired")
 
             event = await rch.get_message(
@@ -44,11 +52,10 @@ async def kc_user_session_task():
                 await sleep(TASK_SLEEP_INTERVAL_SECONDS)
                 continue
 
-            # Close websocket connection and delete user
-            # relation with websocket connection
-            if ws_conn := ws_clients.get(evt_key):
+            # Close websocket connection and remove from connection manager
+            if ws_conn := connection_manager.get_connection(evt_key):
                 await ws_conn.close()
-                del ws_clients[evt_key]
+                connection_manager.disconnect(evt_key)
 
             logger.info(f'Session for user "{evt_key}" has been expired')
 
@@ -61,7 +68,9 @@ async def kc_user_session_task():
         except TimeoutError:
             await sleep(TASK_SLEEP_INTERVAL_SECONDS)
 
-        except Exception as ex:
+        except (RedisError, ConnectionError) as ex:
+            # RedisError: Redis operation errors
+            # ConnectionError: Network connection issues
             logger.error(
                 f"Keycloak user session task error occurred with: {ex}"
             )

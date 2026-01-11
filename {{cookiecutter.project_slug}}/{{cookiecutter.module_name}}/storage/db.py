@@ -3,7 +3,7 @@ import math
 from typing import Any, Callable, Type
 
 from sqlalchemy import Select
-from sqlalchemy.exc import OperationalError
+from sqlalchemy.exc import IntegrityError, OperationalError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     create_async_engine,
@@ -17,6 +17,11 @@ from {{cookiecutter.module_name}}.logging import logger
 from {{cookiecutter.module_name}}.schemas.generic_typing import GenericSQLModelType
 from {{cookiecutter.module_name}}.schemas.response import MetadataModel
 from {{cookiecutter.module_name}}.settings import app_settings
+from {{cookiecutter.module_name}}.utils.pagination_cache import get_cached_count, set_cached_count
+from {{cookiecutter.module_name}}.utils.query_monitor import enable_query_monitoring
+
+# Enable database query performance monitoring
+enable_query_monitoring()
 
 engine: AsyncEngine = create_async_engine(
     app_settings.DATABASE_URL,
@@ -32,8 +37,8 @@ async_session = sessionmaker(
 
 
 async def wait_and_init_db(
-    retry_interval: int = None,
-    max_retries: int = None,
+    retry_interval: int | None = None,
+    max_retries: int | None = None,
 ) -> None:
     """
     Wait until the database is available.
@@ -77,7 +82,17 @@ async def get_session() -> AsyncSession:
         AsyncSession: An asynchronous SQLAlchemy session.
     """
     async with async_session() as session:
-        yield session
+        try:
+            yield session
+            await session.commit()
+        except IntegrityError as ex:
+            await session.rollback()
+            logger.error(f"Database integrity error: {ex}")
+            raise
+        except SQLAlchemyError as ex:
+            await session.rollback()
+            logger.error(f"Database error: {ex}")
+            raise
 
 
 async def get_paginated_results(
@@ -113,28 +128,42 @@ async def get_paginated_results(
         per_page = app_settings.DEFAULT_PAGE_SIZE
     per_page = min(per_page, MAX_PAGE_SIZE)
 
-    query = select(model)
+    query: Select = select(model)
 
     if filters:
         if apply_filters:
-            query: Select = apply_filters(query, model, filters)
+            query = apply_filters(query, model, filters)
         else:
-            query: Select = default_apply_filters(query, model, filters)
+            query = default_apply_filters(query, model, filters)
 
     async with async_session() as s:
         # Calculate total
         if skip_count:
             total = 0  # Skip count query for performance
         else:
-            # More efficient count on primary key instead of subquery
-            count_query = select(func.count(model.id))
-            if filters:
-                if apply_filters:
-                    count_query = apply_filters(count_query, model, filters)
-                else:
-                    count_query = default_apply_filters(count_query, model, filters)
-            total_result = await s.exec(count_query)
-            total = total_result.one()
+            # Try to get count from cache first
+            model_name = model.__name__
+            cached_total = await get_cached_count(model_name, filters)
+
+            if cached_total is not None:
+                total = cached_total
+            else:
+                # More efficient count on primary key instead of subquery
+                count_query = select(func.count(model.id))
+                if filters:
+                    if apply_filters:
+                        count_query = apply_filters(
+                            count_query, model, filters
+                        )
+                    else:
+                        count_query = default_apply_filters(
+                            count_query, model, filters
+                        )
+                total_result = await s.exec(count_query)
+                total = total_result.one()
+
+                # Cache the count result for future requests
+                await set_cached_count(model_name, total, filters)
 
         # Collect/format meta data
         meta_data = MetadataModel(

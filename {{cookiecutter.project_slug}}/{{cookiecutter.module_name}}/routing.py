@@ -1,5 +1,6 @@
 import os
 import pkgutil
+from collections.abc import Callable
 from importlib import import_module
 from typing import Any
 
@@ -7,7 +8,7 @@ from fastapi import APIRouter
 
 from {{cookiecutter.module_name}}.api.ws.constants import PkgID, RSPCode
 from {{cookiecutter.module_name}}.logging import logger
-from {{cookiecutter.module_name}}.managers.rbac_manager import RBACManager
+from {{cookiecutter.module_name}}.managers.rbac_manager import rbac_manager
 from {{cookiecutter.module_name}}.schemas.generic_typing import (
     HandlerCallableType,
     JsonSchemaType,
@@ -26,7 +27,7 @@ class PackageRouter:
     including validation and permission checking for each request.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """
         Initializes the `PackageRouter` class with empty dictionaries to store registered handlers and validators for different package IDs (PkgID).
 
@@ -39,7 +40,7 @@ class PackageRouter:
             PkgID, tuple[JsonSchemaType, ValidatorType]
         ] = {}
         self.permissions_registry: dict[PkgID, list[str]] = {}
-        self.rbac: RBACManager = RBACManager()
+        self.rbac = rbac_manager
 
     def register(
         self,
@@ -47,7 +48,7 @@ class PackageRouter:
         json_schema: JsonSchemaType | None = None,
         validator_callback: ValidatorType | None = None,
         roles: list[str] | None = None,
-    ):
+    ) -> Callable[[HandlerCallableType], HandlerCallableType]:
         """
         Decorator function to register a handler and validator for a specific package ID (PkgID).
 
@@ -63,18 +64,25 @@ class PackageRouter:
             A decorator function that can be used to register a handler function.
         """
 
-        def decorator(func: HandlerCallableType):
+        def decorator(func: HandlerCallableType) -> HandlerCallableType:
             for pkg_id in pkg_ids:
+                # Check if handler is already registered (idempotent for reload)
                 if pkg_id in self.handlers_registry:
-                    raise ValueError(
-                        f"Handler already registered for pkg_id {pkg_id}"
-                    )
+                    # Skip if same handler, raise if different
+                    if self.handlers_registry[pkg_id] != func:
+                        raise ValueError(
+                            f"Different handler already registered for pkg_id {pkg_id}"
+                        )
+                    continue
 
                 self.handlers_registry[pkg_id] = func
-                self.validators_registry[pkg_id] = (
-                    json_schema,
-                    validator_callback,
-                )
+
+                # Only store validators if both schema and callback are provided
+                if json_schema is not None and validator_callback is not None:
+                    self.validators_registry[pkg_id] = (
+                        json_schema,
+                        validator_callback,
+                    )
 
                 # Store permissions if roles are specified
                 if roles:
@@ -105,7 +113,7 @@ class PackageRouter:
         """Check if a handler is registered for the given package ID."""
         return pkg_id in self.handlers_registry
 
-    def get_permissions(self, pkg_id: int) -> list[str]:
+    def get_permissions(self, pkg_id: PkgID | int) -> list[str]:
         """
         Get required roles for a package ID.
 
@@ -115,11 +123,13 @@ class PackageRouter:
         Returns:
             List of role names required for access. Empty list means public access.
         """
-        return self.permissions_registry.get(pkg_id, [])
+        return self.permissions_registry.get(PkgID(pkg_id), [])
 
     def _check_permission(self, pkg_id: int, user: UserModel) -> bool:
         """Check if user has permission for the package ID."""
-        return self.rbac.check_ws_permission(pkg_id, user)
+        return self.rbac.check_ws_permission(
+            pkg_id, user, self.permissions_registry
+        )
 
     def _validate_request(
         self, request: RequestModel
@@ -130,16 +140,25 @@ class PackageRouter:
         Returns:
             ResponseModel with error if validation fails, None if valid.
         """
+        # Skip validation if no validator is registered for this pkg_id
+        if request.pkg_id not in self.validators_registry:
+            return None
+
         json_schema, validator_func = self.validators_registry[request.pkg_id]
 
         if validator_func is None or json_schema is None:
             return None
 
-        # Convert Pydantic model to JSON schema if needed
+        # Convert Pydantic model class to JSON schema if needed
+        schema_dict: dict[str, Any]
         if hasattr(json_schema, "model_json_schema"):
-            json_schema = json_schema.model_json_schema()
+            # It's a Pydantic model class (classmethod call)
+            schema_dict = json_schema.model_json_schema()  # type: ignore[call-arg]
+        else:
+            # It's already a dict
+            schema_dict = json_schema
 
-        return validator_func(request, json_schema)
+        return validator_func(request, schema_dict)
 
     async def handle_request(
         self, user: UserModel, request: RequestModel
@@ -183,6 +202,11 @@ class PackageRouter:
 pkg_router = PackageRouter()
 
 
+# Track registered modules to prevent duplicate logging
+_registered_http_modules: set[str] = set()
+_registered_ws_modules: set[str] = set()
+
+
 def collect_subrouters() -> APIRouter:
     """
     Collects and registers all API and WebSocket routers for the application.
@@ -208,7 +232,10 @@ def collect_subrouters() -> APIRouter:
         # Add api router to main router
         main_router.include_router(api.router)
 
-        logger.info(f'Register "{module}" api')
+        # Only log on first registration
+        if module not in _registered_http_modules:
+            logger.info(f'Register "{module}" api')
+            _registered_http_modules.add(module)
 
     # Get WS routers
     for _, module, _ in pkgutil.iter_modules([f"{app_dir}/api/ws/consumers"]):
@@ -220,6 +247,9 @@ def collect_subrouters() -> APIRouter:
         # Add ws router to main router
         main_router.include_router(ws_consumer.router)
 
-        logger.info(f'Register "{module}" websocket consumer')
+        # Only log on first registration
+        if module not in _registered_ws_modules:
+            logger.info(f'Register "{module}" websocket consumer')
+            _registered_ws_modules.add(module)
 
     return main_router

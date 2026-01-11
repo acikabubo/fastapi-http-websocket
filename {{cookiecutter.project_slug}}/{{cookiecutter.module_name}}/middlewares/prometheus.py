@@ -18,7 +18,7 @@ from {{cookiecutter.module_name}}.utils.metrics import (
 )
 
 
-class PrometheusMiddleware(BaseHTTPMiddleware):
+class PrometheusMiddleware(BaseHTTPMiddleware):  # type: ignore[misc]
     """
     Middleware to track Prometheus metrics for HTTP requests.
 
@@ -37,9 +37,7 @@ class PrometheusMiddleware(BaseHTTPMiddleware):
         """
         super().__init__(app)
 
-    async def dispatch(
-        self, request: Request, call_next: ASGIApp
-    ) -> Response:
+    async def dispatch(self, request: Request, call_next: ASGIApp) -> Response:
         """
         Process the request and track metrics.
 
