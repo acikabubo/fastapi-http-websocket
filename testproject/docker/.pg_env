@@ -1,3 +1,0 @@
-POSTGRES_USER=testproject-user
-POSTGRES_PASSWORD=testproject-pass
-POSTGRES_DB=testproject-db

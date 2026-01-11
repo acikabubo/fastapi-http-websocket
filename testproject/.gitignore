@@ -1,5 +1,0 @@
-*.pyc
-logs/*
-!logs/.gitkeep
-.worktree
-.security_reports/*

@@ -1,3 +1,0 @@
-Generic single-database configuration with async support for SQLModel.
-
-See docs/DATABASE_MIGRATIONS.md for complete usage guide.
