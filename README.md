@@ -43,10 +43,11 @@ A production-ready FastAPI template implementing both HTTP REST API and WebSocke
 - **Code Generation**: Template-based WebSocket handler generator with AST validation
 
 ### Production Features
-- **Monitoring**: Prometheus metrics with Grafana dashboards (HTTP, WebSocket, DB, Redis, Keycloak)
+- **Monitoring**: Prometheus metrics with Grafana dashboards (HTTP, WebSocket, DB, Redis, Keycloak, Circuit Breakers)
 - **Logging**: Structured JSON logging with Grafana Loki integration via Alloy
-- **Alerting**: Prometheus alerting rules for critical system events
+- **Alerting**: Prometheus alerting rules for critical system events (errors, downtime, circuit breakers)
 - **Security**: Security headers middleware, request size limits, IP spoofing protection
+- **Resilience**: Circuit breaker pattern for Keycloak and Redis with fail-fast protection
 - **Containerization**: Docker Compose with health checks, Traefik reverse proxy, and BasicAuth
 - **Performance**: Connection pooling, pagination caching, slow query detection
 - **Protocol Buffers**: Optional protobuf support for WebSocket (30-50% smaller messages)

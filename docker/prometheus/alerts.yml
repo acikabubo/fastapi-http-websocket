@@ -385,3 +385,40 @@ groups:
         annotations:
           summary: "High Keycloak JVM heap memory usage"
           description: "Heap usage: {{ $value | humanizePercentage }} (threshold: 85%)"
+
+  # Circuit Breaker alerts
+  - name: circuit_breaker_alerts
+    interval: 30s
+    rules:
+      # Circuit breaker open for extended period
+      - alert: CircuitBreakerOpen
+        expr: circuit_breaker_state > 0
+        for: 2m
+        labels:
+          severity: critical
+          component: resilience
+        annotations:
+          summary: "Circuit breaker is open for {{ $labels.service }}"
+          description: "{{ $labels.service }} circuit breaker has been open for more than 2 minutes. Service may be unavailable."
+
+      # Circuit breaker flapping
+      - alert: CircuitBreakerFlapping
+        expr: increase(circuit_breaker_state_changes_total[5m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+          component: resilience
+        annotations:
+          summary: "Circuit breaker flapping for {{ $labels.service }}"
+          description: "{{ $labels.service }} circuit breaker has changed state {{ $value }} times in 5 minutes. Service may be unstable or circuit breaker misconfigured."
+
+      # High circuit breaker failure rate
+      - alert: HighCircuitBreakerFailureRate
+        expr: rate(circuit_breaker_failures_total[5m]) > 5
+        for: 3m
+        labels:
+          severity: warning
+          component: resilience
+        annotations:
+          summary: "High failure rate for {{ $labels.service }}"
+          description: "{{ $labels.service }} circuit breaker detecting {{ $value }} failures/sec. Service degradation likely."
