@@ -85,6 +85,31 @@ Access the monitoring and logging tools:
 - `app_info` - Application info (gauge)
   - Labels: version, python_version, environment
 
+### Circuit Breaker Metrics
+
+The application includes circuit breaker pattern for external service resilience (Keycloak and Redis). These metrics are critical for monitoring service health and detecting failures.
+
+- `circuit_breaker_state` - Current circuit breaker state (gauge)
+  - Labels: service (keycloak, redis)
+  - Values: 0 = closed (healthy), 1 = open (failing), 2 = half_open (testing recovery)
+- `circuit_breaker_state_changes_total` - Circuit breaker state transitions (counter)
+  - Labels: service, from_state, to_state
+  - Tracks: closed→open, open→half_open, half_open→closed, half_open→open
+- `circuit_breaker_failures_total` - Failed external service calls (counter)
+  - Labels: service, error_type
+
+**Key Insights:**
+- Circuit breaker state = 1 (open) means service is down → immediate alert required
+- Frequent state changes indicate unstable service (flapping)
+- High failure count even when closed suggests approaching threshold
+
+**Grafana Panels:**
+- Panel 28: Circuit breaker state timeseries (visualizes 0/1/2 states)
+- Panel 29: Circuit breaker failure rate (failures/second per service)
+- Panel 30: Circuit breaker state changes (bar chart of transitions)
+
+**See**: [Circuit Breaker Guide](circuit-breaker.md) for comprehensive documentation on configuration, tuning, and troubleshooting.
+
 ## Prometheus Queries
 
 ### Useful PromQL Queries
@@ -117,6 +142,31 @@ rate(rate_limit_hits_total[5m])
 **Average message processing time:**
 ```promql
 rate(ws_message_processing_duration_seconds_sum[5m]) / rate(ws_message_processing_duration_seconds_count[5m])
+```
+
+**Circuit breaker state (0=closed, 1=open, 2=half_open):**
+```promql
+circuit_breaker_state
+```
+
+**Circuit breaker failure rate:**
+```promql
+rate(circuit_breaker_failures_total[5m])
+```
+
+**Circuit breaker state changes (flapping detection):**
+```promql
+increase(circuit_breaker_state_changes_total[5m])
+```
+
+**Detect open circuit breakers (alert condition):**
+```promql
+circuit_breaker_state > 0
+```
+
+**Time since last circuit breaker state change:**
+```promql
+time() - circuit_breaker_state_changes_total
 ```
 
 ## Grafana Setup

@@ -85,6 +85,11 @@ Status Code: `429 Too Many Requests`
 
 Check the health status of the application and its dependencies.
 
+This endpoint verifies:
+- Database connectivity (PostgreSQL)
+- Redis connectivity
+- WebSocket system health (active connections, metrics)
+
 **Authentication:** Not required
 
 **Response:** `200 OK`
@@ -93,7 +98,11 @@ Check the health status of the application and its dependencies.
 {
   "status": "healthy",
   "database": "healthy",
-  "redis": "healthy"
+  "redis": "healthy",
+  "websocket": {
+    "status": "healthy",
+    "active_connections": 5
+  }
 }
 ```
 
@@ -103,9 +112,23 @@ Check the health status of the application and its dependencies.
 {
   "status": "unhealthy",
   "database": "unhealthy",
-  "redis": "healthy"
+  "redis": "healthy",
+  "websocket": {
+    "status": "healthy",
+    "active_connections": 3
+  }
 }
 ```
+
+**Health Status Fields:**
+
+| Field | Description |
+|-------|-------------|
+| `status` | Overall health status (healthy/unhealthy) |
+| `database` | PostgreSQL database status |
+| `redis` | Redis cache status |
+| `websocket.status` | WebSocket system status |
+| `websocket.active_connections` | Number of active WebSocket connections |
 
 **Example:**
 
@@ -113,81 +136,44 @@ Check the health status of the application and its dependencies.
 curl http://localhost:8000/health
 ```
 
----
-
-### Authors Endpoints
-
-#### POST /authors
-
-Create a new author.
-
-**Authentication:** Required (Role: `user`)
-
-**Request Body:**
-
-```json
-{
-  "name": "John Doe"
-}
-```
-
-**Response:** `200 OK`
-
-```json
-{
-  "id": 1,
-  "name": "John Doe"
-}
-```
-
-**Error Responses:**
-
-| Status Code | Reason | Response |
-|-------------|--------|----------|
-| 401 | Unauthorized | `{"detail": "Not authenticated"}` |
-| 403 | Permission denied | `{"detail": "Forbidden"}` |
-| 422 | Validation error | `{"detail": [...validation errors...]}` |
-| 500 | Database error | `{"detail": "Internal server error"}` |
-
-**Example:**
-
-```bash
-curl -X POST http://localhost:8000/authors \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"name": "John Doe"}'
-```
-
 **Python Example:**
 
 ```python
 import requests
 
-response = requests.post(
-    'http://localhost:8000/authors',
-    headers={'Authorization': f'Bearer {token}'},
-    json={'name': 'John Doe'}
-)
+response = requests.get('http://localhost:8000/health')
+health = response.json()
 
-if response.status_code == 200:
-    author = response.json()
-    print(f"Created author with ID: {author['id']}")
+if health['status'] == 'healthy':
+    print("✓ All systems operational")
+    print(f"  Active WebSocket connections: {health['websocket']['active_connections']}")
+else:
+    print("✗ System unhealthy")
+    if health['database'] == 'unhealthy':
+        print("  - Database is down")
+    if health['redis'] == 'unhealthy':
+        print("  - Redis is down")
 ```
 
 ---
+
+### Authors Endpoints
+
+These endpoints demonstrate the Repository + Command + Dependency Injection pattern. Business logic is encapsulated in commands, making it reusable across HTTP and WebSocket handlers.
 
 #### GET /authors
 
 Retrieve a list of authors with optional filtering.
 
-**Authentication:** Required (Role: `user`)
+**Authentication:** Required (Role: `get-authors`)
 
 **Query Parameters:**
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `id` | integer | No | Filter by author ID |
-| `name` | string | No | Filter by author name (case-insensitive, partial match) |
+| `name` | string | No | Filter by exact author name |
+| `search` | string | No | Search by name (case-insensitive, partial match) |
 
 **Response:** `200 OK`
 
@@ -217,9 +203,13 @@ Retrieve a list of authors with optional filtering.
 curl -H "Authorization: Bearer $TOKEN" \
   http://localhost:8000/authors
 
-# Filter by name
+# Filter by exact name
 curl -H "Authorization: Bearer $TOKEN" \
-  "http://localhost:8000/authors?name=John"
+  "http://localhost:8000/authors?name=John%20Doe"
+
+# Search by partial name
+curl -H "Authorization: Bearer $TOKEN" \
+  "http://localhost:8000/authors?search=John"
 
 # Filter by ID
 curl -H "Authorization: Bearer $TOKEN" \
@@ -234,7 +224,7 @@ import requests
 response = requests.get(
     'http://localhost:8000/authors',
     headers={'Authorization': f'Bearer {token}'},
-    params={'name': 'John'}
+    params={'search': 'John'}
 )
 
 authors = response.json()
@@ -244,11 +234,184 @@ for author in authors:
 
 ---
 
-#### GET /authors_paginated
+#### POST /authors
+
+Create a new author.
+
+**Authentication:** Required (Role: `create-author`)
+
+**Request Body:**
+
+```json
+{
+  "name": "John Doe"
+}
+```
+
+**Response:** `201 Created`
+
+```json
+{
+  "id": 1,
+  "name": "John Doe"
+}
+```
+
+**Error Responses:**
+
+| Status Code | Reason | Response |
+|-------------|--------|----------|
+| 401 | Unauthorized | `{"detail": "Not authenticated"}` |
+| 403 | Permission denied | `{"detail": "Forbidden"}` |
+| 409 | Duplicate author name | `{"detail": "Author with name 'John Doe' already exists"}` |
+| 422 | Validation error | `{"detail": [...validation errors...]}` |
+| 500 | Database error | `{"detail": "Internal server error"}` |
+
+**Example:**
+
+```bash
+curl -X POST http://localhost:8000/authors \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "John Doe"}'
+```
+
+**Python Example:**
+
+```python
+import requests
+
+response = requests.post(
+    'http://localhost:8000/authors',
+    headers={'Authorization': f'Bearer {token}'},
+    json={'name': 'John Doe'}
+)
+
+if response.status_code == 201:
+    author = response.json()
+    print(f"Created author with ID: {author['id']}")
+```
+
+---
+
+#### PUT /authors/{author_id}
+
+Update an existing author.
+
+**Authentication:** Required (Role: `update-author`)
+
+**Path Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `author_id` | integer | Yes | ID of author to update |
+
+**Request Body:**
+
+```json
+{
+  "name": "Jane Doe"
+}
+```
+
+**Response:** `200 OK`
+
+```json
+{
+  "id": 1,
+  "name": "Jane Doe"
+}
+```
+
+**Error Responses:**
+
+| Status Code | Reason | Response |
+|-------------|--------|----------|
+| 401 | Unauthorized | `{"detail": "Not authenticated"}` |
+| 403 | Permission denied | `{"detail": "Forbidden"}` |
+| 404 | Author not found | `{"detail": "Author with ID 1 not found"}` |
+| 409 | Name conflict | `{"detail": "Author with name 'Jane Doe' already exists"}` |
+| 422 | Validation error | `{"detail": [...validation errors...]}` |
+
+**Example:**
+
+```bash
+curl -X PUT http://localhost:8000/authors/1 \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Jane Doe"}'
+```
+
+**Python Example:**
+
+```python
+import requests
+
+response = requests.put(
+    'http://localhost:8000/authors/1',
+    headers={'Authorization': f'Bearer {token}'},
+    json={'name': 'Jane Doe'}
+)
+
+if response.status_code == 200:
+    author = response.json()
+    print(f"Updated author: {author['name']}")
+```
+
+---
+
+#### DELETE /authors/{author_id}
+
+Delete an author.
+
+**Authentication:** Required (Role: `delete-author`)
+
+**Path Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `author_id` | integer | Yes | ID of author to delete |
+
+**Response:** `204 No Content`
+
+(Empty response body)
+
+**Error Responses:**
+
+| Status Code | Reason | Response |
+|-------------|--------|----------|
+| 401 | Unauthorized | `{"detail": "Not authenticated"}` |
+| 403 | Permission denied | `{"detail": "Forbidden"}` |
+| 404 | Author not found | `{"detail": "Author with ID 1 not found"}` |
+
+**Example:**
+
+```bash
+curl -X DELETE http://localhost:8000/authors/1 \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+**Python Example:**
+
+```python
+import requests
+
+response = requests.delete(
+    'http://localhost:8000/authors/1',
+    headers={'Authorization': f'Bearer {token}'}
+)
+
+if response.status_code == 204:
+    print("Author deleted successfully")
+```
+
+---
+
+#### GET /authors/paginated
 
 Retrieve a paginated list of authors with optional filtering.
 
-**Authentication:** Required (Role: `user`)
+**Authentication:** Required (Role: `get-authors`)
 
 **Query Parameters:**
 
@@ -296,15 +459,15 @@ Retrieve a paginated list of authors with optional filtering.
 ```bash
 # Get first page (default 20 items)
 curl -H "Authorization: Bearer $TOKEN" \
-  http://localhost:8000/authors_paginated
+  http://localhost:8000/authors/paginated
 
 # Get specific page with custom page size
 curl -H "Authorization: Bearer $TOKEN" \
-  "http://localhost:8000/authors_paginated?page=2&per_page=10"
+  "http://localhost:8000/authors/paginated?page=2&per_page=10"
 
 # Paginate with filters
 curl -H "Authorization: Bearer $TOKEN" \
-  "http://localhost:8000/authors_paginated?page=1&per_page=10&name=Smith"
+  "http://localhost:8000/authors/paginated?page=1&per_page=10&name=Smith"
 ```
 
 **Python Example:**
@@ -319,7 +482,7 @@ def get_all_authors(token):
 
     while True:
         response = requests.get(
-            'http://localhost:8000/authors_paginated',
+            'http://localhost:8000/authors/paginated',
             headers={'Authorization': f'Bearer {token}'},
             params={'page': page, 'per_page': 100}
         )
@@ -333,6 +496,434 @@ def get_all_authors(token):
         page += 1
 
     return all_authors
+```
+
+---
+
+### Audit Logs Endpoints
+
+These endpoints provide access to the audit trail of user actions. All endpoints are restricted to administrators only.
+
+#### GET /audit-logs
+
+Retrieve paginated audit logs with optional filters.
+
+**Authentication:** Required (Role: `admin`)
+
+**Query Parameters:**
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `page` | integer | No | 1 | Page number (>=1) |
+| `per_page` | integer | No | 20 | Items per page (1-100) |
+| `user_id` | string | No | - | Filter by Keycloak user ID |
+| `username` | string | No | - | Filter by username |
+| `action_type` | string | No | - | Filter by action type (GET, POST, WS:*, etc.) |
+| `resource` | string | No | - | Filter by resource |
+| `outcome` | string | No | - | Filter by outcome (success, error, permission_denied) |
+| `start_date` | datetime | No | - | Filter by start date (ISO 8601) |
+| `end_date` | datetime | No | - | Filter by end date (ISO 8601) |
+
+**Response:** `200 OK`
+
+```json
+{
+  "items": [
+    {
+      "id": 1,
+      "timestamp": "2025-01-12T14:30:00Z",
+      "user_id": "abc-123-def",
+      "username": "john.doe",
+      "action_type": "POST",
+      "resource": "/api/authors",
+      "outcome": "success",
+      "ip_address": "192.168.1.100",
+      "request_id": "550e8400-e29b-41d4-a716-446655440000",
+      "response_status": 201,
+      "duration_ms": 45
+    }
+  ],
+  "meta": {
+    "page": 1,
+    "per_page": 20,
+    "total": 150,
+    "pages": 8
+  }
+}
+```
+
+**Example:**
+
+```bash
+# Get all audit logs (first page)
+curl -H "Authorization: Bearer $TOKEN" \
+  http://localhost:8000/audit-logs
+
+# Filter by user
+curl -H "Authorization: Bearer $TOKEN" \
+  "http://localhost:8000/audit-logs?username=john.doe"
+
+# Filter by outcome
+curl -H "Authorization: Bearer $TOKEN" \
+  "http://localhost:8000/audit-logs?outcome=error"
+
+# Filter by date range
+curl -H "Authorization: Bearer $TOKEN" \
+  "http://localhost:8000/audit-logs?start_date=2025-01-01T00:00:00Z&end_date=2025-01-12T23:59:59Z"
+
+# Combine filters
+curl -H "Authorization: Bearer $TOKEN" \
+  "http://localhost:8000/audit-logs?username=john.doe&action_type=POST&page=2"
+```
+
+**Python Example:**
+
+```python
+import requests
+from datetime import datetime, timedelta
+
+# Get failed actions for specific user in last 24 hours
+start_date = (datetime.now() - timedelta(days=1)).isoformat()
+
+response = requests.get(
+    'http://localhost:8000/audit-logs',
+    headers={'Authorization': f'Bearer {admin_token}'},
+    params={
+        'username': 'john.doe',
+        'outcome': 'error',
+        'start_date': start_date
+    }
+)
+
+logs = response.json()
+for log in logs['items']:
+    print(f"{log['timestamp']}: {log['action_type']} {log['resource']} - {log['outcome']}")
+```
+
+---
+
+#### GET /audit-logs/{log_id}
+
+Retrieve a specific audit log entry by ID.
+
+**Authentication:** Required (Role: `admin`)
+
+**Path Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `log_id` | integer | Yes | ID of the audit log entry |
+
+**Response:** `200 OK`
+
+```json
+{
+  "id": 1,
+  "timestamp": "2025-01-12T14:30:00Z",
+  "user_id": "abc-123-def",
+  "username": "john.doe",
+  "user_roles": ["user", "create-author"],
+  "action_type": "POST",
+  "resource": "/api/authors",
+  "outcome": "success",
+  "ip_address": "192.168.1.100",
+  "user_agent": "Mozilla/5.0...",
+  "request_id": "550e8400-e29b-41d4-a716-446655440000",
+  "request_data": {"name": "New Author"},
+  "response_status": 201,
+  "error_message": null,
+  "duration_ms": 45
+}
+```
+
+**Error Responses:**
+
+| Status Code | Reason | Response |
+|-------------|--------|----------|
+| 404 | Log entry not found | `{"detail": "Audit log not found"}` |
+
+**Example:**
+
+```bash
+curl -H "Authorization: Bearer $TOKEN" \
+  http://localhost:8000/audit-logs/1
+```
+
+---
+
+#### GET /audit-logs/user/{user_id}
+
+Retrieve all audit logs for a specific user.
+
+**Authentication:** Required (Role: `admin`)
+
+**Path Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `user_id` | string | Yes | Keycloak user ID |
+
+**Query Parameters:**
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `page` | integer | No | 1 | Page number (>=1) |
+| `per_page` | integer | No | 20 | Items per page (1-100) |
+| `start_date` | datetime | No | - | Filter by start date (ISO 8601) |
+| `end_date` | datetime | No | - | Filter by end date (ISO 8601) |
+
+**Response:** `200 OK`
+
+```json
+{
+  "items": [
+    {
+      "id": 1,
+      "timestamp": "2025-01-12T14:30:00Z",
+      "user_id": "abc-123-def",
+      "username": "john.doe",
+      "action_type": "POST",
+      "resource": "/api/authors",
+      "outcome": "success",
+      "response_status": 201,
+      "duration_ms": 45
+    }
+  ],
+  "meta": {
+    "page": 1,
+    "per_page": 20,
+    "total": 42,
+    "pages": 3
+  }
+}
+```
+
+**Example:**
+
+```bash
+# Get all logs for user
+curl -H "Authorization: Bearer $TOKEN" \
+  http://localhost:8000/audit-logs/user/abc-123-def
+
+# Filter by date range
+curl -H "Authorization: Bearer $TOKEN" \
+  "http://localhost:8000/audit-logs/user/abc-123-def?start_date=2025-01-01T00:00:00Z"
+```
+
+**Python Example:**
+
+```python
+import requests
+
+# Track user activity over time
+response = requests.get(
+    f'http://localhost:8000/audit-logs/user/{user_id}',
+    headers={'Authorization': f'Bearer {admin_token}'},
+    params={'per_page': 100}
+)
+
+logs = response.json()
+print(f"Total actions: {logs['meta']['total']}")
+print(f"Success rate: {sum(1 for log in logs['items'] if log['outcome'] == 'success') / len(logs['items']) * 100:.1f}%")
+```
+
+---
+
+### Profiling Endpoints
+
+These endpoints provide access to Scalene performance profiling reports. Used for performance analysis and optimization.
+
+#### GET /api/profiling/status
+
+Get current profiling configuration and status.
+
+**Authentication:** Not required
+
+**Response:** `200 OK`
+
+```json
+{
+  "enabled": false,
+  "scalene_installed": false,
+  "output_directory": "profiling_reports",
+  "interval_seconds": 30,
+  "python_version": "3.13.0",
+  "command": "scalene --html --outfile report.html -- uvicorn app:application"
+}
+```
+
+**Example:**
+
+```bash
+curl http://localhost:8000/api/profiling/status
+```
+
+**Python Example:**
+
+```python
+import requests
+
+response = requests.get('http://localhost:8000/api/profiling/status')
+status = response.json()
+
+if not status['scalene_installed']:
+    print("Scalene is not installed. Install with: pip install scalene")
+elif not status['enabled']:
+    print("Profiling is disabled. Enable with: PROFILING_ENABLED=true")
+else:
+    print(f"Profiling enabled. Reports saved to: {status['output_directory']}")
+```
+
+---
+
+#### GET /api/profiling/reports
+
+List all available profiling reports.
+
+**Authentication:** Not required
+
+**Response:** `200 OK`
+
+```json
+{
+  "reports": [
+    {
+      "filename": "websocket_profile_20250123_143000.html",
+      "path": "profiling_reports/websocket_profile_20250123_143000.html",
+      "size_bytes": 125000,
+      "created_at": 1706019000
+    }
+  ],
+  "total_count": 1
+}
+```
+
+**Example:**
+
+```bash
+curl http://localhost:8000/api/profiling/reports
+```
+
+**Python Example:**
+
+```python
+import requests
+from datetime import datetime
+
+response = requests.get('http://localhost:8000/api/profiling/reports')
+data = response.json()
+
+print(f"Total reports: {data['total_count']}")
+for report in data['reports']:
+    created = datetime.fromtimestamp(report['created_at'])
+    size_mb = report['size_bytes'] / 1024 / 1024
+    print(f"  {report['filename']} - {size_mb:.2f}MB - {created}")
+```
+
+---
+
+#### GET /api/profiling/reports/{filename}
+
+Download a specific profiling report.
+
+**Authentication:** Not required
+
+**Path Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `filename` | string | Yes | Name of the report file (e.g., websocket_profile_20250123_143000.html) |
+
+**Response:** `200 OK`
+
+Returns HTML file containing the Scalene profiling report.
+
+**Error Responses:**
+
+| Status Code | Reason | Response |
+|-------------|--------|----------|
+| 400 | Invalid filename | `{"detail": "Invalid filename"}` |
+| 404 | Report not found | `{"detail": "Report 'filename' not found"}` |
+
+**Example:**
+
+```bash
+# Download report
+curl http://localhost:8000/api/profiling/reports/websocket_profile_20250123_143000.html \
+  -o report.html
+
+# Open in browser
+open report.html
+```
+
+**Python Example:**
+
+```python
+import requests
+
+# Download and save report
+filename = "websocket_profile_20250123_143000.html"
+response = requests.get(f'http://localhost:8000/api/profiling/reports/{filename}')
+
+with open(filename, 'wb') as f:
+    f.write(response.content)
+
+print(f"Report saved to: {filename}")
+```
+
+---
+
+#### DELETE /api/profiling/reports/{filename}
+
+Delete a specific profiling report.
+
+**Authentication:** Not required
+
+**Path Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `filename` | string | Yes | Name of the report file to delete |
+
+**Response:** `200 OK`
+
+```json
+{
+  "message": "Report deleted successfully",
+  "filename": "websocket_profile_20250123_143000.html"
+}
+```
+
+**Error Responses:**
+
+| Status Code | Reason | Response |
+|-------------|--------|----------|
+| 400 | Invalid filename | `{"detail": "Invalid filename"}` |
+| 404 | Report not found | `{"detail": "Report 'filename' not found"}` |
+
+**Example:**
+
+```bash
+curl -X DELETE http://localhost:8000/api/profiling/reports/websocket_profile_20250123_143000.html
+```
+
+**Python Example:**
+
+```python
+import requests
+
+# Delete old profiling reports
+response = requests.get('http://localhost:8000/api/profiling/reports')
+reports = response.json()['reports']
+
+for report in reports:
+    # Delete reports older than 7 days
+    age_days = (time.time() - report['created_at']) / 86400
+    if age_days > 7:
+        delete_response = requests.delete(
+            f"http://localhost:8000/api/profiling/reports/{report['filename']}"
+        )
+        print(f"Deleted: {report['filename']}")
 ```
 
 ---

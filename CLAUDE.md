@@ -727,6 +727,73 @@ const ws = new WebSocket('ws://localhost:8000/web?Authorization=Bearer%20token')
   - Cache hit rate dashboard panel available in Grafana
 - Integrated into `AuthBackend.authenticate()` for all HTTP and WebSocket requests
 
+**Audit Logger (`app/utils/audit_logger.py`):**
+- Async queue-based audit log writer for non-blocking audit logging
+- Processes audit log entries in background without blocking HTTP requests
+- Queue-based architecture:
+  - `asyncio.Queue` with configurable max size (`AUDIT_QUEUE_MAX_SIZE`)
+  - Batch processing: writes multiple logs per database transaction
+  - Automatic queue overflow handling (drops logs with metric tracking)
+- Batch writer functionality:
+  - Groups audit logs into batches (`AUDIT_BATCH_SIZE`)
+  - Timeout-based flushing (`AUDIT_BATCH_TIMEOUT`) for partial batches
+  - Single database transaction per batch (efficient bulk insert)
+- Key functions:
+  - `log_action()`: Async function to queue audit log entry
+  - `start_audit_logger()`: Starts background audit writer task
+  - `stop_audit_logger()`: Gracefully stops audit writer and flushes queue
+- Prometheus metrics:
+  - `audit_logs_total`: Total audit logs queued
+  - `audit_logs_written_total`: Successfully written to database
+  - `audit_logs_dropped_total`: Dropped due to queue overflow
+  - `audit_queue_size`: Current queue size
+  - `audit_batch_size`: Logs per batch
+- Prevents request latency from database writes
+- Critical for high-throughput APIs with compliance requirements
+
+**Error Handler (`app/utils/error_handler.py`):**
+- Centralized error handling utilities for HTTP and WebSocket endpoints
+- `handle_http_errors` decorator: Unified error handling for HTTP endpoints
+  - Catches common exceptions (ValueError, KeyError, NotFoundError)
+  - Converts to appropriate HTTP status codes (400, 404, 500)
+  - Returns consistent error response format
+  - Logs errors with full stack trace
+  - Example usage:
+    ```python
+    @router.get("/authors")
+    @handle_http_errors
+    async def get_authors():
+        # Exceptions automatically handled
+        pass
+    ```
+- Error response formatting:
+  - Standardized error structure for client consumption
+  - Includes error type, message, and optional details
+  - Integrates with FastAPI exception handlers
+- Used across all HTTP endpoints for consistent error handling
+- Reduces boilerplate try/except blocks in endpoint code
+- See also: `app/utils/error_formatter.py` for error envelope mapping
+
+**File I/O Utilities (`app/utils/file_io.py`):**
+- JSON schema loading from files for WebSocket handler validation
+- `load_json_schema(file_path)`: Loads and validates JSON schema files
+- Used by WebSocket handlers for request data validation
+- Caches loaded schemas for performance
+- Validates schema format on load (catches schema errors early)
+- Internal utility primarily for WebSocket handler registration:
+  ```python
+  from app.utils.file_io import load_json_schema
+
+  schema = load_json_schema("schemas/author.json")
+
+  @pkg_router.register(
+      PkgID.CREATE_AUTHOR,
+      json_schema=schema  # Loaded from file
+  )
+  async def create_author_handler(request: RequestModel):
+      ...
+  ```
+
 **WebSocket Connection Manager (`app/managers/websocket_connection_manager.py`):**
 - Manages active WebSocket connections
 - `broadcast(message)` sends to all connected clients
@@ -877,6 +944,59 @@ const ws = new WebSocket('ws://localhost:8000/web?Authorization=Bearer%20token')
   - Rate limiting middleware (for IP-based rate limits)
   - Audit logging (for accurate IP tracking in audit logs)
 - Default trusted proxies: Docker networks (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`)
+
+**Audit Middleware (`app/middlewares/audit_middleware.py`):**
+- Intercepts HTTP requests and responses for comprehensive audit logging
+- Captures request data, response status, duration, and user context
+- Sends audit log entries to async queue for non-blocking processing
+- Extracts user information from authenticated requests (user ID, username, roles)
+- Tracks IP addresses using IP spoofing protection (`get_client_ip()`)
+- Records request/response metadata:
+  - Action type (HTTP method)
+  - Resource (request path)
+  - Outcome (success/error/permission_denied)
+  - Duration in milliseconds
+  - Error messages for failed requests
+- Integrated with correlation ID for request tracing
+- Queue-based processing via `audit_logger.py` prevents blocking request handling
+- Used for compliance, security monitoring, and troubleshooting
+
+**Correlation ID Middleware (`app/middlewares/correlation_id.py`):**
+- Adds X-Correlation-ID header to all requests and responses for distributed tracing
+- Generates UUID v4 if client doesn't provide correlation ID
+- Propagates correlation ID through entire request lifecycle:
+  - HTTP requests
+  - WebSocket messages
+  - Database queries
+  - Audit logs
+  - Application logs
+- Enables tracing requests across services and log aggregation systems
+- Essential for debugging and root cause analysis in distributed systems
+- Correlation ID automatically included in structured logs via `logging_context.py`
+
+**Logging Context Middleware (`app/middlewares/logging_context.py`):**
+- Sets logging context from request data for structured logging
+- Enriches all logs within request scope with contextual fields:
+  - `request_id`: Correlation ID from X-Correlation-ID header
+  - `user_id`: Authenticated user ID (if available)
+  - `endpoint`: HTTP endpoint path
+  - `method`: HTTP method (GET, POST, etc.)
+  - `ip_address`: Client IP (with spoofing protection)
+- Uses contextvars for thread-safe context propagation
+- Automatically applied by `set_log_context()` function in `app/logging.py`
+- Integrates with Grafana Loki for log querying by correlation ID, user, endpoint
+- Example log output:
+  ```json
+  {
+    "timestamp": "2025-01-12T14:30:00Z",
+    "level": "INFO",
+    "message": "Processing request",
+    "request_id": "550e8400-e29b-41d4-a716-446655440000",
+    "user_id": "abc-123-def",
+    "endpoint": "/api/authors",
+    "method": "POST"
+  }
+  ```
 
 ### Directory Structure
 

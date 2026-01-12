@@ -168,7 +168,65 @@ async def get_authors():
 - HTTP: `require_roles(*roles)` FastAPI dependency
 - Default policy: If no roles specified = public access
 
-### 4. WebSocket Package Router
+### 4. Middleware Stack
+
+The application uses a comprehensive middleware stack for cross-cutting concerns. Middlewares process requests and responses in order:
+
+**Middleware Execution Order** (configured in `app/__init__.py`):
+
+1. **TrustedHostMiddleware** - Validates Host header against allowed hosts
+   - Prevents Host header injection attacks
+   - Configured via `ALLOWED_HOSTS` setting
+
+2. **AuthenticationMiddleware** (Starlette) - JWT token validation
+   - Uses `AuthBackend.authenticate()` to decode and validate Keycloak tokens
+   - Attaches `UserModel` with roles to request context
+   - Respects `EXCLUDED_PATHS` for public endpoints
+
+3. **CorrelationIDMiddleware** - Adds X-Correlation-ID for distributed tracing
+   - Generates UUID v4 if client doesn't provide correlation ID
+   - Propagates through logs, audit logs, and metrics
+
+4. **LoggingContextMiddleware** - Enriches logs with request context
+   - Adds request_id, user_id, endpoint, method, ip_address to all logs
+   - Uses contextvars for thread-safe propagation
+   - Enables querying logs by correlation ID in Grafana Loki
+
+5. **AuditMiddleware** - Records user actions for compliance
+   - Captures request/response metadata (method, path, status, duration)
+   - Extracts user info from authenticated requests
+   - Async queue-based processing (non-blocking)
+   - Sends to `audit_logger` for batch database writes
+
+6. **RequestSizeLimitMiddleware** - Protects against large payload attacks
+   - Checks Content-Length before processing
+   - Returns 413 Payload Too Large if exceeds `MAX_REQUEST_BODY_SIZE` (1MB default)
+
+7. **SecurityHeadersMiddleware** - Adds security headers
+   - X-Frame-Options, X-Content-Type-Options, X-XSS-Protection
+   - Strict-Transport-Security, Content-Security-Policy
+   - See [Security Guide](../deployment/security.md) for details
+
+8. **RateLimitMiddleware** - Rate limiting for HTTP endpoints
+   - Redis-based sliding window algorithm
+   - Returns 429 Too Many Requests when limits exceeded
+   - Adds X-RateLimit-* headers to responses
+
+9. **PrometheusMiddleware** - Metrics collection
+   - Tracks http_requests_total, http_request_duration_seconds
+   - http_requests_in_progress gauge
+
+**Middleware Architecture Benefits**:
+- **Separation of Concerns**: Each middleware handles one responsibility
+- **Reusability**: Same middleware for all HTTP endpoints
+- **Ordering Control**: Execution order defined in application factory
+- **Testability**: Each middleware can be tested independently
+
+**See Also**:
+- [CLAUDE.md](../../CLAUDE.md#core-components) - Detailed middleware documentation
+- [Security Guide](../deployment/security.md) - Security middleware configuration
+
+### 5. WebSocket Package Router
 
 **Purpose**: Route WebSocket messages to appropriate handlers based on package ID (PkgID).
 
@@ -286,15 +344,52 @@ Models encapsulate data access:
 ### Current Security Measures
 - ✅ JWT-based authentication via Keycloak
 - ✅ RBAC for endpoint authorization
-- ✅ Middleware authentication ordering
+- ✅ Comprehensive middleware stack (9 middlewares)
+- ✅ Security headers (CSP, X-Frame-Options, HSTS, etc.)
+- ✅ Rate limiting (HTTP and WebSocket)
+- ✅ Request size limits (1MB default, configurable)
+- ✅ Host header validation (prevents injection attacks)
+- ✅ IP spoofing protection (trusted proxy validation)
 - ✅ Excluded paths for public endpoints
 - ✅ WebSocket authentication on connection
+- ✅ Audit logging for compliance
 
-### Known Issues (see [Codebase Improvements](../improvements/CODEBASE_IMPROVEMENTS.md))
-- ⚠️ Middleware order issue (#5)
-- ⚠️ Hardcoded credentials in settings (#6)
-- ⚠️ No rate limiting
-- ⚠️ No request correlation IDs
+### Resilience Patterns
+
+**Circuit Breaker Pattern** (see [Circuit Breaker Guide](../guides/circuit-breaker.md)):
+
+The application implements circuit breaker pattern for external service dependencies to prevent cascading failures:
+
+**Protected Services**:
+- **Keycloak**: Authentication service
+  - Fail-fast when Keycloak is unavailable
+  - Prevents thread exhaustion from connection timeouts
+  - Configurable: `KEYCLOAK_CIRCUIT_BREAKER_FAIL_MAX` (default: 5), `KEYCLOAK_CIRCUIT_BREAKER_TIMEOUT` (default: 60s)
+
+- **Redis**: Caching and rate limiting
+  - Graceful degradation when Redis is down
+  - Configurable: `REDIS_CIRCUIT_BREAKER_FAIL_MAX` (default: 3), `REDIS_CIRCUIT_BREAKER_TIMEOUT` (default: 30s)
+
+**Circuit Breaker States**:
+- **Closed (0)**: Normal operation, requests pass through
+- **Open (1)**: Service failing, requests fail fast (no retry)
+- **Half-Open (2)**: Testing if service recovered
+
+**Monitoring**:
+- Prometheus metrics: `circuit_breaker_state`, `circuit_breaker_failures_total`, `circuit_breaker_state_changes_total`
+- Grafana dashboards: Panels 28-30 visualize circuit breaker health
+- Alerts: `CircuitBreakerOpen` (critical), `CircuitBreakerFlapping` (warning)
+
+**Benefits**:
+- Prevents resource exhaustion during outages
+- Allows services to recover without continued load
+- Provides clear visibility into service health
+- Reduces mean time to detection (MTTD) for outages
+
+### Known Issues
+- All major security and resilience features implemented
+- Regular security audits recommended
+- Monitor Prometheus alerts for circuit breaker state
 
 ## Performance Considerations
 
