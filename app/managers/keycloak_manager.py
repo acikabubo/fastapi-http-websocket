@@ -111,6 +111,13 @@ class KeycloakManager:
                 f"(fail_max={app_settings.KEYCLOAK_CIRCUIT_BREAKER_FAIL_MAX}, "
                 f"timeout={app_settings.KEYCLOAK_CIRCUIT_BREAKER_TIMEOUT}s)"
             )
+
+            # Initialize metrics with default values (circuit breaker starts in closed state)
+            from app.utils.metrics import circuit_breaker_state
+
+            circuit_breaker_state.labels(service="keycloak").set(
+                0
+            )  # 0 = closed
         else:
             self.circuit_breaker = None
             logger.info("Keycloak circuit breaker disabled")

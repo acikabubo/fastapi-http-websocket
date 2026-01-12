@@ -97,6 +97,11 @@ if app_settings.CIRCUIT_BREAKER_ENABLED:
         f"(fail_max={app_settings.REDIS_CIRCUIT_BREAKER_FAIL_MAX}, "
         f"timeout={app_settings.REDIS_CIRCUIT_BREAKER_TIMEOUT}s)"
     )
+
+    # Initialize metrics with default values (circuit breaker starts in closed state)
+    from app.utils.metrics import circuit_breaker_state
+
+    circuit_breaker_state.labels(service="redis").set(0)  # 0 = closed
 else:
     logger.info("Redis circuit breaker disabled")
 
