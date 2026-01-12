@@ -140,6 +140,10 @@ class PackageRouter:
         Returns:
             ResponseModel with error if validation fails, None if valid.
         """
+        # Skip validation if no validator is registered for this pkg_id
+        if request.pkg_id not in self.validators_registry:
+            return None
+
         json_schema, validator_func = self.validators_registry[request.pkg_id]
 
         if validator_func is None or json_schema is None:

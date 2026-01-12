@@ -60,9 +60,7 @@ class TestWebSocketConcurrentConnections:
         )
 
         # Test broadcast to all connections
-        broadcast_msg = BroadcastDataModel(
-            pkg_id=1, status_code=0, data={"message": "test"}
-        )
+        broadcast_msg = BroadcastDataModel(pkg_id=1, data={"message": "test"})
 
         start_time = time.time()
         await connection_manager.broadcast(broadcast_msg)
@@ -104,7 +102,7 @@ class TestWebSocketConcurrentConnections:
 
         # Test broadcast to all connections
         broadcast_msg = BroadcastDataModel(
-            pkg_id=1, status_code=0, data={"message": "load_test"}
+            pkg_id=1, data={"message": "load_test"}
         )
 
         start_time = time.time()
@@ -180,9 +178,7 @@ class TestWebSocketMessageThroughput:
         start_time = time.time()
 
         for i in range(broadcasts):
-            broadcast_msg = BroadcastDataModel(
-                pkg_id=1, status_code=0, data={"seq": i}
-            )
+            broadcast_msg = BroadcastDataModel(pkg_id=1, data={"seq": i})
             await connection_manager.broadcast(broadcast_msg)
 
         throughput_time = time.time() - start_time
@@ -216,9 +212,7 @@ class TestWebSocketMessageThroughput:
             "records": [{"id": i, "data": "x" * 1000} for i in range(100)]
         }
 
-        broadcast_msg = BroadcastDataModel(
-            pkg_id=1, status_code=0, data=large_data
-        )
+        broadcast_msg = BroadcastDataModel(pkg_id=1, data=large_data)
 
         start_time = time.time()
         await connection_manager.broadcast(broadcast_msg)
@@ -259,9 +253,7 @@ class TestWebSocketErrorResilience:
             connection_manager.connect(f"session:fail{i}", ws_mock)
 
         # Broadcast message
-        broadcast_msg = BroadcastDataModel(
-            pkg_id=1, status_code=0, data={"message": "test"}
-        )
+        broadcast_msg = BroadcastDataModel(pkg_id=1, data={"message": "test"})
 
         await connection_manager.broadcast(broadcast_msg)
 
@@ -291,9 +283,7 @@ class TestWebSocketErrorResilience:
 
         # Send 10 broadcasts concurrently
         async def send_broadcast(seq: int):
-            broadcast_msg = BroadcastDataModel(
-                pkg_id=1, status_code=0, data={"seq": seq}
-            )
+            broadcast_msg = BroadcastDataModel(pkg_id=1, data={"seq": seq})
             await connection_manager.broadcast(broadcast_msg)
 
         start_time = time.time()

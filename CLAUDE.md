@@ -671,7 +671,36 @@ const ws = new WebSocket('ws://localhost:8000/web?Authorization=Bearer%20token')
 **Keycloak Integration (`app/managers/keycloak_manager.py`):**
 - Singleton managing `KeycloakAdmin` and `KeycloakOpenID` clients
 - Configuration via environment variables (see `app/settings.py`)
-- `login(username, password)` returns access token
+- `login_async(username, password)` returns access token using native async methods
+- Protected by circuit breaker pattern to prevent cascading failures
+
+**Circuit Breaker Pattern (`app/managers/keycloak_manager.py`, `app/storage/redis.py`):**
+- Resilience pattern that prevents cascading failures when external services (Keycloak, Redis) are unavailable
+- Uses pybreaker library to implement fail-fast behavior during outages
+- Configuration via `app/settings.py`:
+  - `CIRCUIT_BREAKER_ENABLED`: Enable/disable circuit breakers globally (default: True)
+  - `KEYCLOAK_CIRCUIT_BREAKER_FAIL_MAX`: Open Keycloak circuit after N failures (default: 5)
+  - `KEYCLOAK_CIRCUIT_BREAKER_TIMEOUT`: Keep circuit open for N seconds (default: 60)
+  - `REDIS_CIRCUIT_BREAKER_FAIL_MAX`: Open Redis circuit after N failures (default: 3)
+  - `REDIS_CIRCUIT_BREAKER_TIMEOUT`: Keep circuit open for N seconds (default: 30)
+- Circuit breaker states:
+  - `closed`: Normal operation, requests pass through
+  - `open`: Service is failing, requests fail immediately (CircuitBreakerError)
+  - `half_open`: Testing if service has recovered
+- Protected operations:
+  - Keycloak authentication: `KeycloakManager.login_async()`
+  - Redis connections: `get_redis_connection(db)`
+- Prometheus metrics tracked:
+  - `circuit_breaker_state{service}`: Current state (0=closed, 1=open, 2=half_open)
+  - `circuit_breaker_state_changes_total{service, from_state, to_state}`: State transition counts
+  - `circuit_breaker_failures_total{service}`: Total failures detected
+- Listener classes log state changes and update metrics:
+  - `KeycloakCircuitBreakerListener`: Tracks Keycloak circuit breaker events
+  - `RedisCircuitBreakerListener`: Tracks Redis circuit breaker events
+- Benefits:
+  - Prevents resource exhaustion during outages (don't wait for timeouts)
+  - Allows services to recover without continued load
+  - Provides clear visibility into service health via metrics
 
 **JWT Token Claim Caching (`app/utils/token_cache.py`):**
 - Redis-based caching of decoded JWT token claims to reduce CPU overhead

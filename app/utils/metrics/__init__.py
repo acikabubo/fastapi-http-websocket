@@ -28,6 +28,11 @@ from app.utils.metrics.audit import (
     audit_logs_written_total,
     audit_queue_size,
 )
+from app.utils.metrics.circuit_breaker import (
+    circuit_breaker_failures_total,
+    circuit_breaker_state,
+    circuit_breaker_state_changes_total,
+)
 from app.utils.metrics.auth import (
     auth_attempts_total,
     auth_backend_requests_total,
@@ -130,4 +135,8 @@ __all__ = [
     # Application metrics
     "app_errors_total",
     "app_info",
+    # Circuit breaker metrics
+    "circuit_breaker_state",
+    "circuit_breaker_state_changes_total",
+    "circuit_breaker_failures_total",
 ]

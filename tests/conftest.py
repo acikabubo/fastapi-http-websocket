@@ -32,6 +32,11 @@ from app.schemas.request import RequestModel
 from app.schemas.response import ResponseModel
 from app.schemas.user import UserModel
 
+# Load WebSocket handlers to register them with the router
+from app.api.ws.handlers import load_handlers
+
+load_handlers()  # type: ignore[no-untyped-call]
+
 
 @pytest.fixture
 def mock_keycloak_token():

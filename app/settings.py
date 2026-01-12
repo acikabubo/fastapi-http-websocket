@@ -131,6 +131,15 @@ class Settings(BaseSettings):  # type: ignore[misc]
     PROFILING_OUTPUT_DIR: str = "profiling_reports"
     PROFILING_INTERVAL_SECONDS: int = 30  # Profiling snapshot interval
 
+    # Circuit breaker settings (resilience pattern for external services)
+    CIRCUIT_BREAKER_ENABLED: bool = True
+    # Keycloak circuit breaker
+    KEYCLOAK_CIRCUIT_BREAKER_FAIL_MAX: int = 5  # Open after 5 failures
+    KEYCLOAK_CIRCUIT_BREAKER_TIMEOUT: int = 60  # Stay open for 60 seconds
+    # Redis circuit breaker
+    REDIS_CIRCUIT_BREAKER_FAIL_MAX: int = 3  # Open after 3 failures
+    REDIS_CIRCUIT_BREAKER_TIMEOUT: int = 30  # Stay open for 30 seconds
+
     def __init__(self, **kwargs: Any) -> None:
         """
         Initialize settings with environment-specific defaults.
