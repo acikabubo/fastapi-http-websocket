@@ -106,6 +106,13 @@ class Settings(BaseSettings):  # type: ignore[misc]
     WS_MAX_CONNECTIONS_PER_USER: int = 5
     WS_MESSAGE_RATE_LIMIT: int = 100  # messages per minute
 
+    # WebSocket CSRF protection
+    # Allowed origins for WebSocket connections to prevent Cross-Site WebSocket
+    # Hijacking (CSWSH) attacks. Use ["*"] to allow all origins (development only).
+    # In production, specify exact origins:
+    # ["https://app.example.com", "https://admin.example.com"]
+    ALLOWED_WS_ORIGINS: list[str] = ["*"]
+
     # Logging settings
     LOG_FILE_PATH: str = "logs/logging_errors.log"
     # Paths to exclude from access logs (e.g., /metrics, /health)

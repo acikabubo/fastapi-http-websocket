@@ -544,6 +544,48 @@ python generate_ws_handler.py handler_name PKG_ID --overwrite
 - ✅ Tokens are short-lived (Keycloak default: 5 minutes)
 - ✅ Referrer-Policy header prevents token leakage
 - ✅ Security headers middleware (Content-Security-Policy allows `ws:` and `wss:`)
+- ✅ Origin validation for CSRF protection (see below)
+
+**WebSocket CSRF Protection:**
+
+Cross-Site WebSocket Hijacking (CSWSH) is prevented by validating the `Origin` header before accepting connections.
+
+**Configuration** (`app/settings.py`):
+```python
+# Allow all origins (development only)
+ALLOWED_WS_ORIGINS: list[str] = ["*"]
+
+# Production - specify exact allowed origins
+ALLOWED_WS_ORIGINS: list[str] = [
+    "https://app.example.com",
+    "https://admin.example.com"
+]
+```
+
+**How It Works** (`app/api/ws/websocket.py`):
+1. Before accepting connection, `_is_origin_allowed()` checks the `Origin` header
+2. If wildcard `*` is in allowed list → all origins permitted (dev mode)
+3. If no `Origin` header → same-origin request, allowed
+4. If origin matches allowed list → permitted
+5. Otherwise → connection closed with `WS_1008_POLICY_VIOLATION`
+
+**Attack Scenario Prevented:**
+```
+1. Attacker hosts malicious site: evil.com
+2. User visits evil.com while authenticated to your app
+3. evil.com attempts WebSocket to your server
+4. Server checks Origin header: "https://evil.com"
+5. Origin not in allowed list → connection rejected ✅
+```
+
+**Environment Configuration:**
+```bash
+# .env.dev.example - Allow all (development)
+# ALLOWED_WS_ORIGINS=["*"]
+
+# .env.production.example - Strict (production)
+ALLOWED_WS_ORIGINS=["https://app.example.com", "https://admin.example.com"]
+```
 
 **Client-Side Best Practices:**
 

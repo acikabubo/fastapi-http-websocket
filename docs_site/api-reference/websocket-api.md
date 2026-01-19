@@ -344,6 +344,61 @@ Response:
 - Client must handle reconnection with refreshed token
 - Monitor `exp` claim in JWT payload
 
+## CSRF Protection
+
+WebSocket connections are protected against Cross-Site WebSocket Hijacking (CSWSH) attacks through Origin header validation.
+
+### How It Works
+
+Before accepting a WebSocket connection, the server validates the `Origin` header:
+
+1. If `ALLOWED_WS_ORIGINS` contains `"*"` → all origins permitted (development only)
+2. If no `Origin` header → same-origin request, allowed
+3. If origin matches an entry in `ALLOWED_WS_ORIGINS` → permitted
+4. Otherwise → connection rejected with code `1008` (Policy Violation)
+
+### Configuration
+
+Configure allowed origins in your environment:
+
+```bash
+# Development (.env.dev) - Allow all origins
+ALLOWED_WS_ORIGINS=["*"]
+
+# Production (.env.production) - Restrict to your domains
+ALLOWED_WS_ORIGINS=["https://app.example.com", "https://admin.example.com"]
+```
+
+### Attack Scenario Prevented
+
+```
+1. Attacker hosts malicious site: evil.com
+2. User visits evil.com while authenticated to your app
+3. evil.com attempts WebSocket connection to your server
+4. Server checks Origin header: "https://evil.com"
+5. Origin not in allowed list → connection rejected with code 1008
+```
+
+### Client-Side Handling
+
+Handle CSRF rejection in your WebSocket `onclose` handler:
+
+```javascript
+ws.onclose = (event) => {
+  if (event.code === 1008) {
+    console.error('Connection rejected: Origin not allowed (CSRF protection)');
+    // This typically means you're connecting from an unauthorized domain
+  }
+};
+```
+
+### Security Recommendations
+
+1. **Never use `["*"]` in production** - Always specify exact allowed origins
+2. **Use HTTPS origins** - Match the protocol used by your frontend
+3. **Include all frontend domains** - Add each domain that needs WebSocket access
+4. **Update on domain changes** - Keep `ALLOWED_WS_ORIGINS` in sync with your deployments
+
 ## Role-Based Access Control (RBAC)
 
 Each handler requires specific roles defined in its `@pkg_router.register()` decorator. Users must have the required role in their Keycloak token to access handlers.

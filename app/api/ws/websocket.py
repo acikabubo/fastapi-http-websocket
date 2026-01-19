@@ -68,6 +68,38 @@ class PackageAuthWebSocketEndpoint(WebSocketEndpoint):  # type: ignore[misc]
     encoding = None  # Handle both JSON and binary (protobuf) formats
     websocket_class: Type[WebSocket] = PackagedWebSocket
 
+    def _is_origin_allowed(self, websocket: WebSocket) -> bool:
+        """
+        Validate WebSocket origin for CSRF protection.
+
+        Prevents Cross-Site WebSocket Hijacking (CSWSH) attacks by validating
+        the Origin header against the allowed origins list.
+
+        Args:
+            websocket: The WebSocket connection instance.
+
+        Returns:
+            True if the origin is allowed, False otherwise.
+        """
+        allowed_origins = app_settings.ALLOWED_WS_ORIGINS
+
+        # Wildcard permits all origins (use only in development)
+        if "*" in allowed_origins:
+            return True
+
+        origin = websocket.headers.get("origin")
+
+        # No Origin header means same-origin request from browser (safe)
+        if origin is None:
+            return True
+
+        # Check if origin exactly matches an allowed origin
+        if origin in allowed_origins:
+            return True
+
+        # Origin not in allowed list - reject connection
+        return False
+
     async def dispatch(self) -> None:
         """
         This function is responsible for managing the WebSocket connection lifecycle.
@@ -160,17 +192,29 @@ class PackageAuthWebSocketEndpoint(WebSocketEndpoint):  # type: ignore[misc]
         Handles WebSocket client connection with authentication and rate limiting.
 
         This method performs the following tasks:
-        1. Calls the parent class on_connect method
-        2. Retrieves authenticated Redis connection
-        3. Validates user authentication
-        4. Enforces per-user connection limits
-        5. Registers the connection in connection manager
-        6. Sets up user session in Redis
+        1. Validates origin for CSRF protection
+        2. Calls the parent class on_connect method
+        3. Retrieves authenticated Redis connection
+        4. Validates user authentication
+        5. Enforces per-user connection limits
+        6. Registers the connection in connection manager
+        7. Sets up user session in Redis
 
         Connection is rejected if:
+        - Origin is not in allowed origins list (CSRF protection)
         - User is not authenticated
         - User has exceeded maximum concurrent connections
         """
+
+        # Validate origin for CSRF protection (before accepting connection)
+        if not self._is_origin_allowed(websocket):
+            origin = websocket.headers.get("origin")
+            logger.warning(
+                f"Rejected WebSocket from untrusted origin: {origin}"
+            )
+            ws_connections_total.labels(status="rejected_origin").inc()
+            await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+            return
 
         await super().on_connect(websocket)
 

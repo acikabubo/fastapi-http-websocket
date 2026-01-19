@@ -485,3 +485,159 @@ class TestWebSocketEdgeCases:
             # Handler should catch database exception and return error response
             assert response.status_code == RSPCode.ERROR
             assert "Database error occurred" in response.data.get("msg", "")
+
+
+class TestWebSocketOriginValidation:
+    """Test WebSocket CSRF protection via origin validation."""
+
+    @pytest.mark.asyncio
+    async def test_origin_allowed_with_wildcard(self, mock_user_data):
+        """Test that wildcard '*' allows all origins."""
+        user = UserModel(**mock_user_data)
+        scope = {"type": "websocket", "user": user}
+        endpoint = PackageAuthWebSocketEndpoint(
+            scope=scope, receive=None, send=None
+        )  # type: ignore
+
+        mock_websocket = create_mock_websocket()
+        mock_websocket.headers = {"origin": "https://evil.com"}
+
+        with patch("app.api.ws.websocket.app_settings") as mock_settings:
+            mock_settings.ALLOWED_WS_ORIGINS = ["*"]
+
+            result = endpoint._is_origin_allowed(mock_websocket)
+
+            assert result is True
+
+    @pytest.mark.asyncio
+    async def test_origin_allowed_no_header(self, mock_user_data):
+        """Test that missing Origin header is allowed (same-origin request)."""
+        user = UserModel(**mock_user_data)
+        scope = {"type": "websocket", "user": user}
+        endpoint = PackageAuthWebSocketEndpoint(
+            scope=scope, receive=None, send=None
+        )  # type: ignore
+
+        mock_websocket = create_mock_websocket()
+        mock_websocket.headers = {}  # No origin header
+
+        with patch("app.api.ws.websocket.app_settings") as mock_settings:
+            mock_settings.ALLOWED_WS_ORIGINS = ["https://app.example.com"]
+
+            result = endpoint._is_origin_allowed(mock_websocket)
+
+            assert result is True
+
+    @pytest.mark.asyncio
+    async def test_origin_allowed_exact_match(self, mock_user_data):
+        """Test that exact match in allowed list is permitted."""
+        user = UserModel(**mock_user_data)
+        scope = {"type": "websocket", "user": user}
+        endpoint = PackageAuthWebSocketEndpoint(
+            scope=scope, receive=None, send=None
+        )  # type: ignore
+
+        mock_websocket = create_mock_websocket()
+        mock_websocket.headers = {"origin": "https://app.example.com"}
+
+        with patch("app.api.ws.websocket.app_settings") as mock_settings:
+            mock_settings.ALLOWED_WS_ORIGINS = [
+                "https://app.example.com",
+                "https://admin.example.com",
+            ]
+
+            result = endpoint._is_origin_allowed(mock_websocket)
+
+            assert result is True
+
+    @pytest.mark.asyncio
+    async def test_origin_rejected_not_in_list(self, mock_user_data):
+        """Test that origin not in allowed list is rejected."""
+        user = UserModel(**mock_user_data)
+        scope = {"type": "websocket", "user": user}
+        endpoint = PackageAuthWebSocketEndpoint(
+            scope=scope, receive=None, send=None
+        )  # type: ignore
+
+        mock_websocket = create_mock_websocket()
+        mock_websocket.headers = {"origin": "https://evil.com"}
+
+        with patch("app.api.ws.websocket.app_settings") as mock_settings:
+            mock_settings.ALLOWED_WS_ORIGINS = [
+                "https://app.example.com",
+                "https://admin.example.com",
+            ]
+
+            result = endpoint._is_origin_allowed(mock_websocket)
+
+            assert result is False
+
+    @pytest.mark.asyncio
+    async def test_origin_rejected_connection_closed(self, mock_user_data):
+        """Test that rejected origin closes WebSocket with policy violation."""
+        user = UserModel(**mock_user_data)
+        scope = {"type": "websocket", "user": user}
+        endpoint = PackageAuthWebSocketEndpoint(
+            scope=scope, receive=None, send=None
+        )  # type: ignore
+
+        mock_websocket = create_mock_websocket()
+        mock_websocket.headers = {"origin": "https://evil.com"}
+
+        with (
+            patch("app.api.ws.websocket.app_settings") as mock_settings,
+            patch(
+                "app.api.ws.websocket.get_auth_redis_connection"
+            ) as mock_redis,
+        ):
+            mock_settings.ALLOWED_WS_ORIGINS = ["https://app.example.com"]
+            mock_settings.USER_SESSION_REDIS_KEY_PREFIX = "session:"
+            mock_redis.return_value = AsyncMock()
+
+            await endpoint.on_connect(mock_websocket)
+
+            # Verify websocket was closed with policy violation code
+            mock_websocket.close.assert_called_once_with(
+                code=1008  # WS_1008_POLICY_VIOLATION
+            )
+
+    @pytest.mark.asyncio
+    async def test_origin_allowed_connection_proceeds(self, mock_user_data):
+        """Test that allowed origin proceeds with normal connection flow."""
+        user = UserModel(**mock_user_data)
+        scope = {"type": "websocket", "user": user}
+        endpoint = PackageAuthWebSocketEndpoint(
+            scope=scope, receive=None, send=None
+        )  # type: ignore
+
+        mock_websocket = create_mock_websocket()
+        mock_websocket.headers = {"origin": "https://app.example.com"}
+
+        mock_redis = AsyncMock()
+        mock_redis.add_kc_user_session = AsyncMock()
+
+        with (
+            patch("app.api.ws.websocket.app_settings") as mock_settings,
+            patch(
+                "app.api.ws.websocket.get_auth_redis_connection",
+                return_value=mock_redis,
+            ),
+            patch(
+                "app.api.ws.websocket.connection_manager",
+                create_mock_connection_manager(),
+            ),
+            patch(
+                "app.api.ws.websocket.connection_limiter"
+            ) as mock_conn_limiter,
+        ):
+            mock_settings.ALLOWED_WS_ORIGINS = ["https://app.example.com"]
+            mock_settings.USER_SESSION_REDIS_KEY_PREFIX = "session:"
+            mock_conn_limiter.add_connection = AsyncMock(return_value=True)
+
+            await endpoint.on_connect(mock_websocket)
+
+            # Verify websocket was NOT closed (connection proceeded)
+            mock_websocket.close.assert_not_called()
+
+            # Verify user session was added (connection fully established)
+            mock_redis.add_kc_user_session.assert_called_once_with(user)
