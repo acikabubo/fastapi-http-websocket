@@ -155,7 +155,8 @@ class PackageRouter:
             # It's a Pydantic model class (classmethod call)
             schema_dict = json_schema.model_json_schema()  # type: ignore[call-arg]
         else:
-            # It's already a dict
+            # It's already a dict (JsonSchemaType includes type[BaseModel] but
+            # this branch only executes when it's a dict)
             schema_dict = json_schema
 
         return validator_func(request, schema_dict)

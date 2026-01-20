@@ -22,19 +22,19 @@ from app.utils.rate_limiter import connection_limiter
 class UUIDEncoder(json.JSONEncoder):
     """Custom JSON encoder that handles UUID objects."""
 
-    def default(self, obj: Any) -> Any:
+    def default(self, o: Any) -> Any:
         """
         Convert UUID objects to strings for JSON serialization.
 
         Args:
-            obj: The object to serialize.
+            o: The object to serialize.
 
         Returns:
             str: String representation of UUID, or delegates to parent.
         """
-        if isinstance(obj, UUID):
-            return str(obj)
-        return super().default(obj)
+        if isinstance(o, UUID):
+            return str(o)
+        return super().default(o)
 
 
 class PackagedWebSocket(WebSocket):  # type: ignore[misc]
