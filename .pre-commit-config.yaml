@@ -33,6 +33,7 @@ repos:
           - '--exclude=.worktree'
           - '--exclude=tests'
           - '--exclude=scripts'
+          - '--exclude=benchmarks'
           - '--exclude=app/settings.py'
           - '--exclude=app/logging.py'
           - '--exclude=app/schemas'
@@ -52,7 +53,7 @@ repos:
       - id: mypy
         name: "mypy: Static type checker"
         args: [--strict, --ignore-missing-imports, --config-file=pyproject.toml]
-        exclude: ^(app/schemas/proto/.*_pb2\.pyi?|get_token\.py|tests/.*|scripts/.*|examples/.*|cli\.py|test_protobuf_websocket\.py)$
+        exclude: ^(app/schemas/proto/.*_pb2\.pyi?|get_token\.py|tests/.*|scripts/.*|examples/.*|benchmarks/.*|cli\.py|test_protobuf_websocket\.py)$
 
   # Security vulnerability scanner for dependencies
   - repo: https://github.com/twu/skjold
@@ -73,7 +74,7 @@ repos:
         name: "bandit: Security vulnerability scanner"
         args: [-lll]
         files: \.py$
-        exclude: ^(tests/|scripts/|examples/|\.worktree/)
+        exclude: ^(tests/|scripts/|examples/|benchmarks/|\.worktree/)
 
   # Code coverage checker
   - repo: local

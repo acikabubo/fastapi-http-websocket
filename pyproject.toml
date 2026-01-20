@@ -136,7 +136,8 @@ exclude = [
     "node_modules",
     "site-packages",
     ".venv",
-    ".worktree"
+    ".worktree",
+    "benchmarks"
 ]
 line-length = 79
 indent-width = 4
@@ -170,6 +171,7 @@ exclude = [
     ".worktree",
     "tests",
     "scripts",
+    "benchmarks",
     "app/settings.py",
     "app/logging.py",
     "app/schemas/*",
@@ -179,6 +181,7 @@ exclude = [
 [tool.mypy]
 exclude = [
     "app/schemas/proto/",  # Exclude auto-generated protobuf files
+    "benchmarks/",  # Exclude benchmark scripts (temporary, remove when orjson adopted)
 ]
 disable_error_code = ["untyped-decorator", "no-any-return"]
 
