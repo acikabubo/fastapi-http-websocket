@@ -300,8 +300,11 @@ async def log_user_action(
             duration_ms=duration_ms,
         )
 
-        # Queue for background processing (non-blocking)
+        # Queue for background processing with backpressure
         queue = get_audit_queue()
+        timeout = app_settings.AUDIT_QUEUE_TIMEOUT
+
+        # Try non-blocking put first (fast path)
         try:
             queue.put_nowait(action)
             # Update queue size metric
@@ -309,13 +312,37 @@ async def log_user_action(
             return action
 
         except asyncio.QueueFull:
-            # Queue is full, drop the log entry
-            audit_logs_dropped_total.inc()
-            logger.warning(
-                f"Audit queue full ({app_settings.AUDIT_QUEUE_MAX_SIZE}), "
-                f"dropping log entry for {username}"
-            )
-            return None
+            # Queue is full - apply backpressure if timeout > 0
+            if timeout > 0:
+                try:
+                    # Wait up to AUDIT_QUEUE_TIMEOUT seconds for space
+                    await asyncio.wait_for(
+                        queue.put(action),
+                        timeout=timeout,
+                    )
+                    # Update queue size metric
+                    audit_queue_size.set(queue.qsize())
+                    logger.debug(
+                        f"Audit log queued after backpressure wait for {username}"
+                    )
+                    return action
+
+                except asyncio.TimeoutError:
+                    # Timeout exceeded - drop the log entry
+                    audit_logs_dropped_total.inc()
+                    logger.warning(
+                        f"Audit queue timeout after {timeout}s, "
+                        f"dropping log entry for {username}"
+                    )
+                    return None
+            else:
+                # No backpressure (timeout=0) - drop immediately
+                audit_logs_dropped_total.inc()
+                logger.warning(
+                    f"Audit queue full ({app_settings.AUDIT_QUEUE_MAX_SIZE}), "
+                    f"dropping log entry for {username}"
+                )
+                return None
 
     except (ValueError, TypeError, AttributeError) as e:
         # ValueError: Invalid data format

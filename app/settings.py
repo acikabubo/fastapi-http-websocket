@@ -132,6 +132,9 @@ class Settings(BaseSettings):  # type: ignore[misc]
     AUDIT_QUEUE_MAX_SIZE: int = 10000
     AUDIT_BATCH_SIZE: int = 100
     AUDIT_BATCH_TIMEOUT: float = 1.0
+    # Backpressure timeout: max seconds to wait when queue is full before dropping
+    # Set to 0 for no backpressure (immediate drop, original behavior)
+    AUDIT_QUEUE_TIMEOUT: float = 1.0
 
     # Profiling settings (Scalene integration)
     PROFILING_ENABLED: bool = True

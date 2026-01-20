@@ -775,21 +775,37 @@ const ws = new WebSocket('ws://localhost:8000/web?Authorization=Bearer%20token')
 - Queue-based architecture:
   - `asyncio.Queue` with configurable max size (`AUDIT_QUEUE_MAX_SIZE`)
   - Batch processing: writes multiple logs per database transaction
-  - Automatic queue overflow handling (drops logs with metric tracking)
+  - Backpressure mechanism for queue overflow handling
 - Batch writer functionality:
   - Groups audit logs into batches (`AUDIT_BATCH_SIZE`)
   - Timeout-based flushing (`AUDIT_BATCH_TIMEOUT`) for partial batches
   - Single database transaction per batch (efficient bulk insert)
+- Backpressure mechanism:
+  - When queue is full, waits up to `AUDIT_QUEUE_TIMEOUT` seconds for space
+  - If timeout=0, drops immediately (original behavior, no backpressure)
+  - If timeout>0, applies backpressure before dropping
+  - Logs are only dropped after timeout expires (compliance-friendly)
+  - Dropped logs tracked via `audit_logs_dropped_total` metric
 - Key functions:
-  - `log_action()`: Async function to queue audit log entry
-  - `start_audit_logger()`: Starts background audit writer task
-  - `stop_audit_logger()`: Gracefully stops audit writer and flushes queue
+  - `log_user_action()`: Async function to queue audit log entry with backpressure
+  - `audit_log_worker()`: Background worker that processes queue in batches
+  - `flush_audit_queue()`: Gracefully flushes remaining logs on shutdown
 - Prometheus metrics:
   - `audit_logs_total`: Total audit logs queued
   - `audit_logs_written_total`: Successfully written to database
-  - `audit_logs_dropped_total`: Dropped due to queue overflow
+  - `audit_logs_dropped_total`: Dropped due to queue overflow (after backpressure timeout)
   - `audit_queue_size`: Current queue size
   - `audit_batch_size`: Logs per batch
+- Prometheus alerts (in `docker/prometheus/alerts.yml`):
+  - `AuditLogDropping`: Logs being dropped at >1/s rate (critical)
+  - `HighAuditLogDropRate`: Drop rate >1% of total logs (warning)
+  - `SustainedAuditQueueOverflow`: Drop rate >1% for 5+ minutes (critical, compliance risk)
+  - `AuditQueueNearCapacity`: Queue usage >80% (warning)
+- Configuration (`app/settings.py`):
+  - `AUDIT_QUEUE_MAX_SIZE`: Maximum queue size (default: 10000)
+  - `AUDIT_BATCH_SIZE`: Logs per batch write (default: 100)
+  - `AUDIT_BATCH_TIMEOUT`: Seconds to wait for batch fill (default: 1.0)
+  - `AUDIT_QUEUE_TIMEOUT`: Backpressure timeout in seconds (default: 1.0, set to 0 to disable)
 - Prevents request latency from database writes
 - Critical for high-throughput APIs with compliance requirements
 
@@ -2827,6 +2843,8 @@ The application includes comprehensive Prometheus alerting rules for proactive m
 5. **Audit Alerts** (`audit_alerts` group):
    - `AuditLogDropping`: Audit logs drop rate > 1/s for 2 minutes (critical)
    - `HighAuditLogDropRate`: Drop rate > 1% for 2 minutes (warning)
+   - `SustainedAuditQueueOverflow`: Drop rate > 1% for 5+ minutes (critical - compliance risk)
+   - `AuditQueueNearCapacity`: Queue usage > 80% for 2 minutes (warning)
 
 6. **Rate Limit Alerts** (`rate_limit_alerts` group):
    - `HighRateLimitHits`: Rate limit hit rate > 10/s for 5 minutes (info)

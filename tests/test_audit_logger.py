@@ -242,8 +242,8 @@ class TestLogUserAction:
             assert action.request_data["password"] == "[REDACTED]"
 
     @pytest.mark.asyncio
-    async def test_log_user_action_queue_full(self):
-        """Test handling of full audit queue."""
+    async def test_log_user_action_queue_full_no_backpressure(self):
+        """Test handling of full audit queue with backpressure disabled."""
         # Reset global queue with size 1
         import app.utils.audit_logger
 
@@ -254,6 +254,7 @@ class TestLogUserAction:
             patch("app.utils.audit_logger.logger") as mock_logger,
         ):
             mock_settings.AUDIT_QUEUE_MAX_SIZE = 1
+            mock_settings.AUDIT_QUEUE_TIMEOUT = 0  # Disable backpressure
 
             # Fill the queue
             action1 = await log_user_action(
@@ -276,9 +277,101 @@ class TestLogUserAction:
                 outcome="success",
             )
 
-            # Should return None when queue is full
+            # Should return None when queue is full and no backpressure
             assert action2 is None
             mock_logger.warning.assert_called()
+
+    @pytest.mark.asyncio
+    async def test_log_user_action_backpressure_timeout(self):
+        """Test backpressure timeout when queue stays full."""
+        import app.utils.audit_logger
+
+        app.utils.audit_logger._audit_queue = None
+
+        with (
+            patch("app.utils.audit_logger.app_settings") as mock_settings,
+            patch("app.utils.audit_logger.logger") as mock_logger,
+        ):
+            mock_settings.AUDIT_QUEUE_MAX_SIZE = 1
+            mock_settings.AUDIT_QUEUE_TIMEOUT = 0.1  # Short timeout for test
+
+            # Fill the queue
+            action1 = await log_user_action(
+                user_id="user1",
+                username="user1",
+                user_roles=["user"],
+                action_type="GET",
+                resource="/api/test",
+                outcome="success",
+            )
+            assert action1 is not None
+
+            # Try to add to full queue - should wait then timeout
+            action2 = await log_user_action(
+                user_id="user2",
+                username="user2",
+                user_roles=["user"],
+                action_type="GET",
+                resource="/api/test",
+                outcome="success",
+            )
+
+            # Should return None after timeout
+            assert action2 is None
+            # Should log warning about timeout
+            warning_calls = [
+                call
+                for call in mock_logger.warning.call_args_list
+                if "timeout" in str(call).lower()
+            ]
+            assert len(warning_calls) > 0
+
+    @pytest.mark.asyncio
+    async def test_log_user_action_backpressure_success(self):
+        """Test backpressure succeeds when queue drains."""
+        import app.utils.audit_logger
+
+        app.utils.audit_logger._audit_queue = None
+
+        with patch("app.utils.audit_logger.app_settings") as mock_settings:
+            mock_settings.AUDIT_QUEUE_MAX_SIZE = 1
+            mock_settings.AUDIT_QUEUE_TIMEOUT = 1.0  # Long enough timeout
+
+            # Fill the queue
+            action1 = await log_user_action(
+                user_id="user1",
+                username="user1",
+                user_roles=["user"],
+                action_type="GET",
+                resource="/api/test",
+                outcome="success",
+            )
+            assert action1 is not None
+
+            queue = get_audit_queue()
+
+            # Simulate consumer draining queue in background
+            async def drain_queue():
+                await asyncio.sleep(0.05)  # Short delay
+                queue.get_nowait()
+
+            # Start drain and try to add
+            drain_task = asyncio.create_task(drain_queue())
+
+            action2 = await log_user_action(
+                user_id="user2",
+                username="user2",
+                user_roles=["user"],
+                action_type="GET",
+                resource="/api/test",
+                outcome="success",
+            )
+
+            await drain_task
+
+            # Should succeed after backpressure wait
+            assert action2 is not None
+            assert action2.user_id == "user2"
 
     @pytest.mark.asyncio
     async def test_log_user_action_handles_exception(self):

@@ -209,6 +209,38 @@ groups:
           summary: "High audit log drop rate"
           description: "Drop rate: {{ $value | humanizePercentage }} (threshold: 1%)"
 
+      # Sustained audit queue overflow (compliance risk)
+      - alert: SustainedAuditQueueOverflow
+        expr: |
+          (
+            rate(audit_logs_dropped_total[5m])
+            /
+            rate(audit_logs_total[5m])
+          ) > 0.01
+        for: 5m
+        labels:
+          severity: critical
+          component: audit
+        annotations:
+          summary: "Sustained audit log queue overflow - compliance risk"
+          description: "Audit logs drop rate {{ $value | humanizePercentage }} for 5+ minutes. Consider increasing AUDIT_QUEUE_MAX_SIZE or AUDIT_BATCH_SIZE."
+
+      # Audit queue near capacity
+      - alert: AuditQueueNearCapacity
+        expr: |
+          (
+            audit_queue_size
+            /
+            10000
+          ) > 0.80
+        for: 2m
+        labels:
+          severity: warning
+          component: audit
+        annotations:
+          summary: "Audit queue usage above 80%"
+          description: "Audit queue size: {{ $value | humanizePercentage }} of max capacity. Backpressure may be applied soon."
+
   - name: rate_limit_alerts
     interval: 30s
     rules:
