@@ -104,7 +104,7 @@ class ConnectionManager:
                     f"(key: {session_key}): {e}"
                 )
                 self.disconnect(session_key)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 # Catch-all for unexpected send errors
                 logger.warning(
                     f"Unexpected error sending to connection {id(connection)} "

@@ -65,7 +65,7 @@ async def health_check(response: Response) -> HealthResponse:
     except (OperationalError, SQLAlchemyError, TimeoutError) as e:
         logger.error(f"Database health check failed: {e}")
         db_status = "unhealthy"
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         # Catch-all for health checks to prevent endpoint failure
         logger.error(f"Unexpected database health check error: {e}")
         db_status = "unhealthy"
@@ -82,7 +82,7 @@ async def health_check(response: Response) -> HealthResponse:
     ) as e:
         logger.error(f"Redis health check failed: {e}")
         redis_status = "unhealthy"
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         # Catch-all for health checks to prevent endpoint failure
         logger.error(f"Unexpected Redis health check error: {e}")
         redis_status = "unhealthy"

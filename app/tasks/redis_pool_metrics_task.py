@@ -44,7 +44,7 @@ async def redis_pool_metrics_task() -> None:
             # Wait before next collection
             await asyncio.sleep(REDIS_POOL_METRICS_INTERVAL_SECONDS)
 
-        except Exception as ex:
+        except Exception as ex:  # noqa: BLE001
             logger.error(
                 f"Error in redis_pool_metrics_task: {ex}", exc_info=True
             )

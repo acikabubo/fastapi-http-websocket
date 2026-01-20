@@ -85,8 +85,16 @@ async def get_cached_token_claims(token: str) -> dict[str, Any] | None:
         logger.debug(f"Token claims cache miss: {token_hash[:8]}...")
         return None
 
-    except Exception as e:
-        logger.warning(f"Error retrieving cached token: {e}")
+    except (json.JSONDecodeError, TypeError, ValueError) as e:
+        # json.JSONDecodeError: Cached data is not valid JSON
+        # TypeError: Cached data is wrong type
+        # ValueError: Invalid JSON structure
+        logger.warning(f"Error decoding cached token data: {e}")
+        return None
+    except Exception as e:  # noqa: BLE001
+        # Catch-all for Redis errors and unexpected issues
+        # (fail-open: return None to proceed without cache)
+        logger.warning(f"Unexpected error retrieving cached token: {e}")
         return None
 
 
@@ -137,8 +145,15 @@ async def cache_token_claims(
                 f"Cached token claims: {token_hash[:8]}... (TTL: {ttl}s)"
             )
 
-    except Exception as e:
-        logger.warning(f"Error caching token: {e}")
+    except (TypeError, ValueError, OverflowError) as e:
+        # TypeError: Invalid data type for claims
+        # ValueError: Invalid TTL value or JSON serialization issue
+        # OverflowError: TTL value too large
+        logger.warning(f"Error serializing token claims: {e}")
+    except Exception as e:  # noqa: BLE001
+        # Catch-all for Redis errors and unexpected issues
+        # (fail-open: failures don't prevent authentication)
+        logger.warning(f"Unexpected error caching token: {e}")
 
 
 async def invalidate_token_cache(token: str) -> None:
@@ -171,5 +186,7 @@ async def invalidate_token_cache(token: str) -> None:
         await redis.delete(cache_key)
         logger.debug(f"Invalidated token cache: {token_hash[:8]}...")
 
-    except Exception as e:
-        logger.warning(f"Error invalidating token cache: {e}")
+    except Exception as e:  # noqa: BLE001
+        # Catch-all for Redis errors and unexpected issues
+        # (fail-open: failures don't prevent logout/invalidation)
+        logger.warning(f"Unexpected error invalidating token cache: {e}")

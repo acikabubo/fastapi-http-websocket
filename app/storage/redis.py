@@ -298,7 +298,7 @@ class RedisPool:
                 logger.debug(
                     f"Could not access pool internal stats for db={db}"
                 )
-            except Exception as ex:
+            except Exception as ex:  # noqa: BLE001
                 logger.error(f"Error updating pool metrics for db={db}: {ex}")
 
     @staticmethod
@@ -346,7 +346,7 @@ async def get_redis_connection(
     except (ConnectionError, TimeoutError, OSError) as ex:
         logger.error(f"Redis connection/network error: {ex}")
         return None
-    except Exception as ex:
+    except Exception as ex:  # noqa: BLE001
         # Catch-all for graceful degradation
         logger.error(f"Unexpected Redis error: {ex}")
         return None
@@ -388,7 +388,7 @@ class REventHandler:
                 # TypeError: Invalid callback arguments
                 self.get_logger().error(f"Callback {callback} failed: {ex}")
                 break
-            except Exception as ex:
+            except Exception as ex:  # noqa: BLE001
                 # Catch-all for callback errors (don't fail the loop)
                 self.get_logger().error(
                     f"Unexpected error in callback {callback}: {ex}"

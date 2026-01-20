@@ -110,7 +110,7 @@ async def validate_database_connection() -> None:
             f"Database connection failed: {ex}. "
             f"Verify DB_HOST, DB_PORT, DB_USER, DB_PASSWORD settings."
         )
-    except Exception as ex:
+    except Exception as ex:  # noqa: BLE001
         raise StartupValidationError(
             f"Unexpected database validation error: {ex}"
         )
@@ -162,7 +162,7 @@ async def validate_redis_connection() -> None:
             f"Redis connection failed: {ex}. "
             f"Verify REDIS_IP and REDIS_PORT settings."
         )
-    except Exception as ex:
+    except Exception as ex:  # noqa: BLE001
         raise StartupValidationError(
             f"Unexpected Redis validation error: {ex}"
         )
