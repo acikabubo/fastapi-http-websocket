@@ -151,6 +151,16 @@ fixable = ["ALL"]
 unfixable = []
 dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 
+# Per-file ignores for BLE001 (scripts, examples, CLI tools can use bare exceptions)
+[tool.ruff.lint.per-file-ignores]
+"cli.py" = ["BLE001"]
+"get_token.py" = ["BLE001"]
+"generate_ws_handler.py" = ["BLE001"]
+"test_protobuf_websocket.py" = ["BLE001"]
+"scripts/*.py" = ["BLE001"]
+"examples/**/*.py" = ["BLE001"]
+"tests/test_metrics.py" = ["BLE001"]
+
 [tool.ruff.format]
 quote-style = "double"
 indent-style = "space"

@@ -34,8 +34,9 @@ class ExcludeMetricsFilter(logging.Filter):
             from app.settings import app_settings
 
             excluded_paths = app_settings.LOG_EXCLUDED_PATHS
-        except Exception:
+        except Exception:  # noqa: BLE001
             # Fallback to hardcoded paths if settings can't be loaded
+            # (ImportError, AttributeError, or any settings initialization error)
             excluded_paths = ["/metrics", "/health"]
 
         # Check if any excluded path appears in the log message
