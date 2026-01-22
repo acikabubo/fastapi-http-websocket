@@ -13,6 +13,10 @@ class MetadataModel(BaseModel):  # type: ignore[misc]
     per_page: Annotated[int, Field(ge=1)]
     total: Annotated[int, Field(ge=0)]
     pages: Annotated[int, Field(ge=0)]
+    next_cursor: str | None = (
+        None  # Cursor for next page (cursor-based pagination)
+    )
+    has_more: bool = False  # Whether there are more results available
 
 
 class BroadcastDataModel[GenericSQLModelType](BaseModel):  # type: ignore[misc]

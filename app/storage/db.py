@@ -1,4 +1,5 @@
 import asyncio
+import base64
 import math
 from typing import Any, Callable, Type
 
@@ -8,7 +9,7 @@ from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     create_async_engine,
 )
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import selectinload, sessionmaker
 from sqlmodel import func, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -95,6 +96,38 @@ async def get_session() -> AsyncSession:
             raise
 
 
+def encode_cursor(last_id: int) -> str:
+    """
+    Encode a cursor from the last item ID for cursor-based pagination.
+
+    Args:
+        last_id: The ID of the last item on the current page.
+
+    Returns:
+        Base64-encoded cursor string.
+    """
+    return base64.b64encode(str(last_id).encode()).decode()
+
+
+def decode_cursor(cursor: str) -> int:
+    """
+    Decode a cursor to get the last item ID for cursor-based pagination.
+
+    Args:
+        cursor: Base64-encoded cursor string.
+
+    Returns:
+        The ID of the last item from the previous page.
+
+    Raises:
+        ValueError: If cursor is invalid or cannot be decoded.
+    """
+    try:
+        return int(base64.b64decode(cursor).decode())
+    except (ValueError, TypeError) as ex:
+        raise ValueError(f"Invalid cursor format: {ex}") from ex
+
+
 async def get_paginated_results(
     model: Type[GenericSQLModelType],
     page: int = 1,
@@ -106,22 +139,43 @@ async def get_paginated_results(
         | None
     ) = None,
     skip_count: bool = False,
+    cursor: str | None = None,
+    eager_load: list[str] | None = None,
 ) -> tuple[list[GenericSQLModelType], MetadataModel]:
     """
-    Get paginated results from a SQLModel query with optional count optimization.
+    Get paginated results from a SQLModel query with cursor and eager loading support.
 
-    This function executes a SQLModel query, applies any provided filters, and returns the paginated results along with metadata about the query.
+    This function supports both offset-based (traditional) and cursor-based pagination.
+    Cursor-based pagination provides consistent performance for any page and stable
+    results unaffected by concurrent inserts/deletes.
 
     Args:
         model (Type[GenericSQLModelType]): The SQLModel class to query.
-        page (int, optional): The page number to retrieve. Defaults to 1.
+        page (int, optional): The page number to retrieve (offset pagination). Defaults to 1.
         per_page (int | None, optional): The number of results to return per page. Defaults to app_settings.DEFAULT_PAGE_SIZE. Capped at MAX_PAGE_SIZE.
         filters (dict[str, Any] | None, optional): A dictionary of filters to apply to the query.
         apply_filters (Callable[[Select, Type[GenericSQLModelType], dict[str, Any]], Select] | None, optional): A custom function to apply filters to the query. If not provided, the `default_apply_filters` function will be used.
         skip_count (bool, optional): Skip the count query for performance. When True, total will be 0. Defaults to False.
+        cursor (str | None, optional): Base64-encoded cursor for cursor-based pagination. When provided, page parameter is ignored.
+        eager_load (list[str] | None, optional): List of relationship names to eager load to prevent N+1 queries.
 
     Returns:
-        tuple[list[GenericSQLModelType], MetadataModel]: A tuple containing the list of results and a `MetadataModel` instance with pagination metadata. When skip_count is True, total will be 0 and pages will be 0.
+        tuple[list[GenericSQLModelType], MetadataModel]: A tuple containing the list of results and a `MetadataModel` instance with pagination metadata. When using cursor pagination, next_cursor and has_more fields will be populated.
+
+    Example:
+        >>> # Offset-based pagination (traditional)
+        >>> authors, meta = await get_paginated_results(
+        ...     Author, page=1, per_page=20
+        ... )
+
+        >>> # Cursor-based pagination with eager loading (prevents N+1 queries)
+        >>> authors, meta = await get_paginated_results(
+        ...     Author,
+        ...     per_page=20,
+        ...     cursor=request.data.get("cursor"),
+        ...     eager_load=["books"],  # Load books relationship
+        ... )
+        >>> # Use meta.next_cursor for next page
     """
     # Use settings default if not specified, cap at MAX_PAGE_SIZE
     if per_page is None:
@@ -130,6 +184,18 @@ async def get_paginated_results(
 
     query: Select = select(model)
 
+    # Apply eager loading for relationships (prevents N+1 queries)
+    if eager_load:
+        for relationship in eager_load:
+            if hasattr(model, relationship):
+                query = query.options(
+                    selectinload(getattr(model, relationship))
+                )
+            else:
+                logger.warning(
+                    f"Relationship '{relationship}' not found on {model.__name__}"
+                )
+
     if filters:
         if apply_filters:
             query = apply_filters(query, model, filters)
@@ -137,8 +203,9 @@ async def get_paginated_results(
             query = default_apply_filters(query, model, filters)
 
     async with async_session() as s:
-        # Calculate total
-        if skip_count:
+        # Calculate total (skip for cursor pagination or when requested)
+        use_cursor = cursor is not None
+        if skip_count or use_cursor:
             total = 0  # Skip count query for performance
         else:
             # Try to get count from cache first
@@ -165,19 +232,41 @@ async def get_paginated_results(
                 # Cache the count result for future requests
                 await set_cached_count(model_name, total, filters)
 
+        # Apply pagination strategy
+        if use_cursor and cursor:  # Type narrowing for mypy
+            # Cursor-based pagination (stable, O(1) performance)
+            last_id = decode_cursor(cursor)
+            query = query.where(model.id > last_id)
+        else:
+            # Offset-based pagination (traditional, O(n) performance)
+            query = query.offset((page - 1) * per_page)
+
+        # Fetch one extra item to determine if there are more results
+        query = query.limit(per_page + 1)
+        results = await s.exec(query)
+        items = results.all()
+
+        # Check if there are more results
+        has_more = len(items) > per_page
+        if has_more:
+            items = items[:per_page]  # Remove the extra item
+
+        # Generate next cursor
+        next_cursor = None
+        if use_cursor and has_more and items:
+            next_cursor = encode_cursor(items[-1].id)
+
         # Collect/format meta data
         meta_data = MetadataModel(
             page=page,
             per_page=per_page,
             total=total,
             pages=math.ceil(total / per_page) if total > 0 else 0,
+            next_cursor=next_cursor,
+            has_more=has_more,
         )
 
-        # Get items
-        query = query.offset((page - 1) * per_page).limit(per_page)
-        results = await s.exec(query)
-
-        return results.all(), meta_data
+        return items, meta_data
 
 
 def default_apply_filters(
