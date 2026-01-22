@@ -119,6 +119,11 @@ get_paginated_authors_schema: JsonSchemaType = {
         },
         "page": {"type": "integer"},
         "per_page": {"type": "integer"},
+        "cursor": {"type": "string"},  # Cursor for cursor-based pagination
+        "eager_load": {  # Relationships to eager load (prevents N+1 queries)
+            "type": "array",
+            "items": {"type": "string"},
+        },
     },
     "additionalProperties": False,
 }
@@ -135,19 +140,25 @@ async def get_paginated_authors_handler(
     request: RequestModel,
 ) -> ResponseModel[Author]:
     """
-    WebSocket handler to get paginated authors.
+    WebSocket handler to get paginated authors with cursor and eager loading support.
+
+    Supports both offset-based (traditional) and cursor-based pagination.
+    Cursor-based pagination provides consistent O(1) performance and stable results.
 
     Request Data:
         {
-            "page": int (default: 1),
+            "page": int (default: 1) - For offset pagination,
             "per_page": int (default: 20),
-            "filters": dict (optional) - e.g., {"id": 1, "name": "John"}
+            "filters": dict (optional) - e.g., {"id": 1, "name": "John"},
+            "cursor": str (optional) - For cursor-based pagination,
+            "eager_load": list[str] (optional) - Relationships to load, e.g., ["books"]
         }
 
     Response Data: List of author objects with pagination metadata.
 
-    Example:
-        {
+    Example (offset-based):
+        Request: {"page": 1, "per_page": 20}
+        Response: {
             "pkg_id": 2,
             "req_id": "uuid-here",
             "data": [...],
@@ -155,7 +166,25 @@ async def get_paginated_authors_handler(
                 "page": 1,
                 "per_page": 20,
                 "total": 100,
-                "pages": 5
+                "pages": 5,
+                "next_cursor": null,
+                "has_more": true
+            }
+        }
+
+    Example (cursor-based with eager loading):
+        Request: {"per_page": 20, "cursor": "MTA=", "eager_load": ["books"]}
+        Response: {
+            "pkg_id": 2,
+            "req_id": "uuid-here",
+            "data": [...],  # Authors with books preloaded
+            "meta": {
+                "page": 1,
+                "per_page": 20,
+                "total": 0,  # Skipped for cursor pagination
+                "pages": 0,
+                "next_cursor": "MjA=",  # Use for next page
+                "has_more": true
             }
         }
     """

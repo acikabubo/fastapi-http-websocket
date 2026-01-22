@@ -1874,10 +1874,16 @@ If migration tests fail during pre-commit:
 
 ### Database Pagination
 
-Use `get_paginated_results()` for all list endpoints:
+The application supports both **offset-based** (traditional) and **cursor-based** pagination, with optional eager loading to prevent N+1 queries.
+
+#### Offset-based Pagination (Traditional)
+
+Standard page-based pagination using `OFFSET` and `LIMIT`:
+
 ```python
 from app.storage.db import get_paginated_results
 
+# Traditional offset pagination
 results, meta = await get_paginated_results(
     Author,
     page=request.data.get("page", 1),
@@ -1892,6 +1898,226 @@ return ResponseModel.success(
     meta=meta
 )
 ```
+
+**Metadata returned:**
+```python
+{
+    "page": 1,
+    "per_page": 20,
+    "total": 100,
+    "pages": 5,
+    "next_cursor": None,
+    "has_more": False
+}
+```
+
+**Pros:**
+- Familiar page-based navigation
+- Shows total count and page numbers
+- Easy to jump to specific pages
+
+**Cons:**
+- O(n) performance - slower for large offsets (e.g., page 1000)
+- Inconsistent results if data changes between page loads
+- Expensive `COUNT(*)` query for total count
+
+#### Cursor-based Pagination (Recommended)
+
+Cursor-based pagination provides consistent O(1) performance and stable results using the last item's ID as a cursor:
+
+```python
+from app.storage.db import get_paginated_results
+
+# First page - no cursor
+results, meta = await get_paginated_results(
+    Author,
+    per_page=20,
+    cursor=""  # Empty string or None for first page
+)
+
+# Subsequent pages - use next_cursor from previous response
+results, meta = await get_paginated_results(
+    Author,
+    per_page=20,
+    cursor=meta.next_cursor  # Base64-encoded last item ID
+)
+```
+
+**Metadata returned:**
+```python
+{
+    "page": 1,
+    "per_page": 20,
+    "total": 0,  # COUNT skipped for performance
+    "pages": 0,
+    "next_cursor": "MjA=",  # Base64-encoded cursor for next page
+    "has_more": True  # Whether more results exist
+}
+```
+
+**Cursor encoding:**
+- Cursor is base64-encoded last item ID: `encode_cursor(20)` → `"MjA="`
+- Decode with `decode_cursor("MjA=")` → `20`
+- Empty cursor or `None` starts from first item
+
+**Pros:**
+- O(1) performance - consistent speed regardless of position
+- Stable results - no duplicates or skipped items if data changes
+- No expensive `COUNT(*)` query
+- Better for infinite scroll and real-time feeds
+
+**Cons:**
+- Cannot jump to arbitrary pages
+- No total count or page numbers
+- Requires sequential traversal
+
+#### Eager Loading (Prevent N+1 Queries)
+
+Both pagination types support eager loading to prevent N+1 query problems:
+
+```python
+# Eager load relationships to prevent N+1 queries
+results, meta = await get_paginated_results(
+    Author,
+    per_page=20,
+    cursor="",
+    eager_load=["books"]  # Load books relationship in 2 queries (not N+1)
+)
+
+# Without eager loading (N+1 problem):
+# - 1 query for authors
+# - N queries for each author's books (if accessed)
+# Total: 1 + N queries
+
+# With eager loading:
+# - 1 query for authors
+# - 1 optimized query for all books
+# Total: 2 queries
+```
+
+**Multiple relationships:**
+```python
+results, meta = await get_paginated_results(
+    Author,
+    per_page=20,
+    eager_load=["books", "reviews"]  # Load multiple relationships
+)
+```
+
+**Invalid relationship handling:**
+- If relationship doesn't exist, logs warning but continues
+- Example: `eager_load=["nonexistent"]` logs warning, returns results
+
+#### Combined Example: Cursor + Eager Loading + Filters
+
+```python
+# Optimal pagination with cursor, eager loading, and filters
+results, meta = await get_paginated_results(
+    Author,
+    per_page=20,
+    cursor=request.data.get("cursor", ""),
+    filters={"status": "active", "verified": True},
+    eager_load=["books", "reviews"]
+)
+
+# Check if more results exist
+if meta.has_more:
+    next_cursor = meta.next_cursor
+    # Client can request next page with cursor=next_cursor
+```
+
+#### WebSocket Handler Example
+
+```python
+@pkg_router.register(PkgID.GET_AUTHORS, json_schema=schema)
+async def get_authors_handler(request: RequestModel) -> ResponseModel:
+    """
+    Get paginated authors with cursor and eager loading support.
+
+    Request Data:
+        {
+            "per_page": 20,
+            "cursor": "MjA=",  # Optional - for subsequent pages
+            "eager_load": ["books"],  # Optional - prevent N+1 queries
+            "filters": {"status": "active"}  # Optional
+        }
+
+    Response:
+        {
+            "data": [...],
+            "meta": {
+                "has_more": true,
+                "next_cursor": "NDA=",
+                "total": 0,  # COUNT skipped for cursor pagination
+                "pages": 0
+            }
+        }
+    """
+    async with async_session() as session:
+        repo = AuthorRepository(session)
+
+        # Get pagination parameters
+        per_page = request.data.get("per_page", 20)
+        cursor = request.data.get("cursor", "")
+        eager_load = request.data.get("eager_load", [])
+        filters = request.data.get("filters", {})
+
+        # Use cursor pagination with eager loading
+        results, meta = await get_paginated_results(
+            Author,
+            per_page=per_page,
+            cursor=cursor,
+            eager_load=eager_load,
+            filters=filters
+        )
+
+        return ResponseModel.success(
+            request.pkg_id,
+            request.req_id,
+            data=[r.model_dump() for r in results],
+            meta=meta.model_dump()
+        )
+```
+
+#### Choosing Between Offset and Cursor Pagination
+
+**Use Cursor Pagination When:**
+- ✅ Performance is critical (large datasets, high traffic)
+- ✅ Real-time data (frequent inserts/updates)
+- ✅ Infinite scroll UI pattern
+- ✅ Mobile apps (bandwidth-sensitive)
+- ✅ No need for page numbers or jumping to specific pages
+
+**Use Offset Pagination When:**
+- ✅ Need total count and page numbers
+- ✅ Users need to jump to arbitrary pages
+- ✅ Small datasets (< 1000 items)
+- ✅ Data rarely changes
+- ✅ Admin dashboards with page selectors
+
+**Best Practice: Support Both**
+
+The current implementation supports both simultaneously - clients can choose via request parameters:
+
+```python
+# Offset pagination (traditional)
+{"page": 2, "per_page": 20}
+
+# Cursor pagination (recommended)
+{"cursor": "MjA=", "per_page": 20}
+```
+
+#### Performance Comparison
+
+| Feature | Offset Pagination | Cursor Pagination |
+|---------|-------------------|-------------------|
+| Speed (page 1) | Fast | Fast |
+| Speed (page 1000) | Slow (O(n)) | Fast (O(1)) |
+| Total count | Yes (expensive) | No (skipped) |
+| Jump to page | Yes | No (sequential only) |
+| Stable results | No (data changes) | Yes (cursor-based) |
+| N+1 queries | Possible | Possible (use eager_load) |
+| Best for | Small datasets | Large datasets, real-time |
 
 ### Performance Optimizations
 

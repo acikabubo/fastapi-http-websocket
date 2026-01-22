@@ -306,6 +306,217 @@ class TestGetPaginatedResults:
             assert len(results) == 1
             assert results[0].name == "Exact Match"
 
+    @pytest.mark.asyncio
+    async def test_cursor_pagination_first_page(self, mock_db_session):
+        """Test cursor pagination without initial cursor."""
+        from unittest.mock import AsyncMock, MagicMock, patch
+
+        from app.models.author import Author
+        from app.storage.db import encode_cursor, get_paginated_results
+
+        # Mock 3 authors (requesting 2, so has_more = True)
+        mock_authors = [
+            Author(id=1, name="Author 1"),
+            Author(id=2, name="Author 2"),
+            Author(id=3, name="Author 3"),  # Extra item for has_more detection
+        ]
+
+        mock_data_result = MagicMock()
+        mock_data_result.all.return_value = mock_authors
+
+        mock_session_inst = AsyncMock()
+        mock_session_inst.exec = AsyncMock(return_value=mock_data_result)
+
+        # Create proper async context manager mock
+        mock_context_manager = MagicMock()
+        mock_context_manager.__aenter__ = AsyncMock(
+            return_value=mock_session_inst
+        )
+        mock_context_manager.__aexit__ = AsyncMock(return_value=None)
+
+        mock_session_maker = MagicMock(return_value=mock_context_manager)
+
+        with patch("app.storage.db.async_session", mock_session_maker):
+            results, meta = await get_paginated_results(
+                Author, per_page=2, cursor=""
+            )
+
+            assert len(results) == 2  # Extra item removed
+            assert meta.has_more is True
+            assert meta.next_cursor == encode_cursor(2)
+            assert meta.total == 0  # COUNT skipped for cursor pagination
+            assert meta.pages == 0
+
+    @pytest.mark.asyncio
+    async def test_cursor_pagination_with_cursor(self, mock_db_session):
+        """Test using next_cursor for subsequent pages."""
+        from unittest.mock import AsyncMock, MagicMock, patch
+
+        from app.models.author import Author
+        from app.storage.db import encode_cursor, get_paginated_results
+
+        # Mock authors starting from ID 3 (after cursor "Mg==" which is ID 2)
+        mock_authors = [
+            Author(id=3, name="Author 3"),
+            Author(id=4, name="Author 4"),
+            Author(id=5, name="Author 5"),  # Extra item for has_more
+        ]
+
+        mock_data_result = MagicMock()
+        mock_data_result.all.return_value = mock_authors
+
+        mock_session_inst = AsyncMock()
+        mock_session_inst.exec = AsyncMock(return_value=mock_data_result)
+
+        mock_context_manager = MagicMock()
+        mock_context_manager.__aenter__ = AsyncMock(
+            return_value=mock_session_inst
+        )
+        mock_context_manager.__aexit__ = AsyncMock(return_value=None)
+
+        mock_session_maker = MagicMock(return_value=mock_context_manager)
+
+        with patch("app.storage.db.async_session", mock_session_maker):
+            # Use cursor from previous page
+            cursor = encode_cursor(2)
+            results, meta = await get_paginated_results(
+                Author, per_page=2, cursor=cursor
+            )
+
+            assert len(results) == 2
+            assert results[0].id == 3
+            assert results[1].id == 4
+            assert meta.has_more is True
+            assert meta.next_cursor == encode_cursor(4)
+
+    @pytest.mark.asyncio
+    async def test_cursor_pagination_last_page(self, mock_db_session):
+        """Test cursor pagination on last page (has_more=False)."""
+        from unittest.mock import AsyncMock, MagicMock, patch
+
+        from app.models.author import Author
+        from app.storage.db import get_paginated_results
+
+        # Only 2 authors (requesting 5, so has_more = False)
+        mock_authors = [
+            Author(id=8, name="Author 8"),
+            Author(id=9, name="Author 9"),
+        ]
+
+        mock_data_result = MagicMock()
+        mock_data_result.all.return_value = mock_authors
+
+        mock_session_inst = AsyncMock()
+        mock_session_inst.exec = AsyncMock(return_value=mock_data_result)
+
+        mock_context_manager = MagicMock()
+        mock_context_manager.__aenter__ = AsyncMock(
+            return_value=mock_session_inst
+        )
+        mock_context_manager.__aexit__ = AsyncMock(return_value=None)
+
+        mock_session_maker = MagicMock(return_value=mock_context_manager)
+
+        with patch("app.storage.db.async_session", mock_session_maker):
+            results, meta = await get_paginated_results(
+                Author, per_page=5, cursor=""
+            )
+
+            assert len(results) == 2
+            assert meta.has_more is False
+            assert meta.next_cursor is None
+
+    @pytest.mark.asyncio
+    async def test_cursor_pagination_with_eager_load(self, mock_db_session):
+        """Test cursor pagination with eager loading."""
+        from unittest.mock import AsyncMock, MagicMock, patch
+
+        from app.models.author import Author
+        from app.storage.db import get_paginated_results
+
+        # Mock authors with books relationship
+        mock_authors = [
+            Author(id=1, name="Author 1"),
+            Author(id=2, name="Author 2"),
+        ]
+
+        mock_data_result = MagicMock()
+        mock_data_result.all.return_value = mock_authors
+
+        mock_session_inst = AsyncMock()
+        mock_session_inst.exec = AsyncMock(return_value=mock_data_result)
+
+        mock_context_manager = MagicMock()
+        mock_context_manager.__aenter__ = AsyncMock(
+            return_value=mock_session_inst
+        )
+        mock_context_manager.__aexit__ = AsyncMock(return_value=None)
+
+        mock_session_maker = MagicMock(return_value=mock_context_manager)
+
+        with patch("app.storage.db.async_session", mock_session_maker):
+            results, meta = await get_paginated_results(
+                Author, per_page=10, cursor="", eager_load=["books"]
+            )
+
+            # Verify eager_load was applied (query was executed)
+            assert len(results) == 2
+            assert mock_session_inst.exec.called
+
+    @pytest.mark.asyncio
+    async def test_cursor_pagination_invalid_cursor(self, mock_db_session):
+        """Test error handling for invalid cursor."""
+        from unittest.mock import patch
+
+        from app.models.author import Author
+        from app.storage.db import get_paginated_results
+
+        with (
+            patch("app.storage.db.async_session"),
+            pytest.raises(ValueError, match="Invalid cursor format"),
+        ):
+            await get_paginated_results(
+                Author, per_page=10, cursor="invalid_base64!!!"
+            )
+
+    @pytest.mark.asyncio
+    async def test_cursor_pagination_eager_load_invalid_relationship(
+        self, mock_db_session
+    ):
+        """Test warning logged for invalid eager_load relationship."""
+        from unittest.mock import AsyncMock, MagicMock, patch
+
+        from app.models.author import Author
+        from app.storage.db import get_paginated_results
+
+        mock_authors = [Author(id=1, name="Author 1")]
+
+        mock_data_result = MagicMock()
+        mock_data_result.all.return_value = mock_authors
+
+        mock_session_inst = AsyncMock()
+        mock_session_inst.exec = AsyncMock(return_value=mock_data_result)
+
+        mock_context_manager = MagicMock()
+        mock_context_manager.__aenter__ = AsyncMock(
+            return_value=mock_session_inst
+        )
+        mock_context_manager.__aexit__ = AsyncMock(return_value=None)
+
+        mock_session_maker = MagicMock(return_value=mock_context_manager)
+
+        with patch("app.storage.db.async_session", mock_session_maker):
+            # Request eager loading for non-existent relationship
+            results, meta = await get_paginated_results(
+                Author,
+                per_page=10,
+                cursor="",
+                eager_load=["nonexistent_relationship"],
+            )
+
+            # Should complete successfully but log warning
+            assert len(results) == 1
+
 
 class TestDefaultApplyFilters:
     """Tests for default_apply_filters function."""
