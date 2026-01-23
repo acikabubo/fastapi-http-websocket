@@ -9,7 +9,6 @@ Uses an async queue and background worker for non-blocking audit log writes.
 
 import asyncio
 import time
-from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy.exc import SQLAlchemyError
@@ -17,6 +16,7 @@ from starlette.requests import Request
 
 from app.logging import logger
 from app.models.user_action import UserAction
+from app.schemas.audit import AuditLogInput
 from app.settings import app_settings
 from app.storage.db import async_session
 from app.types import ActionType, AuditOutcome, RequestId, UserId, Username
@@ -277,27 +277,52 @@ async def log_user_action(
 
     Returns:
         The created UserAction instance (not yet persisted), or None if queueing failed.
+
+    Raises:
+        ValidationError: If any parameter fails Pydantic validation (type or value errors).
     """
+    # Validate input parameters using Pydantic model
+    # This will raise ValidationError for invalid types or empty required fields
+    validated_input = AuditLogInput(
+        user_id=user_id,
+        username=username,
+        user_roles=user_roles,
+        action_type=action_type,
+        resource=resource,
+        outcome=outcome,
+        ip_address=ip_address,
+        user_agent=user_agent,
+        request_id=request_id,
+        request_data=request_data,
+        response_status=response_status,
+        error_message=error_message,
+        duration_ms=duration_ms,
+    )
+
     try:
         # Sanitize request data to remove sensitive information
-        sanitized_data = sanitize_data(request_data)
+        sanitized_data = sanitize_data(validated_input.request_data)
 
-        # Create audit log entry
+        # Create audit log entry using validated input
         action = UserAction(
-            timestamp=datetime.now(UTC),
-            user_id=user_id,
-            username=username,
-            user_roles=user_roles,
-            action_type=action_type,
-            resource=resource,
-            outcome=outcome,
-            ip_address=ip_address,
-            user_agent=user_agent,
-            request_id=str(request_id) if request_id else None,
+            timestamp=validated_input.timestamp,
+            user_id=validated_input.user_id,
+            username=validated_input.username,
+            user_roles=validated_input.user_roles,
+            action_type=validated_input.action_type,
+            resource=validated_input.resource,
+            outcome=validated_input.outcome,
+            ip_address=validated_input.ip_address,
+            user_agent=validated_input.user_agent,
+            request_id=(
+                str(validated_input.request_id)
+                if validated_input.request_id
+                else None
+            ),
             request_data=sanitized_data,
-            response_status=response_status,
-            error_message=error_message,
-            duration_ms=duration_ms,
+            response_status=validated_input.response_status,
+            error_message=validated_input.error_message,
+            duration_ms=validated_input.duration_ms,
         )
 
         # Queue for background processing with backpressure
