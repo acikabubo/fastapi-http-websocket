@@ -182,6 +182,10 @@ async def get_paginated_results(
         per_page = app_settings.DEFAULT_PAGE_SIZE
     per_page = min(per_page, MAX_PAGE_SIZE)
 
+    # Validate per_page is positive (prevents division by zero)
+    if per_page < 1:
+        raise ValueError("per_page must be >= 1")
+
     query: Select = select(model)
 
     # Apply eager loading for relationships (prevents N+1 queries)

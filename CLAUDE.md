@@ -2399,6 +2399,134 @@ async def test_authentication():
 3. Never create inline mocks - always use or extend centralized factories
 4. See refactored files for examples: `test_rate_limiting.py`, `test_websocket.py`, `test_auth_basic.py`
 
+#### Edge Case Testing
+
+**IMPORTANT**: Always write edge case tests for critical components. Edge cases reveal bugs that standard tests miss.
+
+**What Are Edge Cases?**
+- Invalid input (malformed data, wrong types, missing fields)
+- Boundary conditions (zero, negative, maximum values)
+- Resource failures (database down, Redis unavailable, connection drops)
+- Concurrent operations (race conditions, deadlocks)
+- Unusual state combinations (empty results, overflow, underflow)
+
+**Dedicated Edge Case Test Files:**
+- `tests/test_websocket_edge_cases.py` - WebSocket consumer edge cases (14 tests)
+- `tests/test_rate_limiter_edge_cases.py` - Rate limiter edge cases (19 tests)
+- `tests/test_audit_edge_cases.py` - Audit logger edge cases (15 tests)
+- `tests/test_pagination_edge_cases.py` - Pagination edge cases (16 tests)
+
+**Edge Case Categories:**
+
+1. **Malformed Input:**
+   ```python
+   async def test_malformed_json_message(self):
+       """Test handling of invalid JSON."""
+       invalid_data = {"invalid_field": "value"}  # Missing required fields
+       await consumer.on_receive(websocket, invalid_data)
+       websocket.close.assert_called_once()  # Should close gracefully
+   ```
+
+2. **Resource Failures:**
+   ```python
+   async def test_redis_connection_error_fail_open(self):
+       """Test fail-open when Redis unavailable."""
+       mock_redis.zadd.side_effect = RedisConnectionError("Connection refused")
+       is_allowed, _ = await rate_limiter.check_rate_limit("user:123", 10, 60)
+       assert is_allowed is True  # Should allow request (fail-open)
+   ```
+
+3. **Boundary Conditions:**
+   ```python
+   async def test_page_zero(self):
+       """Test that page=0 is rejected."""
+       with pytest.raises(ValueError, match="page must be >= 1"):
+           await get_paginated_results(Author, page=0, per_page=10)
+   ```
+
+4. **Concurrent Operations:**
+   ```python
+   async def test_concurrent_messages_from_single_connection(self):
+       """Test handling of multiple concurrent messages."""
+       tasks = [consumer.on_receive(websocket, req) for req in requests]
+       await asyncio.gather(*tasks)
+       assert websocket.send_response.call_count == len(requests)
+   ```
+
+5. **Connection/Network Failures:**
+   ```python
+   async def test_message_processing_during_disconnect(self):
+       """Test when connection drops mid-processing."""
+       websocket.send_response.side_effect = RuntimeError("Connection closed")
+       # Should handle gracefully without crashing
+       await consumer.on_receive(websocket, request_data)
+   ```
+
+**When to Write Edge Case Tests:**
+
+✅ **Always write edge case tests for:**
+- Critical path code (authentication, authorization, data persistence)
+- External service integrations (Redis, PostgreSQL, Keycloak)
+- Message handling (WebSocket, HTTP request validation)
+- Rate limiting and resource management
+- Data pagination and filtering
+
+❌ **Don't need edge case tests for:**
+- Simple utility functions with no external dependencies
+- Configuration loaders
+- Static data transformations
+
+**Discovered Bugs Process:**
+
+When edge case tests reveal bugs:
+1. Document bug in test docstring with "BUG DISCOVERED:" prefix
+2. Update test to expect current behavior (with `pytest.raises`)
+3. Create GitHub issue for fixing the bug
+4. Link issue number in test comment
+5. After fix, update test to expect correct behavior
+
+**Example:**
+```python
+async def test_malformed_protobuf_message(self):
+    """
+    Test handling of invalid Protobuf data.
+
+    BUG DISCOVERED: DecodeError not caught, causing exception.
+    GitHub Issue: #130
+    Should be caught and handled like ValidationError.
+    """
+    # Currently raises DecodeError (not caught)
+    with pytest.raises(DecodeError):
+        await consumer.on_receive(websocket, invalid_protobuf)
+
+    # After fix (issue #130), change to:
+    # await consumer.on_receive(websocket, invalid_protobuf)
+    # websocket.close.assert_called_once()
+```
+
+**Running Edge Case Tests:**
+```bash
+# Run all edge case tests
+pytest tests/test_*_edge_cases.py -v
+
+# Run specific category
+pytest tests/test_websocket_edge_cases.py -v
+
+# Run only edge case tests that currently fail (to track bugs)
+pytest tests/test_*_edge_cases.py -v --tb=line | grep FAILED
+```
+
+**Benefits of Edge Case Testing:**
+- ✅ Catches bugs before production (5 critical bugs found in WebSocket consumer)
+- ✅ Documents expected behavior for unusual scenarios
+- ✅ Prevents regressions when fixing bugs
+- ✅ Improves code reliability and robustness
+- ✅ Serves as specification for fail-open/fail-closed behavior
+
+**See Also:**
+- `BUGS_DISCOVERED_ISSUE_129.md` - Summary of bugs found during edge case testing
+- `tests/test_websocket_edge_cases.py` - Comprehensive WebSocket edge case examples
+
 ### Performance Profiling with Scalene
 
 **Overview:**
