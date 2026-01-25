@@ -2079,6 +2079,130 @@ async def get_authors_handler(request: RequestModel) -> ResponseModel:
         )
 ```
 
+#### Type-Safe Filters with Pydantic Schemas
+
+For better type safety and IDE autocomplete, use Pydantic filter schemas instead of raw dictionaries:
+
+**Filter Schema Definition:**
+```python
+# app/schemas/filters.py
+from pydantic import BaseModel, Field
+from app.schemas.filters import BaseFilter
+
+class AuthorFilters(BaseFilter):
+    """Type-safe filters for Author model queries."""
+
+    id: int | None = Field(
+        default=None,
+        description="Filter by exact author ID",
+    )
+    name: str | None = Field(
+        default=None,
+        description="Filter by author name (case-insensitive partial match)",
+    )
+
+# BaseFilter provides to_dict() method and extra="forbid" config
+```
+
+**Usage in WebSocket Handlers:**
+```python
+from pydantic import ValidationError
+from app.schemas.filters import AuthorFilters
+
+@pkg_router.register(PkgID.GET_PAGINATED_AUTHORS)
+@handle_ws_errors
+async def get_paginated_authors_handler(request: RequestModel) -> ResponseModel:
+    # Extract request parameters
+    data = request.data or {}
+    page = data.get("page", 1)
+    per_page = data.get("per_page")
+
+    # Parse filters with type-safe Pydantic schema
+    filters = None
+    if "filters" in data:
+        try:
+            filters = AuthorFilters(**data["filters"])
+        except ValidationError as e:
+            return ResponseModel.err_msg(
+                request.pkg_id,
+                request.req_id,
+                f"Invalid filter parameters: {str(e)}",
+            )
+
+    # Get paginated results with type-safe filters
+    authors, meta = await get_paginated_results(
+        Author,
+        page=page,
+        per_page=per_page,
+        filters=filters,  # Pydantic model, not dict!
+    )
+
+    return ResponseModel(
+        pkg_id=request.pkg_id,
+        req_id=request.req_id,
+        data=[author.model_dump() for author in authors],
+        meta=meta,
+    )
+```
+
+**Benefits of Type-Safe Filters:**
+- ✅ **Compile-time safety**: IDE autocomplete for filter fields
+- ✅ **Runtime validation**: Pydantic catches invalid fields before query execution
+- ✅ **Self-documenting**: Filter schemas document available filter options
+- ✅ **Security**: Whitelist of allowed filter fields prevents injection attacks
+- ✅ **Backward compatible**: Legacy dict filters still work via `get_paginated_results()`
+
+**Creating Filter Schemas:**
+
+When adding a new model, create a corresponding filter schema in `app/schemas/filters.py`:
+
+```python
+class MyModelFilters(BaseFilter):
+    """Type-safe filters for MyModel queries."""
+
+    id: int | None = None
+    name: str | None = None
+    created_after: datetime | None = Field(
+        None,
+        description="Filter by creation date"
+    )
+
+    # All fields are optional (None default)
+    # String filters use case-insensitive ILIKE pattern matching
+    # to_dict() method excludes None values automatically
+```
+
+**Filter Validation:**
+
+The `get_paginated_results()` function validates filter keys against model columns in `default_apply_filters()`:
+
+```python
+def default_apply_filters(query, model, filters):
+    for key, value in filters.items():
+        if hasattr(model, key):
+            # Apply filter
+            attr = getattr(model, key)
+            query = query.filter(attr == value)
+        else:
+            # Invalid filter key
+            raise ValueError(
+                f"Invalid filter: {key} is not an attribute of {model.__name__}"
+            )
+    return query
+```
+
+**Error Handling:**
+```python
+# Invalid filter field (extra="forbid")
+filters = AuthorFilters(invalid_field="value")  # ValidationError!
+
+# Invalid field type
+filters = AuthorFilters(id="not_an_int")  # ValidationError!
+
+# Valid filter
+filters = AuthorFilters(name="John")  # ✅ Type-safe
+```
+
 #### Choosing Between Offset and Cursor Pagination
 
 **Use Cursor Pagination When:**

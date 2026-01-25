@@ -13,6 +13,8 @@ Key Benefits:
 - Consistent behavior across protocols
 """
 
+from pydantic import ValidationError
+
 from app.api.ws.constants import PkgID
 from app.api.ws.validation import validator
 from app.commands.author_commands import (
@@ -24,6 +26,7 @@ from app.commands.author_commands import (
 from app.models.author import Author
 from app.repositories.author_repository import AuthorRepository
 from app.routing import pkg_router
+from app.schemas.filters import AuthorFilters
 from app.schemas.generic_typing import JsonSchemaType
 from app.schemas.request import RequestModel
 from app.schemas.response import ResponseModel
@@ -156,8 +159,8 @@ async def get_paginated_authors_handler(
 
     Response Data: List of author objects with pagination metadata.
 
-    Example (offset-based):
-        Request: {"page": 1, "per_page": 20}
+    Example (offset-based with type-safe filters):
+        Request: {"page": 1, "per_page": 20, "filters": {"name": "John"}}
         Response: {
             "pkg_id": 2,
             "req_id": "uuid-here",
@@ -188,7 +191,35 @@ async def get_paginated_authors_handler(
             }
         }
     """
-    authors, meta = await get_paginated_results(Author, **(request.data or {}))
+    # Extract request parameters
+    data = request.data or {}
+    page = data.get("page", 1)
+    per_page = data.get("per_page")
+    cursor = data.get("cursor")
+    eager_load = data.get("eager_load")
+
+    # Parse filters with type-safe Pydantic schema
+    filters = None
+    if "filters" in data:
+        try:
+            filters = AuthorFilters(**data["filters"])
+        except ValidationError as e:
+            # Return validation error response
+            return ResponseModel.err_msg(
+                request.pkg_id,
+                request.req_id,
+                msg=f"Invalid filter parameters: {str(e)}",
+            )
+
+    # Get paginated results with type-safe filters
+    authors, meta = await get_paginated_results(
+        Author,
+        page=page,
+        per_page=per_page,
+        filters=filters,
+        cursor=cursor,
+        eager_load=eager_load,
+    )
 
     return ResponseModel(
         pkg_id=request.pkg_id,
