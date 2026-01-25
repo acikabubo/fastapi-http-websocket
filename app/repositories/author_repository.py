@@ -75,15 +75,3 @@ class AuthorRepository(BaseRepository[Author]):
         stmt = select(Author).where(Author.name.ilike(f"%{name_pattern}%"))  # type: ignore[attr-defined]
         result = await self.session.exec(stmt)
         return list(result.all())
-
-    async def get_active_authors(self) -> list[Author]:
-        """
-        Get all active authors.
-
-        This is a placeholder for potential future filtering.
-        Currently returns all authors since there's no 'active' field.
-
-        Returns:
-            List of all authors.
-        """
-        return await self.get_all()

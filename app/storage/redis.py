@@ -28,7 +28,7 @@ class RedisCircuitBreakerListener(CircuitBreakerListener):  # type: ignore[misc]
 
     def before_call(
         self,
-        cb: CircuitBreaker,
+        _cb: CircuitBreaker,
         func: Callable[..., Any],
         *args: Any,
         **kwargs: Any,
@@ -36,11 +36,11 @@ class RedisCircuitBreakerListener(CircuitBreakerListener):  # type: ignore[misc]
         """Called before circuit breaker calls the function."""
         pass  # No action needed before call
 
-    def success(self, cb: CircuitBreaker) -> None:
+    def success(self, _cb: CircuitBreaker) -> None:
         """Called when circuit breaker call succeeds."""
         pass  # No action needed on success
 
-    def failure(self, cb: CircuitBreaker, exc: BaseException) -> None:
+    def failure(self, _cb: CircuitBreaker, exc: BaseException) -> None:
         """Called when circuit breaker call fails."""
         logger.error(f"Redis circuit breaker failure: {exc}")
 
@@ -50,7 +50,7 @@ class RedisCircuitBreakerListener(CircuitBreakerListener):  # type: ignore[misc]
 
     def state_change(
         self,
-        cb: CircuitBreaker,
+        _cb: CircuitBreaker,
         old_state: CircuitBreakerState | None,
         new_state: CircuitBreakerState,
     ) -> None:
