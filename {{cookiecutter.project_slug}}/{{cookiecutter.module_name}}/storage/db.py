@@ -2,6 +2,7 @@ import asyncio
 import math
 from typing import Any, Callable, Type
 
+from pydantic import BaseModel as PydanticBaseModel
 from sqlalchemy import Select
 from sqlalchemy.exc import IntegrityError, OperationalError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import (
@@ -100,7 +101,7 @@ async def get_paginated_results(
     page: int = 1,
     per_page: int | None = None,
     *,
-    filters: dict[str, Any] | None = None,
+    filters: dict[str, Any] | PydanticBaseModel | None = None,
     apply_filters: (
         Callable[[Select, Type[GenericSQLModelType], dict[str, Any]], Select]
         | None
@@ -116,7 +117,7 @@ async def get_paginated_results(
         model (Type[GenericSQLModelType]): The SQLModel class to query.
         page (int, optional): The page number to retrieve. Defaults to 1.
         per_page (int | None, optional): The number of results to return per page. Defaults to app_settings.DEFAULT_PAGE_SIZE. Capped at MAX_PAGE_SIZE.
-        filters (dict[str, Any] | None, optional): A dictionary of filters to apply to the query.
+        filters (dict[str, Any] | PydanticBaseModel | None, optional): Filters to apply to the query. Can be a dict (legacy) or Pydantic BaseModel (type-safe). Pydantic models should inherit from {{cookiecutter.module_name}}.schemas.filters.BaseFilter.
         apply_filters (Callable[[Select, Type[GenericSQLModelType], dict[str, Any]], Select] | None, optional): A custom function to apply filters to the query. If not provided, the `default_apply_filters` function will be used.
         skip_count (bool, optional): Skip the count query for performance. When True, total will be 0. Defaults to False.
 
@@ -128,13 +129,32 @@ async def get_paginated_results(
         per_page = app_settings.DEFAULT_PAGE_SIZE
     per_page = min(per_page, MAX_PAGE_SIZE)
 
+    # Convert Pydantic filters to dict (backward compatibility)
+    filter_dict: dict[str, Any] | None = None
+    if filters is not None:
+        if isinstance(filters, PydanticBaseModel):
+            # Type-safe Pydantic filter schema
+            # Use to_dict() method if available (BaseFilter), else model_dump()
+            if hasattr(filters, "to_dict"):
+                filter_dict = filters.to_dict()  # type: ignore[attr-defined]
+            else:
+                # Fallback for custom Pydantic models without to_dict()
+                filter_dict = {
+                    k: v
+                    for k, v in filters.model_dump().items()
+                    if v is not None
+                }
+        else:
+            # Legacy dict filters
+            filter_dict = filters
+
     query: Select = select(model)
 
-    if filters:
+    if filter_dict:
         if apply_filters:
-            query = apply_filters(query, model, filters)
+            query = apply_filters(query, model, filter_dict)
         else:
-            query = default_apply_filters(query, model, filters)
+            query = default_apply_filters(query, model, filter_dict)
 
     async with async_session() as s:
         # Calculate total
@@ -143,27 +163,27 @@ async def get_paginated_results(
         else:
             # Try to get count from cache first
             model_name = model.__name__
-            cached_total = await get_cached_count(model_name, filters)
+            cached_total = await get_cached_count(model_name, filter_dict)
 
             if cached_total is not None:
                 total = cached_total
             else:
                 # More efficient count on primary key instead of subquery
                 count_query = select(func.count(model.id))
-                if filters:
+                if filter_dict:
                     if apply_filters:
                         count_query = apply_filters(
-                            count_query, model, filters
+                            count_query, model, filter_dict
                         )
                     else:
                         count_query = default_apply_filters(
-                            count_query, model, filters
+                            count_query, model, filter_dict
                         )
                 total_result = await s.exec(count_query)
                 total = total_result.one()
 
                 # Cache the count result for future requests
-                await set_cached_count(model_name, total, filters)
+                await set_cached_count(model_name, total, filter_dict)
 
         # Collect/format meta data
         meta_data = MetadataModel(
