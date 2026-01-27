@@ -1188,23 +1188,86 @@ Application-wide constants are defined in `app/constants.py` to eliminate magic 
 - **WebSocket**: `WS_POLICY_VIOLATION_CODE`, `WS_CLOSE_TIMEOUT_SECONDS`
 - **Keycloak/Auth**: `KC_SESSION_EXPIRY_BUFFER_SECONDS`
 
-**Settings (`app/settings.py`)**
+**Settings (`app/settings/`)**
 
-Environment variables in `app/settings.py` (loaded via pydantic-settings) use constants as defaults:
+Settings are organized into a modular package structure with nested configuration groups. The settings support **two access patterns**:
+
+1. **Flat access** (original, backward compatible): `app_settings.DB_HOST`
+2. **Nested access** (new, recommended): `app_settings.database.HOST`
+
+**Settings Structure:**
+- `app/settings/__init__.py` - Main Settings class with flat env vars
+- `app/settings/models.py` - Nested BaseModel classes for grouping
+
+**Nested Configuration Groups:**
+```python
+from app.settings import app_settings
+
+# Database settings
+app_settings.database.USER          # or app_settings.DB_USER
+app_settings.database.PASSWORD      # or app_settings.DB_PASSWORD
+app_settings.database.HOST          # or app_settings.DB_HOST
+app_settings.database.url           # Computed property (DATABASE_URL)
+
+# Redis settings
+app_settings.redis.IP               # or app_settings.REDIS_IP
+app_settings.redis.PORT             # or app_settings.REDIS_PORT
+app_settings.redis.MAIN_DB          # or app_settings.MAIN_REDIS_DB
+
+# Keycloak settings
+app_settings.keycloak.REALM         # or app_settings.KEYCLOAK_REALM
+app_settings.keycloak.CLIENT_ID     # or app_settings.KEYCLOAK_CLIENT_ID
+
+# Security settings (with nested rate_limit)
+app_settings.security.ALLOWED_HOSTS
+app_settings.security.rate_limit.ENABLED     # or app_settings.RATE_LIMIT_ENABLED
+app_settings.security.rate_limit.PER_MINUTE  # or app_settings.RATE_LIMIT_PER_MINUTE
+
+# WebSocket settings
+app_settings.websocket.MAX_CONNECTIONS_PER_USER  # or app_settings.WS_MAX_CONNECTIONS_PER_USER
+app_settings.websocket.ALLOWED_ORIGINS           # or app_settings.ALLOWED_WS_ORIGINS
+
+# Logging settings (with nested audit)
+app_settings.logging.LEVEL                     # or app_settings.LOG_LEVEL
+app_settings.logging.CONSOLE_FORMAT            # or app_settings.LOG_CONSOLE_FORMAT
+app_settings.logging.audit.ENABLED             # or app_settings.AUDIT_LOG_ENABLED
+app_settings.logging.audit.QUEUE_MAX_SIZE      # or app_settings.AUDIT_QUEUE_MAX_SIZE
+
+# Circuit breaker settings (with nested keycloak/redis)
+app_settings.circuit_breaker.ENABLED
+app_settings.circuit_breaker.keycloak.FAIL_MAX  # or app_settings.KEYCLOAK_CIRCUIT_BREAKER_FAIL_MAX
+app_settings.circuit_breaker.redis.TIMEOUT      # or app_settings.REDIS_CIRCUIT_BREAKER_TIMEOUT
+
+# Profiling settings
+app_settings.profiling.ENABLED          # or app_settings.PROFILING_ENABLED
+app_settings.profiling.OUTPUT_DIR       # or app_settings.PROFILING_OUTPUT_DIR
+```
+
+**Environment Variables:**
+
+All settings are loaded from environment variables with their original flat names:
+- `DB_USER`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT`
+- `REDIS_IP`, `REDIS_PORT`, `MAIN_REDIS_DB`, `AUTH_REDIS_DB`
 - `KEYCLOAK_REALM`, `KEYCLOAK_CLIENT_ID`, `KEYCLOAK_BASE_URL`
-- `KEYCLOAK_ADMIN_USERNAME`, `KEYCLOAK_ADMIN_PASSWORD`
-- `REDIS_IP`, `REDIS_PORT` (default: `REDIS_DEFAULT_PORT`)
-- `REDIS_MAX_CONNECTIONS` (default: `REDIS_MAX_CONNECTIONS`)
-- `MAIN_REDIS_DB`, `AUTH_REDIS_DB`
-- `RATE_LIMIT_PER_MINUTE` (default: `DEFAULT_RATE_LIMIT_PER_MINUTE`)
-- `WS_MAX_CONNECTIONS_PER_USER` (default: `DEFAULT_WS_MAX_CONNECTIONS_PER_USER`)
-- `AUDIT_QUEUE_MAX_SIZE` (default: `AUDIT_QUEUE_MAX_SIZE`)
+- `RATE_LIMIT_ENABLED`, `RATE_LIMIT_PER_MINUTE`
+- `WS_MAX_CONNECTIONS_PER_USER`, `WS_MESSAGE_RATE_LIMIT`
+- `LOG_LEVEL`, `LOG_CONSOLE_FORMAT`
+- `AUDIT_LOG_ENABLED`, `AUDIT_QUEUE_MAX_SIZE`
+- `PROFILING_ENABLED`, `PROFILING_OUTPUT_DIR`
 
-**Adding New Constants:**
-1. Add to appropriate category in `app/constants.py`
-2. Use descriptive name indicating purpose and units (e.g., `_SECONDS`, `_SIZE`)
-3. Add docstring comment explaining the constant's purpose
-4. If configurable, add to Settings with constant as default value
+**No breaking changes** - all existing env var names are preserved!
+
+**Benefits of Nested Access:**
+- Better IDE autocomplete (`app_settings.database.` shows all database settings)
+- Logical grouping (related settings together)
+- Type hints for nested models
+- Backward compatible (flat access still works)
+
+**Adding New Settings:**
+1. Add env var to `Settings` class in `app/settings/__init__.py` (flat field)
+2. Add field to appropriate nested model in `app/settings/models.py`
+3. Add mapping in corresponding `@property` method
+4. Both access patterns will work automatically
 
 **Environment-Specific Configuration**
 
