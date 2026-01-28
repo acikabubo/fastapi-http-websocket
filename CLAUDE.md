@@ -2405,22 +2405,64 @@ if cached_total is None:
 ```
 
 **Cache Invalidation:**
+
+Invalidate the count cache after any CREATE, UPDATE, or DELETE operation that affects the model:
+
 ```python
 from app.utils.pagination_cache import invalidate_count_cache
 
-# Invalidate after INSERT/UPDATE/DELETE operations
-async def create_author(author: Author) -> Author:
-    async with async_session() as session:
-        result = await Author.create(session, author)
-        # Invalidate cache for Author model
-        await invalidate_count_cache("Author")
-        return result
+# After creating a new record
+async def create_author(author: Author, repo: AuthorRepository) -> Author:
+    result = await repo.create(author)
+    await invalidate_count_cache("Author")  # Invalidate all Author counts
+    return result
 
-# Invalidate specific filter combination
+# After deleting a record
+async def delete_author(author_id: int, repo: AuthorRepository) -> None:
+    await repo.delete(author_id)
+    await invalidate_count_cache("Author")
+
+# After updating (if it might affect filters)
+async def update_author_status(author_id: int, status: str, repo: AuthorRepository) -> Author:
+    author = await repo.get_by_id(author_id)
+    old_status = author.status
+    author.status = status
+    result = await repo.update(author)
+
+    # Invalidate counts for both old and new status
+    await invalidate_count_cache("Author", filters={"status": old_status})
+    await invalidate_count_cache("Author", filters={"status": status})
+    return result
+```
+
+**When to invalidate:**
+- ✅ **Always**: After INSERT or DELETE operations
+- ✅ **Conditional**: After UPDATE if updated field is in common filters
+- ❌ **Never**: After SELECT/GET operations
+- ⚠️ **Skip caching**: For models with very frequent writes (use `skip_count=True` instead)
+
+**Granular invalidation:**
+```python
+# Invalidate all counts for a model
+await invalidate_count_cache("Author")
+
+# Invalidate only specific filter combination
 await invalidate_count_cache("Author", filters={"status": "active"})
 
-# Invalidate all counts for a model
-await invalidate_count_cache("Author", filters=None)
+# Invalidate multiple filter combinations after batch operations
+for status in ["active", "inactive", "pending"]:
+    await invalidate_count_cache("Author", filters={"status": status})
+```
+
+**Batch operations:**
+```python
+# Batch insert - invalidate once at the end
+async def batch_create_authors(authors: list[Author], repo: AuthorRepository) -> None:
+    for author in authors:
+        await repo.create(author)
+
+    # Invalidate once after batch (not per record!)
+    await invalidate_count_cache("Author")
 ```
 
 **Benefits:**
