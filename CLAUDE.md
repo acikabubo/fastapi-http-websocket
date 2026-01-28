@@ -935,6 +935,39 @@ const ws = new WebSocket('ws://localhost:8000/web?Authorization=Bearer%20token')
   - Performance tuning: Detect connection bottlenecks
   - Leak detection: Spot connections not being properly released
 
+**Database Connection Pool Monitoring (`app/storage/db.py`, `app/tasks/db_pool_metrics_task.py`):**
+- Real-time monitoring of PostgreSQL connection pool health and usage
+- Background task collects pool metrics every 15 seconds
+- Prometheus metrics tracked:
+  - `db_pool_max_connections`: Maximum connections allowed (pool_size + max_overflow)
+  - `db_pool_connections_in_use`: Current active connections (checked out)
+  - `db_pool_connections_available`: Idle connections ready for use
+  - `db_pool_connections_created_total`: Total connections created (cumulative)
+  - `db_pool_overflow_count`: Overflow connections beyond pool_size
+  - `db_pool_info`: Pool configuration metadata (pool_size, max_overflow, timeout)
+- Enables detection of:
+  - Pool exhaustion (all connections in use)
+  - Connection leaks (connections not returned to pool)
+  - Under-provisioned pools (frequent overflow usage)
+  - Over-provisioned pools (many idle connections)
+- Prometheus alerts configured in `docker/prometheus/alerts.yml`:
+  - `DatabasePoolNearExhaustion`: Pool usage > 80% for 3 minutes (warning)
+  - `DatabasePoolExhausted`: Pool usage ≥ 95% for 1 minute (critical)
+  - `DatabasePoolNoAvailableConnections`: Zero available connections for 1 minute (critical)
+- Grafana dashboard panels (IDs 31-33):
+  - Panel 31: Connections in use vs max connections (timeseries with thresholds)
+  - Panel 32: Available connections over time (timeseries)
+  - Panel 33: Pool usage percentage gauge (0-100% with color thresholds)
+- Pool configuration via SQLAlchemy engine settings:
+  - Pool size: Configured in `app/storage/db.py` via engine creation
+  - Max overflow: Additional connections beyond pool size
+  - Pool timeout: Wait time before raising exception when pool exhausted
+- Use cases:
+  - Capacity planning: Determine optimal pool_size and max_overflow settings
+  - Incident response: Identify pool exhaustion during high traffic
+  - Performance tuning: Detect connection bottlenecks
+  - Leak detection: Spot connections not being properly closed
+
 **Prometheus Metrics (`app/utils/metrics/`, `app/middlewares/prometheus.py`):**
 - Comprehensive metrics collection for monitoring and observability organized by subsystem
 - Metrics are split into logical modules for better maintainability:

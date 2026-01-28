@@ -92,6 +92,49 @@ groups:
           summary: "Slow database queries detected"
           description: "95th percentile query duration is {{ $value }}s (threshold: 0.5s)"
 
+      # Database connection pool near exhaustion
+      - alert: DatabasePoolNearExhaustion
+        expr: |
+          (
+            db_pool_connections_in_use
+            /
+            db_pool_max_connections
+          ) > 0.80
+        for: 3m
+        labels:
+          severity: warning
+          component: db_pool
+        annotations:
+          summary: "Database connection pool usage above 80%"
+          description: "Database pool ({{ $labels.pool_name }}) is using {{ $value | humanizePercentage }} of max connections (threshold: 80%)"
+
+      # Database connection pool exhausted
+      - alert: DatabasePoolExhausted
+        expr: |
+          (
+            db_pool_connections_in_use
+            /
+            db_pool_max_connections
+          ) >= 0.95
+        for: 1m
+        labels:
+          severity: critical
+          component: db_pool
+        annotations:
+          summary: "Database connection pool critically exhausted"
+          description: "Database pool ({{ $labels.pool_name }}) is using {{ $value | humanizePercentage }} of max connections (threshold: 95%). Pool may be exhausted."
+
+      # No available connections in database pool
+      - alert: DatabasePoolNoAvailableConnections
+        expr: db_pool_connections_available == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: db_pool
+        annotations:
+          summary: "No available connections in database pool"
+          description: "Database pool ({{ $labels.pool_name }}) has 0 available connections. All connections are in use."
+
   - name: redis_alerts
     interval: 30s
     rules:
