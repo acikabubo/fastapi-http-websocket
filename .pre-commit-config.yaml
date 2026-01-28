@@ -76,9 +76,16 @@ repos:
         files: \.py$
         exclude: ^(tests/|scripts/|examples/|benchmarks/|\.worktree/)
 
-  # Code coverage checker
+  # Local hooks
   - repo: local
     hooks:
+      - id: vulture
+        name: "vulture: Dead code detector"
+        entry: uvx vulture app/ --min-confidence 100
+        language: system
+        pass_filenames: false
+        files: ^app/.*\.py$
+
       - id: pytest-coverage
         name: "pytest-cov: Code coverage checker (serial)"
         entry: uv run pytest -p no:xdist --cov=app --cov-report=term-missing --cov-fail-under=80
