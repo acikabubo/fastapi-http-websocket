@@ -47,7 +47,7 @@ redis_pool_info = _get_or_create_gauge(
     ],
 )
 
-redis_pool_connections_created_total = _get_or_create_counter(
+redis_pool_connections_created_total = _get_or_create_gauge(
     "redis_pool_connections_created_total",
     "Total connections created in Redis pool",
     ["db"],
