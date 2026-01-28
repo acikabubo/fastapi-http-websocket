@@ -115,7 +115,7 @@ jobs:
         continue-on-error: true
 
   pre-commit:
-    name: Pre-commit Hooks
+    name: Pre-commit Hooks (prek)
     runs-on: ubuntu-latest
 
     steps:
@@ -127,14 +127,14 @@ jobs:
         with:
           python-version: '3.13'
 
-      - name: Install pre-commit
-        run: pip install pre-commit
+      - name: Install prek
+        run: pip install prek
 
-      - name: Cache pre-commit environments
+      - name: Cache prek environments
         uses: actions/cache@v4
         with:
-          path: ~/.cache/pre-commit
-          key: pre-commit-${{ hashFiles('.pre-commit-config.yaml') }}
+          path: ~/.cache/prek
+          key: prek-${{ hashFiles('.pre-commit-config.yaml') }}
 
-      - name: Run pre-commit hooks
-        run: pre-commit run --all-files
+      - name: Run pre-commit hooks with prek
+        run: prek run --all-files
