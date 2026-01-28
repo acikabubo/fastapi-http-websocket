@@ -276,11 +276,11 @@ class RedisPool:
                 # Number of connections currently checked out from pool
                 in_use = len(pool._in_use_connections)
 
-                # Total connections created (both in use and available)
-                created = pool._created_connections
+                # Number of available (idle) connections in pool
+                available = len(pool._available_connections)
 
-                # Available connections = created - in_use
-                available = created - in_use
+                # Total connections created (both in use and available)
+                created = in_use + available
 
                 # Update Prometheus gauges
                 redis_pool_connections_in_use.labels(db=db_label).set(in_use)
@@ -293,10 +293,10 @@ class RedisPool:
                     created
                 )
 
-            except AttributeError:
+            except AttributeError as ex:
                 # Pool implementation may vary - fail gracefully
                 logger.debug(
-                    f"Could not access pool internal stats for db={db}"
+                    f"Could not access pool internal stats for db={db}: {ex}"
                 )
             except Exception as ex:  # noqa: BLE001
                 logger.error(f"Error updating pool metrics for db={db}: {ex}")
