@@ -42,6 +42,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     - Creates user session background task
     - Starts audit log background worker
     - Starts Redis pool metrics collection task
+    - Starts database pool metrics collection task
     - Initializes Prometheus metrics
 
     Shutdown operations:
@@ -82,6 +83,14 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         create_task(redis_pool_metrics_task(), name="redis_pool_metrics")
     )
     logger.info("Started Redis pool metrics collection task")
+
+    # Start database pool metrics collection task
+    from app.tasks.db_pool_metrics_task import db_pool_metrics_task
+
+    background_tasks.append(
+        create_task(db_pool_metrics_task(), name="db_pool_metrics")
+    )
+    logger.info("Started database pool metrics collection task")
 
     # Initialize app info metric
     import sys
