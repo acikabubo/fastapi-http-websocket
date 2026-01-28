@@ -6,7 +6,7 @@ and can be tested independently of HTTP/WebSocket handlers.
 """
 
 import pytest
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, patch
 
 from app.commands.author_commands import (
     CreateAuthorCommand,
@@ -107,7 +107,12 @@ class TestCreateAuthorCommand:
         command = CreateAuthorCommand(mock_repo)
         input_data = CreateAuthorInput(name="New Author")
 
-        result = await command.execute(input_data)
+        # Mock cache invalidation to avoid Redis connection issues
+        with patch(
+            "app.commands.author_commands.invalidate_count_cache",
+            new_callable=AsyncMock,
+        ):
+            result = await command.execute(input_data)
 
         assert result.id == 1
         assert result.name == "New Author"
@@ -217,7 +222,12 @@ class TestDeleteAuthorCommand:
 
         command = DeleteAuthorCommand(mock_repo)
 
-        await command.execute(1)
+        # Mock cache invalidation to avoid Redis connection issues
+        with patch(
+            "app.commands.author_commands.invalidate_count_cache",
+            new_callable=AsyncMock,
+        ):
+            await command.execute(1)
 
         mock_repo.get_by_id.assert_called_once_with(1)
         mock_repo.delete.assert_called_once()
