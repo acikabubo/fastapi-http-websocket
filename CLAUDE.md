@@ -455,6 +455,15 @@ make dead-code-scan
 
 # Spell checking
 uvx typos
+
+# Run all pre-commit hooks manually (recommended)
+prek run --all-files
+
+# Run specific hook
+prek run ruff --all-files
+
+# Run pre-push hooks (includes pytest-cov)
+prek run --hook-stage pre-push --all-files
 ```
 
 ### Security Scanning
@@ -1447,6 +1456,8 @@ Comprehensive tests in [tests/test_startup_validation.py](tests/test_startup_val
 
 ### Pre-commit Hooks
 
+**Hook Manager**: We use **prek** (Rust-based, 3-10x faster than pre-commit) for running pre-commit hooks.
+
 All commits must pass:
 - **ruff**: Linting and formatting (79 char line length)
 - **mypy**: Strict type checking
@@ -1455,6 +1466,37 @@ All commits must pass:
 - **bandit**: Security scanning (low severity threshold `-lll`)
 - **skjold**: Dependency vulnerability checks
 - **pytest-cov**: Code coverage checker (≥80% coverage, runs on `git push` only)
+
+**Installing Hooks:**
+
+```bash
+# Install prek (recommended - 3-10x faster)
+uv tool install prek
+prek install -f
+prek install --hook-type pre-push -f
+
+# Alternative: Use pre-commit (slower but more mature)
+uvx pre-commit install
+uvx pre-commit install --hook-type pre-push
+```
+
+**Rollback to pre-commit (if needed):**
+
+```bash
+prek uninstall
+prek uninstall --hook-type pre-push
+uvx pre-commit install
+uvx pre-commit install --hook-type pre-push
+```
+
+**Why prek?**
+- 3-10x faster hook execution (typical: 2s vs 10-20s)
+- 50% less disk space usage
+- Drop-in replacement (uses same `.pre-commit-config.yaml`)
+- Automatic stashing of unstaged changes
+- Used by CPython, Apache Airflow, FastAPI, Home Assistant
+
+**Note**: Both prek and pre-commit use the same `.pre-commit-config.yaml` file, so switching between them is seamless.
 
 **Running Tests with Coverage:**
 
