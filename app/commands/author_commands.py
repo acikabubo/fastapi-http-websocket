@@ -43,6 +43,7 @@ from app.exceptions import ConflictError, NotFoundError
 from app.models.author import Author
 from app.protocols import Repository
 from app.repositories.author_repository import AuthorRepository
+from app.utils.pagination_cache import invalidate_count_cache
 
 
 # ============================================================================
@@ -183,7 +184,12 @@ class CreateAuthorCommand(BaseCommand[CreateAuthorInput, Author]):
 
         # Create author
         author = Author(name=input_data.name)
-        return await self.repository.create(author)
+        result = await self.repository.create(author)
+
+        # Invalidate pagination count cache (total count changed)
+        await invalidate_count_cache("Author")
+
+        return result
 
 
 class UpdateAuthorCommand(BaseCommand[UpdateAuthorInput, Author]):
@@ -236,7 +242,15 @@ class UpdateAuthorCommand(BaseCommand[UpdateAuthorInput, Author]):
 
         # Update author
         author.name = input_data.name
-        return await self.repository.update(author)
+        result = await self.repository.update(author)
+
+        # Note: No cache invalidation needed for name updates
+        # (name is not a common filter field in pagination)
+        # If name was used in filters, we would invalidate here:
+        # await invalidate_count_cache("Author", filters={"name": old_name})
+        # await invalidate_count_cache("Author", filters={"name": input_data.name})
+
+        return result
 
 
 class DeleteAuthorCommand(BaseCommand[int, None]):
@@ -279,3 +293,6 @@ class DeleteAuthorCommand(BaseCommand[int, None]):
             raise NotFoundError(f"Author with ID {author_id} not found")
 
         await self.repository.delete(author)
+
+        # Invalidate pagination count cache (total count decreased)
+        await invalidate_count_cache("Author")
