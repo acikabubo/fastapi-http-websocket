@@ -1644,6 +1644,95 @@ def get_paginated(params: PaginationParams) -> list[Model]:
 - ✅ Middleware `dispatch` methods must type `call_next: ASGIApp`
 - ✅ Redis connection functions return `Redis | None`
 
+**Return Type Guidelines:**
+
+1. **Functions that return nothing** - Use `-> None`:
+   ```python
+   async def send_notification(user_id: str, message: str) -> None:
+       await notification_service.send(user_id, message)
+       # No return statement
+
+   async def audit_log_worker() -> None:
+       """Background worker that processes audit logs."""
+       while True:
+           batch = await get_batch()
+           await process_batch(batch)
+   ```
+
+2. **Functions that never return** (infinite loops, always raise) - Use `-> NoReturn`:
+   ```python
+   from typing import NoReturn
+
+   async def background_task() -> NoReturn:
+       """Task that runs forever."""
+       while True:
+           await asyncio.sleep(10)
+           await do_work()
+           # Never exits normally
+
+   def raise_error() -> NoReturn:
+       """Always raises an exception."""
+       raise ValueError("This always fails")
+   ```
+
+3. **Functions with optional returns** - Use `-> ReturnType | None`:
+   ```python
+   async def get_user(user_id: int) -> User | None:
+       """Returns User or None if not found."""
+       user = await db.query(User).filter(User.id == user_id).first()
+       return user
+
+   async def get_redis_connection(db: int = 1) -> Redis | None:
+       """Returns Redis connection or None if unavailable."""
+       try:
+           return await RedisPool.get_instance(db)
+       except ConnectionError:
+           return None
+   ```
+
+4. **Generic collections** - Use specific type parameters:
+   ```python
+   # ✅ Good - specific types
+   def get_authors() -> list[Author]:
+       return [Author(id=1, name="John")]
+
+   def get_config() -> dict[str, Any]:
+       return {"key": "value", "count": 42}
+
+   # ❌ Bad - bare collections
+   def get_authors() -> list:  # ❌ What's in the list?
+       return [Author(id=1, name="John")]
+
+   def get_config() -> dict:  # ❌ What are the keys/values?
+       return {"key": "value"}
+   ```
+
+5. **Async context managers** - Use `-> AsyncGenerator`:
+   ```python
+   from collections.abc import AsyncGenerator
+
+   async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+       """FastAPI lifespan context manager."""
+       # Startup
+       await initialize_services()
+       yield
+       # Shutdown
+       await cleanup_services()
+   ```
+
+6. **Middleware dispatch methods** - Use `-> Response`:
+   ```python
+   from starlette.types import ASGIApp
+
+   async def dispatch(
+       self, request: Request, call_next: ASGIApp
+   ) -> Response:
+       # Process request
+       response = await call_next(request)
+       # Modify response
+       return response
+   ```
+
 **Examples:**
 ```python
 # Good
@@ -1656,6 +1745,14 @@ def process_data(filters: dict[str, Any]) -> list[Author]:
 async def dispatch(self, request: Request, call_next: ASGIApp) -> Response:
     ...
 
+async def background_worker() -> None:
+    while True:
+        await process()
+
+async def infinite_task() -> NoReturn:
+    while True:
+        await asyncio.sleep(1)
+
 # Bad
 async def get_connection(db=1):  # ❌ No return type
     ...
@@ -1666,6 +1763,19 @@ def process_data(filters: dict):  # ❌ Generic dict
 async def dispatch(self, request: Request, call_next):  # ❌ Missing type
     ...
 ```
+
+**mypy Configuration:**
+
+The project enforces strict type checking via `pyproject.toml`:
+```toml
+[tool.mypy]
+python_version = "3.13"
+strict = true
+warn_return_any = true
+disallow_untyped_defs = true  # Requires return types
+```
+
+Run `uvx mypy app/` to verify type correctness before committing.
 
 ### Database Session Management
 
