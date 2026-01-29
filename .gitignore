@@ -5,6 +5,7 @@
 .worktree
 *.pyc
 logs/*
+.hypothesis/*
 
 # MkDocs build output
 site/
