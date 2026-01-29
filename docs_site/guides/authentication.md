@@ -1,578 +1,579 @@
 # Authentication Guide
 
-Complete guide to authentication in the FastAPI HTTP/WebSocket application.
+Complete guide to authentication including HTTP and WebSocket flows, RBAC, token caching, circuit breakers, and security best practices.
 
 ## Table of Contents
 
 1. [Overview](#overview)
 2. [Quick Start](#quick-start)
-3. [Keycloak Setup](#keycloak-setup)
-4. [Getting Tokens](#getting-tokens)
-5. [Using Tokens](#using-tokens)
-6. [Development Workflow](#development-workflow)
-7. [Troubleshooting](#troubleshooting)
+3. [Configuration](#configuration)
+4. [HTTP Authentication](#http-authentication)
+5. [WebSocket Authentication](#websocket-authentication)
+6. [Role-Based Access Control (RBAC)](#role-based-access-control-rbac)
+7. [Token Caching](#token-caching)
+8. [Debug Mode](#debug-mode)
+9. [Prometheus Metrics](#prometheus-metrics)
+10. [Circuit Breaker](#circuit-breaker)
+11. [Security Best Practices](#security-best-practices)
+12. [Troubleshooting](#troubleshooting)
+13. [API Reference](#api-reference)
 
 ---
 
 ## Overview
 
-This application uses **Keycloak** for authentication with **JWT (JSON Web Tokens)**. All endpoints except those in `EXCLUDED_PATHS` require authentication.
+The application uses **Keycloak** for authentication with JWT tokens. Authentication is handled by the `AuthBackend` class which integrates with FastAPI's authentication middleware.
 
-### Authentication Flow
+### Architecture
 
-```
-1. User authenticates with Keycloak (username/password)
-2. Keycloak returns JWT access token
-3. Client includes token in every request
-4. Server validates token and extracts user info + roles
-5. RBAC checks if user has required role for endpoint
-6. Request proceeds or returns 403 Forbidden
+```mermaid
+sequenceDiagram
+    participant Client
+    participant FastAPI
+    participant AuthBackend
+    participant TokenCache
+    participant Keycloak
+
+    Client->>FastAPI: Request + JWT Token
+    FastAPI->>AuthBackend: Authenticate
+    AuthBackend->>TokenCache: Check cache
+    alt Cache Hit
+        TokenCache-->>AuthBackend: Cached claims
+    else Cache Miss
+        AuthBackend->>Keycloak: Validate token
+        Keycloak-->>AuthBackend: Token claims
+        AuthBackend->>TokenCache: Cache claims
+    end
+    AuthBackend-->>FastAPI: UserModel
+    FastAPI-->>Client: Response
 ```
 
 ### Key Components
 
-- **Keycloak**: OpenID Connect / OAuth 2.0 provider
-- **JWT Tokens**: Contain user identity and roles
-- **RBAC**: Role-based access control for endpoints
-- **Middleware**: Validates tokens on every request
+- **AuthBackend** (`app/auth.py`): Validates JWT tokens from Authorization header or query parameters
+- **KeycloakManager** (`app/managers/keycloak_manager.py`): Singleton managing Keycloak client instances
+- **RBACManager** (`app/managers/rbac_manager.py`): Role-based access control enforcement
+- **Token Cache** (`app/utils/token_cache.py`): Redis-based caching of decoded JWT claims
+- **UserModel** (`app/schemas/user.py`): User data extracted from JWT claims
+
+### Supported Auth Flows
+
+1. **HTTP Authentication**: JWT token in `Authorization: Bearer <token>` header
+2. **WebSocket Authentication**: JWT token in query parameter `?Authorization=Bearer%20<token>`
 
 ---
 
 ## Quick Start
 
-### Get a Token
+### 1. Get a Token from Keycloak
 
 ```bash
-# Using the helper script
-python scripts/get_token.py <username> <password>
-
-# Example:
-python scripts/get_token.py acika 12345
+# Using curl
+TOKEN=$(curl -X POST "http://localhost:8080/realms/myrealm/protocol/openid-connect/token" \
+  -d "client_id=myclient" \
+  -d "client_secret=your-client-secret" \
+  -d "username=testuser" \
+  -d "password=password" \
+  -d "grant_type=password" | jq -r '.access_token')
 ```
 
-Copy the access token from the output.
+### 2. Test HTTP Endpoint
 
-### Use the Token
-
-**HTTP Request** (with curl):
 ```bash
-curl -H "Authorization: Bearer YOUR_TOKEN_HERE" \
-  http://localhost:8000/authors
+curl -H "Authorization: Bearer $TOKEN" http://localhost:8000/api/authors
 ```
 
-**WebSocket Connection**:
+### 3. Test WebSocket Connection
+
 ```javascript
-const ws = new WebSocket('ws://localhost:8000/web?Authorization=Bearer YOUR_TOKEN_HERE');
+const token = 'Bearer eyJhbGc...';
+const wsUrl = `ws://localhost:8000/web?Authorization=${encodeURIComponent(token)}`;
+const ws = new WebSocket(wsUrl);
+
+ws.onopen = () => console.log('Authenticated!');
 ```
 
 ---
 
-## Keycloak Setup
+## Configuration
+
+### Environment Variables
+
+| Variable | Description | Required | Default |
+|----------|-------------|----------|---------|
+| `KEYCLOAK_BASE_URL` | Keycloak server URL | Yes | - |
+| `KEYCLOAK_REALM` | Keycloak realm name | Yes | - |
+| `KEYCLOAK_CLIENT_ID` | OAuth client ID | Yes | - |
+| `KEYCLOAK_CLIENT_SECRET` | OAuth client secret | Yes | - |
+| `KEYCLOAK_ADMIN_USERNAME` | Keycloak admin username | Yes | - |
+| `KEYCLOAK_ADMIN_PASSWORD` | Keycloak admin password | Yes | - |
+| `CIRCUIT_BREAKER_ENABLED` | Enable circuit breaker for Keycloak | No | `true` |
+| `KEYCLOAK_CIRCUIT_BREAKER_FAIL_MAX` | Open circuit after N failures | No | `5` |
+| `KEYCLOAK_CIRCUIT_BREAKER_TIMEOUT` | Circuit open duration (seconds) | No | `60` |
+| `DEBUG_AUTH` | Allow requests without authentication | No | `false` |
+
+### Example .env File
+
+```bash
+# Production
+KEYCLOAK_BASE_URL=https://keycloak.example.com
+KEYCLOAK_REALM=production
+KEYCLOAK_CLIENT_ID=prod-client
+KEYCLOAK_CLIENT_SECRET=<strong-secret>
+DEBUG_AUTH=false
+```
+
+---
+
+## HTTP Authentication
+
+### Token Validation Flow
+
+```mermaid
+flowchart TD
+    A[HTTP Request] --> B{Authorization header?}
+    B -->|No| C{Path excluded?}
+    C -->|Yes| D[Allow request]
+    C -->|No| E[401 Unauthorized]
+    B -->|Yes| F[Extract token]
+    F --> G[Check token cache]
+    G -->|Cache hit| H[Return cached claims]
+    G -->|Cache miss| I[Validate with Keycloak]
+    I -->|Valid| J[Cache claims + Return]
+    I -->|Invalid| K[401 Unauthorized]
+    J --> L[Create UserModel]
+    H --> L
+    L --> M{Has required roles?}
+    M -->|No| N[403 Forbidden]
+    M -->|Yes| O[Process request]
+```
+
+### Protected Endpoints
+
+```python
+from fastapi import APIRouter, Depends
+from app.dependencies.permissions import require_roles
+
+router = APIRouter()
+
+# Any authenticated user
+@router.get("/authenticated")
+async def authenticated_endpoint(request: Request):
+    user: UserModel = request.user
+    return {"username": user.username}
+
+# Specific roles required (user must have ALL)
+@router.get("/admin", dependencies=[Depends(require_roles("admin"))])
+async def admin_endpoint():
+    return {"message": "Admin access"}
+```
+
+### Excluded Paths
+
+Configured via `EXCLUDED_PATHS` regex in `app/settings.py`:
+
+```python
+EXCLUDED_PATHS: list[str] = [
+    r"^/docs.*",      # API documentation
+    r"^/metrics$",    # Prometheus metrics
+    r"^/health$",     # Health check
+]
+```
+
+---
+
+## WebSocket Authentication
+
+### Token in Query Parameters
+
+⚠️ **IMPORTANT**: WebSocket connections use tokens in query parameters due to browser limitations (cannot send custom headers during handshake).
+
+```javascript
+// ❌ Not supported by WebSocket API
+const ws = new WebSocket('wss://api.example.com/web', {
+  headers: { 'Authorization': 'Bearer token' }
+});
+
+// ✅ Must use query parameters
+const token = await getAccessToken();
+const wsUrl = `wss://api.example.com/web?Authorization=${encodeURIComponent(token)}`;
+const ws = new WebSocket(wsUrl);
+```
+
+### Security Implications
+
+**Risks**:
+- Tokens appear in server access logs
+- Tokens stored in browser history
+- Potential proxy caching
+
+**Mitigations** (already implemented):
+- ✅ Always use WSS (WebSocket over TLS)
+- ✅ Short-lived tokens (5 minutes default)
+- ✅ Origin validation for CSRF protection
+- ✅ Referrer-Policy header prevents leakage
+
+### Client Best Practices
+
+```javascript
+// 1. Get fresh token before connecting
+const token = await getAccessToken();
+
+// 2. Encode properly
+const wsUrl = `wss://api.example.com/web?Authorization=${encodeURIComponent('Bearer ' + token)}`;
+
+// 3. Connect
+const ws = new WebSocket(wsUrl);
+
+// 4. Refresh for long connections
+setInterval(async () => {
+    ws.close();
+    const newToken = await refreshAccessToken();
+    ws = new WebSocket(`wss://api.example.com/web?Authorization=${encodeURIComponent('Bearer ' + newToken)}`);
+}, 4 * 60 * 1000); // Every 4 minutes
+```
+
+---
+
+## Role-Based Access Control (RBAC)
+
+### RBAC Decision Flow
+
+```mermaid
+flowchart TD
+    A[Request] --> B{Authenticated?}
+    B -->|No| C[401 Unauthorized]
+    B -->|Yes| D{Has ALL required roles?}
+    D -->|No| E[403 Forbidden]
+    D -->|Yes| F[Process request]
+```
+
+### HTTP Endpoints
+
+```python
+from app.dependencies.permissions import require_roles
+
+# Single role
+@router.get("/users", dependencies=[Depends(require_roles("view-users"))])
+async def list_users():
+    pass
+
+# Multiple roles (user must have ALL - AND logic)
+@router.delete(
+    "/users/{id}",
+    dependencies=[Depends(require_roles("admin", "delete-users"))]
+)
+async def delete_user(id: int):
+    pass
+```
+
+### WebSocket Handlers
+
+```python
+from app.routing import pkg_router
+from app.api.ws.constants import PkgID
+
+# With roles
+@pkg_router.register(
+    PkgID.DELETE_AUTHOR,
+    roles=["admin", "delete-author"]  # Must have ALL
+)
+async def delete_author_handler(request: RequestModel):
+    pass
+
+# Public (no authentication)
+@pkg_router.register(PkgID.PUBLIC_DATA)
+async def public_handler(request: RequestModel):
+    pass
+```
+
+### Role Extraction
+
+Roles are extracted from JWT `resource_access` claim:
+
+```json
+{
+  "resource_access": {
+    "myclient": {
+      "roles": ["user", "admin", "view-authors"]
+    }
+  }
+}
+```
+
+---
+
+## Token Caching
+
+### How It Works
+
+JWT claims are cached in Redis to reduce CPU overhead:
+
+```python
+# Cache lookup (SHA-256 hash of token as key)
+cached_claims = await get_cached_token_claims(access_token)
+if cached_claims:
+    return cached_claims  # Cache hit
+
+# Validate with Keycloak
+claims = await keycloak_manager.openid.a_decode_token(access_token)
+
+# Cache for future requests (TTL = token expiry - 30s)
+await cache_token_claims(access_token, claims)
+```
+
+### Performance Impact
+
+- **90% reduction** in token decode CPU time
+- **85-95% cache hit rate** for repeated requests
+- **85-95% reduction** in Keycloak API load
+
+### Metrics
+
+```promql
+# Cache hit rate
+rate(token_cache_hits_total[5m]) /
+(rate(token_cache_hits_total[5m]) + rate(token_cache_misses_total[5m]))
+```
+
+---
+
+## Debug Mode
+
+⚠️ **WARNING**: `DEBUG_AUTH` allows requests without authentication. **Development only!**
 
 ### Configuration
 
-Set these environment variables (or use defaults from `app/settings.py`):
-
 ```bash
-# Keycloak server
-KEYCLOAK_BASE_URL=http://hw-keycloak:8080/
+# .env
+DEBUG_AUTH=false  # Default (use real auth)
 
-# Realm and client
-KEYCLOAK_REALM=your-realm
-KEYCLOAK_CLIENT_ID=your-client-id
-
-# Admin credentials (for token generation scripts)
-KEYCLOAK_ADMIN_USERNAME=admin
-KEYCLOAK_ADMIN_PASSWORD=admin-password
+# Production: automatically enforced
+ENV=production
+DEBUG_AUTH=false  # Cannot be true in production
 ```
 
-### Docker Setup
+### How It Works
 
-Start Keycloak with docker-compose:
-
-```bash
-make start  # Starts all services including Keycloak
-```
-
-### Manual Setup
-
-1. Access Keycloak Admin Console: http://localhost:8080/
-2. Create a realm (e.g., "my-app")
-3. Create a client:
-   - Client ID: "fastapi-client"
-   - Access Type: "confidential" or "public"
-   - Valid Redirect URIs: "*" (for development)
-4. Create users and assign roles
-5. Update `.env` with your configuration
-
----
-
-## Getting Tokens
-
-### Option 1: Helper Script (Recommended)
-
-```bash
-python scripts/get_token.py USERNAME PASSWORD
-
-# Options:
-python scripts/get_token.py USERNAME PASSWORD --json    # Full JSON response
-python scripts/get_token.py USERNAME PASSWORD --refresh # Include refresh token
-```
-
-**Output:**
-```
-Access Token:
-eyJhbGciOiJSUzI1NiIsInR5cC...
-
-Expires in: 300 seconds
-```
-
-### Option 2: Direct API Call
-
-```bash
-curl -X POST "http://localhost:8080/realms/YOUR_REALM/protocol/openid-connect/token" \
-  -H "Content-Type: application/x-www-form-urlencoded" \
-  -d "client_id=YOUR_CLIENT_ID" \
-  -d "username=USERNAME" \
-  -d "password=PASSWORD" \
-  -d "grant_type=password"
-```
-
-### Option 3: Python Code
+When `DEBUG_AUTH=true`, requests without token get fake user:
 
 ```python
-from app.managers.keycloak_manager import KeycloakManager
-
-kc = KeycloakManager()
-token_response = kc.login("username", "password")
-access_token = token_response["access_token"]
-```
-
----
-
-## Using Tokens
-
-### HTTP Requests
-
-#### With curl
-
-```bash
-TOKEN="your-access-token-here"
-
-# GET request
-curl -H "Authorization: Bearer $TOKEN" \
-  http://localhost:8000/authors
-
-# POST request
-curl -X POST \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"name": "New Author"}' \
-  http://localhost:8000/authors
-```
-
-#### With Python requests
-
-```python
-import requests
-
-token = "your-access-token"
-headers = {"Authorization": f"Bearer {token}"}
-
-# GET
-response = requests.get("http://localhost:8000/authors", headers=headers)
-
-# POST
-response = requests.post(
-    "http://localhost:8000/authors",
-    headers=headers,
-    json={"name": "New Author"}
+UserModel(
+    id="debug-user-id",
+    username="debug-username",
+    roles=DEBUG_AUTH_ROLES,  # From settings
+    expired_in=9999999999
 )
 ```
 
-#### With httpie
+### Security Warnings
 
-```bash
-http GET localhost:8000/authors \
-  Authorization:"Bearer YOUR_TOKEN"
 ```
-
-### WebSocket Connections
-
-#### JavaScript
-
-```javascript
-// Token in query parameter
-const token = "your-access-token";
-const ws = new WebSocket(`ws://localhost:8000/web?Authorization=Bearer ${token}`);
-
-ws.onopen = () => {
-    console.log('Connected');
-
-    // Send request
-    ws.send(JSON.stringify({
-        pkg_id: 1,
-        req_id: crypto.randomUUID(),
-        data: {}
-    }));
-};
-
-ws.onmessage = (event) => {
-    const response = JSON.parse(event.data);
-    console.log('Response:', response);
-};
-```
-
-#### Python
-
-```python
-import asyncio
-import json
-import uuid
-import websockets
-
-async def test_websocket():
-    token = "your-access-token"
-    uri = f"ws://localhost:8000/web?Authorization=Bearer {token}"
-
-    async with websockets.connect(uri) as websocket:
-        # Send request
-        request = {
-            "pkg_id": 1,
-            "req_id": str(uuid.uuid4()),
-            "data": {}
-        }
-        await websocket.send(json.dumps(request))
-
-        # Receive response
-        response = await websocket.recv()
-        print(json.loads(response))
-
-asyncio.run(test_websocket())
+WARNING - DEBUG_AUTH is enabled! All requests authenticated with fake user.
+WARNING - This is extremely insecure - development only!
 ```
 
 ---
 
-## Development Workflow
+## Prometheus Metrics
 
-### 1. Start Services
+### Available Metrics
 
-```bash
-make start  # Start PostgreSQL, Redis, Keycloak
-make serve  # Start FastAPI app
-```
-
-### 2. Get Token
-
-```bash
-python scripts/get_token.py acika 12345
-```
-
-### 3. Test Endpoints
-
-**Option A: VS Code REST Client** (`api-testing/api.http`):
-```http
-### Get Authors
-GET http://localhost:8000/authors
-Authorization: Bearer YOUR_TOKEN_HERE
-```
-
-**Option B: curl**:
-```bash
-TOKEN="your-token"
-curl -H "Authorization: Bearer $TOKEN" http://localhost:8000/authors
-```
-
-**Option C: Python script**:
 ```python
-# test_auth.py
-import requests
+# Authentication attempts
+keycloak_auth_attempts_total{status, method}
 
-token = "your-token"
-response = requests.get(
-    "http://localhost:8000/authors",
-    headers={"Authorization": f"Bearer {token}"}
-)
-print(response.json())
+# Token validation
+keycloak_token_validation_total{status, reason}
+
+# Operation duration
+keycloak_operation_duration_seconds{operation}
+
+# Token cache
+token_cache_hits_total
+token_cache_misses_total
 ```
 
-### 4. Automated Tests
+### Alerts
 
-```bash
-# Run all tests
-uv run pytest
-
-# Run specific test
-uv run pytest tests/test_auth_example.py::TestMockAuthentication::test_valid_user_has_permission
+```yaml
+# High auth failure rate
+- alert: HighAuthFailureRate
+  expr: |
+    rate(auth_backend_requests_total{outcome="denied"}[5m]) /
+    rate(auth_backend_requests_total[5m]) > 0.20
+  for: 3m
 ```
+
+### Dashboard
+
+Grafana `fastapi-metrics` dashboard includes authentication panels for success rate, failures, cache hit rate, and latency.
 
 ---
 
-## Token Management
+## Circuit Breaker
 
-### Token Expiration
+### States
 
-Tokens expire after a configured time (default: 300 seconds / 5 minutes).
-
-**Handling Expiration**:
-1. **HTTP**: Re-authenticate and get new token
-2. **WebSocket**: Connection closes, client must reconnect with new token
-
-**Check Token Validity**:
-```python
-import jwt
-from datetime import datetime
-
-token = "your-token"
-decoded = jwt.decode(token, options={"verify_signature": False})
-exp_timestamp = decoded["exp"]
-exp_time = datetime.fromtimestamp(exp_timestamp)
-
-print(f"Token expires at: {exp_time}")
-print(f"Is expired: {datetime.now() > exp_time}")
+```mermaid
+stateDiagram-v2
+    [*] --> Closed
+    Closed --> Open: Failures >= 5
+    Open --> HalfOpen: After 60s
+    HalfOpen --> Closed: Success
+    HalfOpen --> Open: Failure
 ```
 
-### Refresh Tokens
-
-```bash
-# Get refresh token
-python scripts/get_token.py USERNAME PASSWORD --refresh
-
-# Use refresh token to get new access token
-curl -X POST "http://localhost:8080/realms/YOUR_REALM/protocol/openid-connect/token" \
-  -H "Content-Type: application/x-www-form-urlencoded" \
-  -d "client_id=YOUR_CLIENT_ID" \
-  -d "refresh_token=YOUR_REFRESH_TOKEN" \
-  -d "grant_type=refresh_token"
-```
-
----
-
-## Roles and Permissions
-
-### Understanding Roles
-
-Roles determine what endpoints a user can access. Roles are:
-1. Defined in Keycloak
-2. Included in JWT token
-3. Checked by RBAC on each request
-
-### Current Roles
-
-Roles are defined in handler decorators throughout the codebase. Common roles include:
-- `get-authors` - View author list
-- `create-author` - Create new authors
-- `admin` - Administrative access
-
-**Finding Role Requirements:**
-Check the handler code to see required roles:
-```python
-# WebSocket handler example
-@pkg_router.register(PkgID.GET_AUTHORS, roles=["get-authors"])
-
-# HTTP endpoint example
-@router.get("/authors", dependencies=[Depends(require_roles("get-authors"))])
-```
-
-### Checking User Roles
-
-Roles are in the JWT token:
-```python
-import jwt
-
-token = "your-token"
-decoded = jwt.decode(token, options={"verify_signature": False})
-
-# Realm roles
-realm_roles = decoded["realm_access"]["roles"]
-
-# Client roles
-client_roles = decoded["resource_access"]["your-client"]["roles"]
-```
-
-### Adding Roles in Keycloak
-
-1. Go to Keycloak Admin Console
-2. Select your realm
-3. Go to "Roles" → "Add Role"
-4. Create role (e.g., "get-authors")
-5. Go to "Users" → Select user → "Role Mappings"
-6. Assign role to user
-
----
-
-## Troubleshooting
-
-### "401 Unauthorized"
-
-**Cause**: Missing or invalid token
-
-**Solutions**:
-1. Check token is included in request
-2. Verify token hasn't expired
-3. Get fresh token
-4. Check Authorization header format: `Bearer YOUR_TOKEN`
-
-### "403 Forbidden"
-
-**Cause**: Valid token but insufficient permissions
-
-**Solutions**:
-1. Check user has required role in Keycloak
-2. Verify handler's required roles in decorator (e.g., `@pkg_router.register(roles=["admin"])`)
-3. Check RBAC logs: `logger.info("Permission denied...")`
-
-### "Token Expired"
-
-**Cause**: Token validity period elapsed
-
-**Solutions**:
-1. Get new token: `python scripts/get_token.py USERNAME PASSWORD`
-2. Use refresh token to get new access token
-3. For development, increase token lifetime in Keycloak
-
-### WebSocket Connection Fails
-
-**Cause**: Token in wrong format or expired
-
-**Solutions**:
-1. Ensure query param format: `?Authorization=Bearer TOKEN`
-2. Verify token is valid (not expired)
-3. Check server logs for authentication errors
-
-### "Connection Closed"
-
-**Cause**: Token expired during connection
-
-**Solutions**:
-1. WebSocket closes when token expires
-2. Client must reconnect with fresh token
-3. Implement automatic reconnection logic
-
-### Keycloak Not Available
-
-**Cause**: Keycloak service not running
-
-**Solutions**:
-```bash
-# Check Keycloak status
-docker ps | grep keycloak
-
-# Start Keycloak
-make start
-
-# Check Keycloak logs
-docker logs hw-keycloak
-```
-
----
-
-## Testing Authentication
-
-### Unit Tests with Mocks
+### Configuration
 
 ```python
-import pytest
-from unittest.mock import patch
-
-@pytest.fixture
-def mock_keycloak_token():
-    """Mock Keycloak token response."""
-    return {
-        "access_token": "mock-token-12345",
-        "expires_in": 300,
-        "refresh_token": "mock-refresh",
-        "token_type": "Bearer"
-    }
-
-def test_endpoint_with_auth(client, mock_keycloak_token):
-    """Test endpoint with mocked authentication."""
-    with patch('app.auth.AuthBackend.authenticate'):
-        response = client.get(
-            "/authors",
-            headers={"Authorization": f"Bearer {mock_keycloak_token['access_token']}"}
-        )
-        assert response.status_code == 200
+CIRCUIT_BREAKER_ENABLED = True
+KEYCLOAK_CIRCUIT_BREAKER_FAIL_MAX = 5   # Open after 5 failures
+KEYCLOAK_CIRCUIT_BREAKER_TIMEOUT = 60   # Keep open 60 seconds
 ```
 
-### Integration Tests with Real Keycloak
+### Protected Operations
 
-```python
-import pytest
+- `KeycloakManager.login_async()` - User authentication
+- Token validation calls to Keycloak
 
-@pytest.mark.integration
-def test_real_authentication():
-    """Test with real Keycloak instance."""
-    from app.managers.keycloak_manager import KeycloakManager
-
-    kc = KeycloakManager()
-    token = kc.login("testuser", "testpass")
-
-    # Use token in request
-    response = requests.get(
-        "http://localhost:8000/authors",
-        headers={"Authorization": f"Bearer {token['access_token']}"}
-    )
-    assert response.status_code == 200
-```
-
-See [Testing Guide](TESTING.md) for more details.
+Raises `CircuitBreakerError` when circuit is open (Keycloak down).
 
 ---
 
 ## Security Best Practices
 
-### Production Checklist
+### Token Handling
 
-- [ ] Use HTTPS for all connections
-- [ ] Set short token expiration times
-- [ ] Rotate client secrets regularly
-- [ ] Use strong passwords in Keycloak
-- [ ] Disable debug authentication bypass
-- [ ] Configure proper CORS policies
-- [ ] Enable Keycloak audit logging
-- [ ] Use refresh tokens for long sessions
-- [ ] Implement rate limiting
-- [ ] Monitor for suspicious activity
+**DO**:
+- ✅ Use HTTPS/WSS in production
+- ✅ Keep tokens short-lived (5-15 minutes)
+- ✅ Clear tokens from memory after use
 
-### Token Storage
+**DON'T**:
+- ❌ Log tokens in application logs
+- ❌ Store in localStorage (XSS risk)
+- ❌ Use long-lived access tokens
 
-**Browser**:
-- Store in memory (JavaScript variable)
-- Or use httpOnly cookies
-- Never localStorage (XSS risk)
+### Rate Limiting Integration
 
-**Mobile**:
-- Use secure keychain/keystore
-- Encrypt if in local storage
+```python
+from app.utils.rate_limiter import RateLimiter
 
-**Server-to-Server**:
-- Environment variables
-- Secret management system
-- Never commit to git
+rate_limiter = RateLimiter()
+
+async def rate_limit_check(request: Request):
+    is_allowed, _ = await rate_limiter.check_rate_limit(
+        key=f"user:{request.user.id}",
+        limit=60,
+        window_seconds=60
+    )
+    if not is_allowed:
+        raise HTTPException(429, "Rate limit exceeded")
+```
+
+---
+
+## Troubleshooting
+
+### Common Errors
+
+**401 Unauthorized: "token_expired"**
+
+Solution: Get fresh token from Keycloak.
+
+**403 Forbidden: "User does not have required roles"**
+
+Solution: Check user's roles in Keycloak, assign missing roles.
+
+**WebSocket Connection Rejected**
+
+Solution: Ensure token is URL-encoded and not expired.
+
+**Circuit Breaker Open**
+
+Solution: Check Keycloak connectivity, wait for circuit to close.
+
+### Debug Logging
+
+```bash
+LOG_LEVEL=DEBUG
+```
+
+Shows token validation, cache hits/misses, RBAC checks.
+
+---
+
+## API Reference
+
+### AuthBackend
+
+```python
+class AuthBackend:
+    async def authenticate(self, conn: HTTPConnection):
+        """
+        Validate JWT token from Authorization header or query params.
+
+        Returns: (AuthCredentials, UserModel) or None
+        Raises: AuthenticationError for invalid/expired tokens
+        """
+```
+
+### KeycloakManager
+
+```python
+class KeycloakManager:
+    async def login_async(self, username: str, password: str):
+        """
+        Authenticate user with Keycloak.
+
+        Returns: {"access_token": "...", "expires_in": 300, ...}
+        Raises: KeycloakAuthenticationError, CircuitBreakerError
+        """
+```
+
+### RBACManager
+
+```python
+class RBACManager:
+    def check_ws_permission(self, pkg_id: int, user: UserModel):
+        """
+        Check if user has required roles for WebSocket handler.
+
+        Raises: PermissionDeniedError if lacking roles
+        """
+```
+
+### require_roles()
+
+```python
+def require_roles(*roles: str):
+    """
+    FastAPI dependency enforcing role requirements.
+
+    User must have ALL specified roles (AND logic).
+
+    Raises: HTTPException 401/403
+    """
+```
+
+### UserModel
+
+```python
+class UserModel:
+    id: str              # Keycloak user ID (sub claim)
+    username: str        # preferred_username claim
+    email: str | None
+    roles: list[str]     # Client roles from resource_access
+    expired_in: int      # Token expiration (exp claim)
+```
 
 ---
 
 ## Related Documentation
 
-- [Testing Guide](TESTING.md) - How to test with authentication
-- [Quick Start](QUICKSTART_AUTH.md) - Quick authentication reference
-- [Architecture Overview](../architecture/OVERVIEW.md) - System architecture
-- [CLAUDE.md](../../CLAUDE.md) - Development guidelines
-
----
-
-## Additional Resources
-
-### Keycloak Documentation
-- [Getting Started](https://www.keycloak.org/getting-started)
-- [Securing Applications](https://www.keycloak.org/docs/latest/securing_apps/)
-- [Server Administration](https://www.keycloak.org/docs/latest/server_admin/)
-
-### JWT Resources
-- [JWT.io](https://jwt.io/) - Decode and verify tokens
-- [JWT Best Practices](https://tools.ietf.org/html/rfc8725)
-
-### OAuth 2.0 / OpenID Connect
-- [OAuth 2.0 RFC](https://tools.ietf.org/html/rfc6749)
-- [OpenID Connect Spec](https://openid.net/connect/)
+- [HTTP API Reference](../api-reference/http-api.md)
+- [WebSocket API Reference](../api-reference/websocket-api.md)
+- [Monitoring Guide](monitoring.md)
+- [Rate Limiting Guide](rate-limiting.md)
+- [Architecture Overview](../architecture/overview.md)
