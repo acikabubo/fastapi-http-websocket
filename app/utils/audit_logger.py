@@ -280,6 +280,70 @@ async def log_user_action(
 
     Raises:
         ValidationError: If any parameter fails Pydantic validation (type or value errors).
+
+    Examples:
+        >>> # Successful action
+        >>> await log_user_action(
+        ...     user_id=UserId("user-123-abc"),
+        ...     username=Username("john.doe"),
+        ...     user_roles=["user", "get-authors"],
+        ...     action_type="GET",
+        ...     resource="/api/authors",
+        ...     outcome="success",
+        ...     request_id=RequestId("550e8400-e29b-41d4-a716-446655440000"),
+        ...     ip_address="192.168.1.100",
+        ...     user_agent="Mozilla/5.0...",
+        ...     response_status=200,
+        ...     duration_ms=45,
+        ... )
+
+        >>> # Permission denied
+        >>> await log_user_action(
+        ...     user_id=UserId("user-456-def"),
+        ...     username=Username("jane.smith"),
+        ...     user_roles=["user"],
+        ...     action_type="DELETE",
+        ...     resource="/api/authors/123",
+        ...     outcome="permission_denied",
+        ...     request_id=RequestId("550e8400-e29b-41d4-a716-446655440001"),
+        ...     ip_address="192.168.1.101",
+        ...     user_agent="PostmanRuntime/7.26.8",
+        ...     response_status=403,
+        ...     error_message="Missing required role: delete-author",
+        ... )
+
+        >>> # Error with request data
+        >>> await log_user_action(
+        ...     user_id=UserId("user-789-ghi"),
+        ...     username=Username("bob.jones"),
+        ...     user_roles=["user", "create-author"],
+        ...     action_type="POST",
+        ...     resource="/api/authors",
+        ...     outcome="error",
+        ...     request_id=RequestId("550e8400-e29b-41d4-a716-446655440002"),
+        ...     ip_address="192.168.1.102",
+        ...     user_agent="axios/0.21.1",
+        ...     request_data={"name": "John Doe", "email": "invalid-email"},
+        ...     response_status=400,
+        ...     error_message="Invalid email format",
+        ...     duration_ms=15,
+        ... )
+
+        >>> # WebSocket action
+        >>> await log_user_action(
+        ...     user_id=UserId("user-999-jkl"),
+        ...     username=Username("alice.williams"),
+        ...     user_roles=["user", "create-author"],
+        ...     action_type="WS:CREATE_AUTHOR",
+        ...     resource="pkg_id=3",
+        ...     outcome="success",
+        ...     request_id=RequestId("550e8400-e29b-41d4-a716-446655440003"),
+        ...     ip_address="192.168.1.103",
+        ...     user_agent="websocket-client/1.0",
+        ...     request_data={"name": "Jane Doe"},
+        ...     response_status=0,
+        ...     duration_ms=32,
+        ... )
     """
     # Validate input parameters using Pydantic model
     # This will raise ValidationError for invalid types or empty required fields

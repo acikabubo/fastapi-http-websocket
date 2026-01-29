@@ -55,6 +55,42 @@ class RateLimiter:
 
         Raises:
             Exception: If Redis connection fails.
+
+        Examples:
+            >>> # Basic rate limiting (60 requests per minute)
+            >>> limiter = RateLimiter()
+            >>> is_allowed, remaining = await limiter.check_rate_limit(
+            ...     key="user:123", limit=60, window_seconds=60
+            ... )
+            >>> if not is_allowed:
+            ...     raise HTTPException(429, "Rate limit exceeded")
+            >>> print(f"Remaining requests: {remaining}")
+
+            >>> # With burst allowance for traffic spikes
+            >>> is_allowed, remaining = await limiter.check_rate_limit(
+            ...     key="ip:192.168.1.1",
+            ...     limit=100,
+            ...     window_seconds=60,
+            ...     burst=20,  # Allow 120 total (100 + 20 burst)
+            ... )
+
+            >>> # Different windows for different actions
+            >>> # Login attempts: 5 per minute
+            >>> is_allowed, remaining = await limiter.check_rate_limit(
+            ...     key="login:user123", limit=5, window_seconds=60
+            ... )
+            >>> # API calls: 1000 per hour
+            >>> is_allowed, remaining = await limiter.check_rate_limit(
+            ...     key="api:user123", limit=1000, window_seconds=3600
+            ... )
+
+            >>> # Per-endpoint rate limiting
+            >>> endpoint = "/api/expensive-operation"
+            >>> is_allowed, remaining = await limiter.check_rate_limit(
+            ...     key=f"endpoint:{endpoint}:user:123",
+            ...     limit=10,
+            ...     window_seconds=60,
+            ... )
         """
         if not self.enabled:
             return True, limit
