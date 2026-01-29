@@ -94,6 +94,12 @@ exclude_lines = [
 directory = "htmlcov"
 
 [tool.vulture]
+min_confidence = 100
+paths = ["app"]
+exclude = [
+    "app/storage/migrations/*",
+    "app/schemas/proto/*",  # Generated protobuf code
+]
 ignore_names = [
     "create_author_endpoint",
     "get_authors_endpoint",
@@ -104,9 +110,17 @@ ignore_names = [
     "get_paginated_authors_handler",
     "authenticate",
     "dialect",  # SQLAlchemy type decorator required parameter
-    "executemany"  # SQLAlchemy event listener required parameter
+    "executemany",  # SQLAlchemy event listener required parameter
+    "lifespan",  # FastAPI lifespan context manager
+    "on_connect",  # WebSocket lifecycle methods
+    "on_disconnect",
+    "on_receive",
+    "*Model",  # SQLModel classes (may appear unused)
 ]
-# exclude = ["app/api/ws/constants.py"]
+ignore_decorators = [
+    "@router.*",  # FastAPI route decorators
+    "@pkg_router.register",  # WebSocket handler decorators
+]
 
 [tool.ruff]
 exclude = [

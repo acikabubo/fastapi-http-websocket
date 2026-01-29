@@ -44,6 +44,7 @@ repos:
     rev: v0.14.10
     hooks:
       - id: ruff
+        args: [--fix, --exit-non-zero-on-fix]
       - id: ruff-format
 
   # Static type checker
@@ -81,10 +82,11 @@ repos:
     hooks:
       - id: vulture
         name: "vulture: Dead code detector"
-        entry: uvx vulture app/ --min-confidence 100
+        entry: uvx vulture app/
         language: system
         pass_filenames: false
         files: ^app/.*\.py$
+        stages: [pre-push]  # Only run on push, not on every commit
 
       - id: pytest-coverage
         name: "pytest-cov: Code coverage checker (serial)"
