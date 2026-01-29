@@ -84,8 +84,24 @@ class Author(SQLModel, table=True):
 
 ### ✅ Current Pattern: Repository + Command + Dependency Injection
 
-```python
-# Clean separation of concerns
+```mermaid
+graph LR
+    Handler[HTTP/WebSocket<br/>Handler] --> Command[Command<br/>Business Logic]
+    Command --> Repository[Repository<br/>Data Access]
+    Repository --> DB[(Database)]
+
+    DI[Dependency<br/>Injection] -.-> Repository
+    DI -.-> Command
+
+    style Handler fill:#cce5ff
+    style Command fill:#d4edda
+    style Repository fill:#fff3cd
+    style DB fill:#f8d7da
+    style DI fill:#e1f5ff,stroke-dasharray: 5 5
+```
+
+**Clean separation of concerns:**
+```
 Repository (data access) → Command (business logic) → Handler (protocol)
 ```
 
