@@ -535,6 +535,111 @@ python scripts/get_token.py acika 12345
 4. **Rotate tokens regularly**: Even in development
 5. **Disable DEBUG_AUTH in CI/CD**: Force proper authentication in pipelines
 6. **Test with different user roles**: Verify RBAC properly
+7. **Use Property-Based Testing**: Catch edge cases automatically with Hypothesis
+
+---
+
+## Property-Based Testing with Hypothesis
+
+### What is Property-Based Testing?
+
+Property-based testing automatically generates test cases to verify that code properties hold for a wide range of inputs. Instead of writing specific examples, you define properties that should always be true.
+
+**Benefits:**
+- Catches edge cases you wouldn't think to test manually
+- One property test replaces dozens of example tests
+- Automatically finds minimal failing cases
+- Tests thousands of input combinations
+
+### Installation
+
+Hypothesis is included in dev dependencies:
+
+```bash
+uv sync --group dev
+```
+
+### Example: Testing Pagination Properties
+
+```python
+from hypothesis import given, strategies as st
+import pytest
+
+class TestPaginationProperties:
+    @given(
+        page=st.integers(min_value=1, max_value=100),
+        per_page=st.integers(min_value=1, max_value=100),
+    )
+    def test_page_calculation_properties(self, page: int, per_page: int) -> None:
+        """
+        Test mathematical properties of pagination calculations.
+
+        Properties:
+        1. offset = (page - 1) * per_page
+        2. offset is always >= 0
+        """
+        offset = (page - 1) * per_page
+
+        assert offset == (page - 1) * per_page
+        assert offset >= 0
+        assert offset + per_page == page * per_page
+```
+
+### Running Property-Based Tests
+
+```bash
+# Run property-based tests
+pytest tests/test_pagination_property_based.py -v
+
+# Hypothesis runs 100 examples by default
+# Example output:
+# test_page_calculation_properties PASSED (ran 100 examples)
+```
+
+### Common Use Cases
+
+**1. Reversible Operations:**
+```python
+@given(st.text())
+def test_encoding_roundtrip(self, value: str) -> None:
+    """Test that decode(encode(x)) == x"""
+    encoded = encode_cursor(value)
+    decoded = decode_cursor(encoded)
+    assert decoded == value
+```
+
+**2. Boundary Conditions:**
+```python
+@given(st.integers(min_value=-100, max_value=0))
+def test_invalid_pages_rejected(self, invalid_page: int) -> None:
+    """Test that page <= 0 raises ValueError"""
+    with pytest.raises(ValueError):
+        get_paginated_results(Model, page=invalid_page, per_page=10)
+```
+
+**3. Data Validation:**
+```python
+@given(st.dictionaries(keys=st.text(), values=st.integers()))
+def test_filters_json_serializable(self, filters: dict) -> None:
+    """Test that filters are always JSON-serializable"""
+    import json
+    serialized = json.dumps(filters)
+    assert json.loads(serialized) == filters
+```
+
+### Best Practices
+
+- Start with simple mathematical properties
+- Use realistic input bounds
+- Combine with example-based tests
+- Document what property is being tested
+- Let Hypothesis automatically shrink failing cases
+
+### See Also
+
+- Example file: `tests/test_pagination_property_based.py`
+- [Hypothesis Documentation](https://hypothesis.readthedocs.io/)
+- CLAUDE.md section on Property-Based Testing
 
 ---
 

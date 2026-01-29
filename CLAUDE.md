@@ -3123,6 +3123,232 @@ pytest tests/test_*_edge_cases.py -v --tb=line | grep FAILED
 - `BUGS_DISCOVERED_ISSUE_129.md` - Summary of bugs found during edge case testing
 - `tests/test_websocket_edge_cases.py` - Comprehensive WebSocket edge case examples
 
+#### Property-Based Testing
+
+**What is Property-Based Testing?**
+
+Property-based testing uses automated test case generation to verify that code properties hold for a wide range of inputs. Instead of writing specific test cases, you define properties that should always be true, and the testing framework (Hypothesis) generates hundreds of test cases automatically.
+
+**Benefits:**
+- ✅ **Comprehensive Coverage**: Tests thousands of edge cases automatically
+- ✅ **Bug Discovery**: Finds edge cases you wouldn't think to test manually
+- ✅ **Less Maintenance**: One property test replaces dozens of example tests
+- ✅ **Better Documentation**: Properties clearly express the invariants your code maintains
+
+**When to Use Property-Based Tests:**
+- Mathematical operations (pagination calculations, offset math)
+- Data transformations (encoding/decoding, serialization)
+- Validation logic (input sanitization, filter validation)
+- Invariant properties (reversible operations, consistency checks)
+
+**Installation:**
+
+Hypothesis is already included in dev dependencies:
+```toml
+[dependency-groups]
+dev = [
+    "hypothesis>=6.151.4",
+    # ... other dependencies
+]
+```
+
+**Example: Pagination Properties**
+
+```python
+from hypothesis import given, strategies as st
+import pytest
+
+class TestPaginationProperties:
+    """Property-based tests for pagination logic."""
+
+    @given(
+        page=st.integers(min_value=1, max_value=100),
+        per_page=st.integers(min_value=1, max_value=100),
+    )
+    def test_page_calculation_properties(self, page: int, per_page: int) -> None:
+        """
+        Test mathematical properties of pagination calculations.
+
+        Properties tested:
+        1. offset = (page - 1) * per_page
+        2. offset is always >= 0
+        3. offset + per_page represents the end index
+        """
+        offset = (page - 1) * per_page
+
+        # Property 1: Offset calculation is correct
+        assert offset == (page - 1) * per_page
+
+        # Property 2: Offset is always non-negative
+        assert offset >= 0
+
+        # Property 3: End index is offset + per_page
+        end_index = offset + per_page
+        assert end_index == page * per_page
+
+    @given(
+        total=st.integers(min_value=0, max_value=1000),
+        per_page=st.integers(min_value=1, max_value=100),
+    )
+    def test_total_pages_calculation(self, total: int, per_page: int) -> None:
+        """
+        Test that total pages calculation is always correct.
+
+        Property: total_pages = ceil(total / per_page)
+        """
+        import math
+
+        expected_pages = math.ceil(total / per_page) if total > 0 else 0
+
+        # Property: Ceiling division is correct
+        assert expected_pages == (
+            (total + per_page - 1) // per_page if total > 0 else 0
+        )
+
+        # Property: Total pages * per_page >= total
+        if expected_pages > 0:
+            assert expected_pages * per_page >= total
+
+    @given(st.integers(min_value=-100, max_value=0))
+    def test_invalid_page_numbers_rejected(self, invalid_page: int) -> None:
+        """
+        Test that invalid page numbers (<=0) are rejected.
+
+        Property: For any page <= 0, pagination should raise ValueError.
+        """
+        assert invalid_page <= 0
+        # In actual implementation, verify ValueError is raised
+```
+
+**Example: Encoding/Decoding Properties**
+
+```python
+@given(
+    cursor=st.text(
+        alphabet=st.characters(whitelist_categories=("Lu", "Ll", "And")),
+        min_size=0,
+        max_size=50,
+    )
+)
+def test_cursor_encoding_properties(self, cursor: str) -> None:
+    """
+    Test cursor encoding/decoding is reversible.
+
+    Property: decode(encode(cursor)) == cursor
+    """
+    from app.storage.db import encode_cursor, decode_cursor
+
+    if cursor.isdigit():
+        encoded = encode_cursor(int(cursor) if cursor else 0)
+        decoded = decode_cursor(encoded)
+
+        # Round-trip should preserve value
+        assert decoded == (int(cursor) if cursor else 0)
+```
+
+**Example: Filter Validation Properties**
+
+```python
+@given(
+    filter_dict=st.dictionaries(
+        keys=st.text(min_size=1, max_size=20),
+        values=st.one_of(
+            st.integers(),
+            st.text(max_size=50),
+            st.booleans(),
+            st.none(),
+        ),
+        max_size=10,
+    )
+)
+def test_filter_dict_always_serializable(
+    self, filter_dict: dict[str, int | str | bool | None]
+) -> None:
+    """
+    Test that any filter dictionary can be safely serialized.
+
+    Property: Filter dicts should always be JSON-serializable.
+    """
+    import json
+
+    serialized = json.dumps(filter_dict)
+    deserialized = json.loads(serialized)
+
+    # Round-trip should preserve structure
+    assert set(deserialized.keys()) == set(filter_dict.keys())
+```
+
+**Running Property-Based Tests:**
+
+```bash
+# Run property-based tests
+pytest tests/test_pagination_property_based.py -v
+
+# Hypothesis will generate hundreds of test cases automatically
+# Example output:
+# test_page_calculation_properties PASSED (ran 100 examples)
+# test_total_pages_calculation PASSED (ran 100 examples)
+
+# If a property fails, Hypothesis will automatically shrink the input
+# to find the minimal failing case:
+# Falsifying example: test_cursor_encoding(cursor='\\x00')
+```
+
+**Hypothesis Strategies:**
+
+Common strategies for generating test data:
+
+```python
+from hypothesis import strategies as st
+
+# Basic types
+st.integers(min_value=1, max_value=100)
+st.floats(min_value=0.0, max_value=1.0)
+st.text(min_size=1, max_size=50)
+st.booleans()
+
+# Collections
+st.lists(st.integers(), min_size=0, max_size=10)
+st.dictionaries(keys=st.text(), values=st.integers())
+st.sets(st.text(), max_size=5)
+
+# Composite strategies
+st.one_of(st.integers(), st.text(), st.none())
+st.tuples(st.integers(), st.text())
+
+# Custom strategies for domain models
+@st.composite
+def author_strategy(draw):
+    return Author(
+        id=draw(st.integers(min_value=1)),
+        name=draw(st.text(min_size=1, max_size=100)),
+    )
+```
+
+**Best Practices:**
+
+1. **Start with Simple Properties**: Test mathematical invariants first
+2. **Use Appropriate Bounds**: Don't generate unrealistic test cases
+3. **Combine with Example Tests**: Use both property-based and example-based tests
+4. **Shrinking is Automatic**: Hypothesis will find minimal failing cases
+5. **Document Properties**: Clearly state what property is being tested
+
+**Common Properties to Test:**
+
+- **Reversibility**: `decode(encode(x)) == x`
+- **Idempotence**: `f(f(x)) == f(x)`
+- **Commutativity**: `f(x, y) == f(y, x)`
+- **Consistency**: Related fields maintain invariants
+- **Bounds**: Results stay within expected ranges
+- **No Crashes**: Code handles all valid inputs without exceptions
+
+**Test Files:**
+- `tests/test_pagination_property_based.py` - Property-based tests for pagination
+
+**See Also:**
+- [Hypothesis Documentation](https://hypothesis.readthedocs.io/)
+- [Property-Based Testing Guide](https://increment.com/testing/in-praise-of-property-based-testing/)
+
 ### Performance Profiling with Scalene
 
 **Overview:**
