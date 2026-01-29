@@ -62,6 +62,66 @@ class PackageRouter:
 
         Returns:
             A decorator function that can be used to register a handler function.
+
+        Examples:
+            >>> # Simple handler without validation or roles (public access)
+            >>> @pkg_router.register(PkgID.GET_STATUS)
+            ... async def get_status_handler(
+            ...     request: RequestModel,
+            ... ) -> ResponseModel:
+            ...     return ResponseModel.success(
+            ...         request.pkg_id, request.req_id, data={"status": "ok"}
+            ...     )
+
+            >>> # Handler with RBAC roles (requires ALL roles)
+            >>> @pkg_router.register(PkgID.GET_AUTHORS, roles=["get-authors"])
+            ... async def get_authors_handler(
+            ...     request: RequestModel,
+            ... ) -> ResponseModel:
+            ...     authors = await get_all_authors()
+            ...     return ResponseModel.success(
+            ...         request.pkg_id, request.req_id, data=authors
+            ...     )
+
+            >>> # Handler with JSON schema validation
+            >>> from app.utils.file_io import load_json_schema
+            >>> create_author_schema = load_json_schema(
+            ...     "schemas/create_author.json"
+            ... )
+            >>>
+            >>> @pkg_router.register(
+            ...     PkgID.CREATE_AUTHOR,
+            ...     json_schema=create_author_schema,
+            ...     roles=["create-author"],
+            ... )
+            ... async def create_author_handler(
+            ...     request: RequestModel,
+            ... ) -> ResponseModel:
+            ...     author = await create_author(request.data)
+            ...     return ResponseModel.success(
+            ...         request.pkg_id, request.req_id, data=author
+            ...     )
+
+            >>> # Handler requiring multiple roles (user must have ALL)
+            >>> @pkg_router.register(
+            ...     PkgID.DELETE_AUTHOR, roles=["delete-author", "admin"]
+            ... )
+            ... async def delete_author_handler(
+            ...     request: RequestModel,
+            ... ) -> ResponseModel:
+            ...     await delete_author(request.data["id"])
+            ...     return ResponseModel.success(
+            ...         request.pkg_id, request.req_id, data={}
+            ...     )
+
+            >>> # Register multiple PkgIDs to same handler
+            >>> @pkg_router.register(PkgID.HEALTH_CHECK, PkgID.PING)
+            ... async def health_handler(
+            ...     request: RequestModel,
+            ... ) -> ResponseModel:
+            ...     return ResponseModel.success(
+            ...         request.pkg_id, request.req_id, data={"healthy": True}
+            ...     )
         """
 
         def decorator(func: HandlerCallableType) -> HandlerCallableType:

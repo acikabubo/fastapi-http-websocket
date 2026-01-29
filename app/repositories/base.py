@@ -73,6 +73,14 @@ class BaseRepository(Repository[T], Generic[T]):
 
         Returns:
             Entity if found, None otherwise.
+
+        Examples:
+            >>> repo = AuthorRepository(session)
+            >>> author = await repo.get_by_id(1)
+            >>> if author:
+            ...     print(f"Found: {author.name}")
+            ... else:
+            ...     print("Not found")
         """
         return await self.session.get(self.model, id)
 
@@ -82,13 +90,23 @@ class BaseRepository(Repository[T], Generic[T]):
 
         Args:
             **filters: Field name and value pairs to filter by.
-                Example: get_all(name="John", age=25)
 
         Returns:
             List of entities matching all filters.
 
         Raises:
             SQLAlchemyError: If database query fails.
+
+        Examples:
+            >>> # Get all authors
+            >>> repo = AuthorRepository(session)
+            >>> all_authors = await repo.get_all()
+
+            >>> # Get authors with filters
+            >>> active_authors = await repo.get_all(
+            ...     status="active", verified=True
+            ... )
+            >>> print(f"Found {len(active_authors)} active verified authors")
         """
         try:
             stmt = select(self.model)
@@ -113,6 +131,12 @@ class BaseRepository(Repository[T], Generic[T]):
 
         Raises:
             SQLAlchemyError: If database operation fails.
+
+        Examples:
+            >>> repo = AuthorRepository(session)
+            >>> new_author = Author(name="John Doe")
+            >>> created = await repo.create(new_author)
+            >>> print(f"Created author with ID: {created.id}")
         """
         try:
             self.session.add(entity)

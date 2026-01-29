@@ -1575,6 +1575,93 @@ Coverage settings are in `pyproject.toml`:
 - **Formatting**: Double quotes, 4-space indentation
 - **Unused code**: Will be caught by vulture (see `pyproject.toml` for ignored names)
 
+### Docstring Style Guide
+
+All public functions, classes, and methods must have comprehensive docstrings following **Google-style** format:
+
+**Required Sections:**
+1. **One-line summary** - Imperative mood, ends with period
+2. **Extended description** - Optional, for complex functions
+3. **Args** - All parameters with types and descriptions
+4. **Returns** - Return type and description
+5. **Raises** - Expected exceptions (optional)
+6. **Examples** - 2-3 realistic usage examples (required for complex functions)
+
+**Example Docstring:**
+```python
+async def check_rate_limit(
+    self,
+    key: str,
+    limit: int,
+    window_seconds: int = 60,
+    burst: int | None = None,
+) -> tuple[bool, int]:
+    """
+    Check if a request is within rate limits using sliding window.
+
+    This function uses Redis sorted sets to implement a sliding window
+    rate limiter that accurately counts requests over time.
+
+    Args:
+        key: Unique identifier for the rate limit (e.g., user_id, IP).
+        limit: Maximum number of requests allowed in the window.
+        window_seconds: Time window in seconds (default: 60).
+        burst: Optional burst limit for short-term spikes.
+
+    Returns:
+        Tuple of (is_allowed, remaining_requests).
+
+    Raises:
+        Exception: If Redis connection fails.
+
+    Examples:
+        >>> # Basic rate limiting (60 requests per minute)
+        >>> limiter = RateLimiter()
+        >>> is_allowed, remaining = await limiter.check_rate_limit(
+        ...     key="user:123",
+        ...     limit=60,
+        ...     window_seconds=60
+        ... )
+        >>> if not is_allowed:
+        ...     raise HTTPException(429, "Rate limit exceeded")
+
+        >>> # With burst allowance for traffic spikes
+        >>> is_allowed, remaining = await limiter.check_rate_limit(
+        ...     key="ip:192.168.1.1",
+        ...     limit=100,
+        ...     window_seconds=60,
+        ...     burst=20  # Allow 120 total (100 + 20 burst)
+        ... )
+    """
+    # Implementation...
+```
+
+**When to Add Examples:**
+- ✅ Complex functions with 3+ parameters
+- ✅ Functions with non-obvious usage patterns
+- ✅ Public API functions used by other developers
+- ✅ Functions with conditional behavior or edge cases
+- ❌ Simple getters/setters
+- ❌ Private utility functions (unless complex)
+
+**Example Guidelines:**
+- Use `>>>` for doctest-style examples
+- Show 2-3 realistic use cases
+- Include error handling examples
+- Demonstrate optional parameters
+- Keep examples concise but complete
+
+**Functions with Examples:**
+- `get_paginated_results()` - app/storage/db.py
+- `log_user_action()` - app/utils/audit_logger.py
+- `check_rate_limit()` - app/utils/rate_limiter.py
+- `PackageRouter.register()` - app/routing.py
+- `require_roles()` - app/dependencies/permissions.py
+- BaseRepository methods - app/repositories/base.py
+
+**Verification:**
+Run `uvx interrogate app/` to check docstring coverage (must be ≥80%).
+
 ### Automated Dependency Updates
 
 **Dependabot Configuration:**
