@@ -10,12 +10,147 @@ This guide explains how to test the application with proper authentication.
 
 ## Table of Contents
 
-1. [Getting Valid Tokens](#getting-valid-tokens)
-2. [Debug Mode (Development Only)](#debug-mode-development-only)
-3. [Manual Testing](#manual-testing)
-4. [Automated Testing with Pytest](#automated-testing-with-pytest)
-5. [Using Centralized Test Mocks](#using-centralized-test-mocks)
-6. [Testing WebSocket Endpoints](#testing-websocket-endpoints)
+1. [Test Organization](#test-organization)
+2. [Getting Valid Tokens](#getting-valid-tokens)
+3. [Debug Mode (Development Only)](#debug-mode-development-only)
+4. [Manual Testing](#manual-testing)
+5. [Automated Testing with Pytest](#automated-testing-with-pytest)
+6. [Using Centralized Test Mocks](#using-centralized-test-mocks)
+7. [Testing WebSocket Endpoints](#testing-websocket-endpoints)
+
+---
+
+## Test Organization
+
+Tests are organized into subdirectories by test type for better maintainability and scalability.
+
+### Directory Structure
+
+```
+tests/
+├── unit/              # Fast unit tests (no external dependencies)
+│   ├── commands/      # Command pattern tests
+│   │   └── test_author_commands.py
+│   ├── repositories/  # Repository pattern tests
+│   │   └── test_author_repository.py
+│   ├── pagination/    # Pagination logic tests (4 files)
+│   ├── schemas/       # Schema validation tests (3 files)
+│   ├── middleware/    # Middleware tests (3 files)
+│   ├── rbac/          # RBAC tests (3 files)
+│   ├── websocket/     # WebSocket utility tests (2 files)
+│   ├── utils/         # Utility tests (8 files)
+│   ├── edge_cases/    # Edge case tests (2 files)
+│   └── test_check.py  # Smoke test
+├── integration/       # Integration tests (require external services)
+│   ├── test_database.py
+│   ├── test_redis.py
+│   └── test_keycloak.py
+├── load/              # Performance and load tests
+│   └── test_websocket_load.py
+├── chaos/             # Chaos engineering tests (failure scenarios)
+│   ├── test_redis_failures.py
+│   ├── test_database_failures.py
+│   └── test_keycloak_failures.py
+├── mocks/             # Centralized mock factories
+│   ├── redis_mocks.py
+│   ├── websocket_mocks.py
+│   └── auth_mocks.py
+└── conftest.py        # Shared fixtures and configuration
+```
+
+### Test Categories
+
+**Unit Tests** (`tests/unit/`):
+- Test individual functions/classes in isolation
+- Use mocks for all external dependencies
+- Fast execution (< 1 second per test)
+- No database, Redis, or Keycloak required
+- Examples: pagination logic, data validation, encoding/decoding
+
+**Integration Tests** (`tests/integration/`):
+- Test interaction between components
+- Use real external services (Docker containers)
+- Slower execution (1-10 seconds per test)
+- Marked with `@pytest.mark.integration`
+- Examples: database queries, Redis operations, Keycloak authentication
+
+**Load Tests** (`tests/load/`):
+- Test performance under high load
+- Measure throughput, latency, resource usage
+- Very slow execution (10+ seconds)
+- Marked with `@pytest.mark.load`
+- Examples: 1000 concurrent WebSocket connections, broadcast performance
+
+**Chaos Tests** (`tests/chaos/`):
+- Test resilience when dependencies fail
+- Simulate failures, timeouts, network partitions
+- Marked with `@pytest.mark.chaos`
+- Examples: Redis down, database connection loss, Keycloak unavailable
+
+### Running Tests by Category
+
+```bash
+# Run unit tests only (fast)
+pytest tests/unit/ -v
+
+# Run integration tests (requires Docker)
+pytest tests/integration/ -v -m integration
+
+# Run all tests except slow ones
+pytest -m "not load and not chaos"
+
+# Run load tests
+pytest tests/load/ -v -m load
+
+# Run chaos tests
+pytest tests/chaos/ -v -m chaos
+
+# Run all tests in parallel
+pytest -n auto
+```
+
+### Naming Conventions
+
+**Test Files:**
+- `test_<component>_<scenario>.py`
+- Examples: `test_pagination_edge_cases.py`, `test_websocket_load.py`
+
+**Test Functions:**
+- `test_<what>_<condition>_<expected_result>()`
+- Examples: `test_pagination_with_invalid_page_raises_error()`
+
+**Test Classes:**
+- `Test<ComponentName><Category>`
+- Examples: `TestPaginationProperties`, `TestAuthenticationFailures`
+
+### When Creating New Tests
+
+1. **Determine test type**: Unit, integration, load, or chaos?
+2. **Place in correct directory**: Use structure above
+3. **Add appropriate markers**: `@pytest.mark.integration`, `@pytest.mark.load`, etc.
+4. **Use centralized mocks**: Import from `tests/mocks/` directory
+5. **Follow naming conventions**: Clear, descriptive names
+
+**Example:**
+
+```python
+# tests/unit/test_pagination_properties.py
+import pytest
+from hypothesis import given, strategies as st
+
+class TestPaginationProperties:
+    """Property-based tests for pagination logic."""
+
+    @given(
+        page=st.integers(min_value=1, max_value=100),
+        per_page=st.integers(min_value=1, max_value=100),
+    )
+    def test_offset_calculation_always_valid(self, page: int, per_page: int):
+        """Test that offset calculation is always correct."""
+        offset = (page - 1) * per_page
+        assert offset >= 0
+        assert offset == (page - 1) * per_page
+```
 
 ---
 

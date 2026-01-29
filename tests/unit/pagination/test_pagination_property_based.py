@@ -114,7 +114,7 @@ class TestPaginationProperties:
 
     @given(
         cursor=st.text(
-            alphabet=st.characters(whitelist_categories=("Lu", "Ll", "And")),
+            alphabet=st.characters(whitelist_categories=("Lu", "Ll", "Nd")),
             min_size=0,
             max_size=50,
         )

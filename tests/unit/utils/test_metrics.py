@@ -18,7 +18,7 @@ def clear_metrics():
     for collector in collectors:
         try:
             REGISTRY.unregister(collector)
-        except Exception:
+        except Exception:  # noqa: BLE001
             pass
 
     yield
@@ -28,7 +28,7 @@ def clear_metrics():
     for collector in collectors:
         try:
             REGISTRY.unregister(collector)
-        except Exception:
+        except Exception:  # noqa: BLE001
             pass
 
 
