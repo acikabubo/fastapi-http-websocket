@@ -155,6 +155,7 @@ nav:
       - Authentication: guides/authentication.md
       - HTTP Endpoints: guides/http-endpoints.md
       - WebSocket Handlers: guides/websocket-handlers.md
+      - WebSocket Protocol: guides/websocket-protocol.md
       - Rate Limiting: guides/rate-limiting.md
       - Audit Logging: guides/audit-logging.md
       - Database Operations: guides/database.md

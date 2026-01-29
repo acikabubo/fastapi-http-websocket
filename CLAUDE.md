@@ -502,6 +502,20 @@ python generate_ws_handler.py delete_author DELETE_AUTHOR --roles admin delete-a
 python generate_ws_handler.py handler_name PKG_ID --overwrite
 ```
 
+**WebSocket Protocol Documentation:**
+
+For client developers implementing WebSocket clients, see the comprehensive protocol specification at `docs_site/guides/websocket-protocol.md`:
+
+- Connection URL format and authentication
+- Message format (JSON and Protobuf)
+- Status codes (RSPCode) and error handling
+- Available Package IDs (PkgID) with schemas
+- Connection lifecycle and sequence diagrams
+- Rate limiting and best practices
+- Troubleshooting guide
+
+This documentation is also available online at: https://acikabubo.github.io/fastapi-http-websocket/guides/websocket-protocol/
+
 ## Architecture
 
 ### Request Flow
