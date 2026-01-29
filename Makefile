@@ -107,6 +107,13 @@ skjold-scan: ## Scan dependencies for known vulnerabilities (generates JSON repo
 	@uvx skjold audit -s pyup -s gemnasium -o json ./uv.lock > .security_reports/skjold_audit_report.json
 
 dead-code-scan: ## Find dead code with Vulture
+	@echo "Running dead code detection..."
+	@uvx vulture app/
+
+dead-code-fix: ## Remove unused imports with ruff and re-scan
+	@echo "Removing unused imports with ruff..."
+	@uvx ruff check app/ --fix
+	@echo "Re-running dead code scan..."
 	@uvx vulture app/
 
 outdated-pkgs-scan: ## Scan for outdated Python packages

@@ -449,9 +449,12 @@ uvx mypy app/
 # Check docstring coverage (must be ≥80%)
 uvx interrogate app/
 
-# Find dead code
+# Find dead code (uses min_confidence from pyproject.toml)
 make dead-code-scan
 # Or: uvx vulture app/
+
+# Fix dead code (remove unused imports and re-scan)
+make dead-code-fix
 
 # Spell checking
 uvx typos
@@ -1506,12 +1509,13 @@ Comprehensive tests in [tests/test_startup_validation.py](tests/test_startup_val
 **Hook Manager**: We use **prek** (Rust-based, 3-10x faster than pre-commit) for running pre-commit hooks.
 
 All commits must pass:
-- **ruff**: Linting and formatting (79 char line length)
+- **ruff**: Linting and formatting with auto-fix (79 char line length, removes unused imports)
 - **mypy**: Strict type checking
 - **interrogate**: ≥80% docstring coverage
 - **typos**: Spell checking
 - **bandit**: Security scanning (low severity threshold `-lll`)
 - **skjold**: Dependency vulnerability checks
+- **vulture**: Dead code detection (100% confidence, runs on `git push` only)
 - **pytest-cov**: Code coverage checker (≥80% coverage, runs on `git push` only)
 
 **Installing Hooks:**
@@ -1566,6 +1570,83 @@ Coverage settings are in `pyproject.toml`:
 - Excluded lines: `pragma: no cover`, imports, pass statements
 
 **Note**: The coverage hook only runs on `git push` (not on every commit) to avoid slowing down the development workflow. This allows you to commit work-in-progress code while ensuring coverage is checked before pushing to remote.
+
+### Dead Code Detection
+
+The project uses **vulture** (dead code detector) and **ruff** (with auto-fix) to keep the codebase clean and maintainable.
+
+**Pre-commit Hooks:**
+- **ruff**: Automatically fixes lint violations including unused imports (F401) and unused variables (F841) on every commit
+- **vulture**: Detects unused functions, classes, and variables on `git push` (100% confidence)
+
+**Manual Commands:**
+
+```bash
+# Scan for dead code (uses min_confidence from pyproject.toml)
+make dead-code-scan
+# Or: uvx vulture app/
+
+# Fix dead code (remove unused imports + re-scan)
+make dead-code-fix
+```
+
+**Configuration (`pyproject.toml`):**
+
+```toml
+[tool.vulture]
+min_confidence = 100  # Only report absolutely certain dead code
+paths = ["app"]
+exclude = [
+    "app/storage/migrations/*",
+    "app/schemas/proto/*",  # Generated protobuf code
+]
+ignore_names = [
+    "lifespan",  # FastAPI lifespan context manager
+    "on_connect",  # WebSocket lifecycle methods
+    "on_disconnect",
+    "on_receive",
+    "dispatch",  # Middleware dispatch methods
+    "*Model",  # SQLModel classes (may appear unused)
+]
+ignore_decorators = [
+    "@router.*",  # FastAPI route decorators
+    "@pkg_router.register",  # WebSocket handler decorators
+]
+```
+
+**Vulture Confidence Levels:**
+- **100%**: Definitely dead (unused imports, unreachable code) - ruff auto-fixes unused imports (F401), vulture detects other dead code
+- **80-99%**: Very likely dead (unused functions) - not reported with 100% threshold
+- **60-79%**: Probably dead (may be false positive) - not reported with 100% threshold
+- **<60%**: Uncertain (many false positives) - not reported with 100% threshold
+
+**Note**: With `min_confidence = 100`, vulture only reports absolutely certain dead code. Ruff's auto-fix handles unused imports, so vulture primarily catches unreachable code and unused function definitions.
+
+**Handling False Positives:**
+
+```python
+# Option 1: Add to vulture whitelist in pyproject.toml
+# See ignore_names, ignore_decorators above
+
+# Option 2: Add # noqa: vulture comment
+def used_in_tests_only():  # noqa: vulture
+    pass
+
+# Option 3: Reference in __all__ or import in __init__.py
+__all__ = ["may_be_used_dynamically"]
+```
+
+**Workflow:**
+1. Developer commits code → ruff auto-fixes lint violations (including unused imports)
+2. Developer pushes code → vulture checks for unused functions/classes (100% confidence)
+3. If dead code found → fix and commit → push succeeds
+
+**Benefits:**
+- ✅ Cleaner codebase with less noise
+- ✅ Easier navigation and code reviews
+- ✅ Faster imports and smaller bundles
+- ✅ Safe refactoring (unused code caught early)
+- ✅ Automated enforcement via pre-commit hooks
 
 ### Code Style Requirements
 
