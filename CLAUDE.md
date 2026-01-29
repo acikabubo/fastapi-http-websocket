@@ -2675,7 +2675,19 @@ The current implementation supports both simultaneously - clients can choose via
 
 ### Performance Optimizations
 
-The application includes several performance optimizations for database queries and pagination:
+The application includes several built-in performance optimizations for database queries, caching, and connection pooling.
+
+**📖 Complete Guide**: See [docs_site/guides/performance-tuning.md](docs_site/guides/performance-tuning.md) for comprehensive performance tuning documentation.
+
+**Quick Reference:**
+- **N+1 Query Prevention**: Use `eager_load` parameter in `get_paginated_results()`
+- **Count Caching**: Automatic Redis caching of pagination COUNT queries (invalidate after writes!)
+- **Token Caching**: JWT claim caching reduces Keycloak load by 85-95%
+- **Connection Pooling**: DB and Redis connection reuse for performance
+- **Slow Query Detection**: Automatic monitoring of queries >100ms
+- **Profiling**: Use Scalene for detailed performance analysis
+
+**Performance Optimizations:**
 
 #### Slow Query Detection
 
