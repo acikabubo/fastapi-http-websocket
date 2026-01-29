@@ -607,9 +607,169 @@ table_manager:
 
 ## Distributed Tracing
 
-### OpenTelemetry Integration (Optional)
+### Correlation ID Tracing (Built-in)
 
-For distributed tracing across services:
+The application uses **correlation IDs** for distributed tracing without requiring OpenTelemetry. This provides equivalent functionality for monolithic services and simple microservices architectures.
+
+**How It Works:**
+
+1. **X-Correlation-ID Header**: Automatically added to all requests (8-char UUID)
+2. **Request Propagation**: Correlation ID flows through entire request lifecycle
+3. **Structured Logging**: All logs include `request_id` field
+4. **Audit Logs**: Database records include `request_id` column
+5. **Grafana Queries**: Filter logs by correlation ID for request tracing
+
+**Architecture:**
+
+```
+Client Request
+    │
+    ├─> X-Correlation-ID: abc12345
+    │
+    v
+┌─────────────────────────────────┐
+│  CorrelationIDMiddleware        │
+│  - Extract/generate correlation │
+│  - Store in request.state       │
+│  - Set context variable         │
+└─────────────┬───────────────────┘
+              │
+              ├─> HTTP Handler
+              │   └─> logger.info("...", extra={"request_id": "abc12345"})
+              │
+              ├─> WebSocket Handler
+              │   └─> RequestModel(req_id="abc12345")
+              │
+              ├─> Database Query
+              │   └─> audit_log(request_id="abc12345")
+              │
+              └─> Response
+                  └─> X-Correlation-ID: abc12345
+```
+
+**Accessing Correlation ID:**
+
+```python
+from app.middlewares.correlation_id import get_correlation_id
+
+# In any handler or middleware
+correlation_id = get_correlation_id()
+logger.info(f"Processing request {correlation_id}")
+
+# Automatically included in structured logs
+logger.info("User action", extra={
+    "user_id": "123",
+    "action": "create_author"
+})
+# Output: {"request_id": "abc12345", "user_id": "123", "action": "create_author", ...}
+```
+
+**Tracing Request Flow in Grafana:**
+
+```logql
+# 1. Find request by correlation ID
+{service="shell"} | json | request_id="abc12345"
+
+# 2. Trace complete request lifecycle
+{service="shell"} | json | request_id="abc12345"
+  | line_format "{{.timestamp}} [{{.level}}] {{.logger}}: {{.message}}"
+
+# 3. Filter by specific component
+{service="shell"} | json | request_id="abc12345" | logger=~"app.api.*"
+
+# 4. Show error logs only
+{service="shell"} | json | request_id="abc12345" | level="ERROR"
+
+# 5. Correlate with audit logs (PostgreSQL dashboard)
+SELECT * FROM user_actions WHERE request_id = 'abc12345' ORDER BY timestamp;
+```
+
+**Example: Tracing Failed Request**
+
+**1. Find error in logs:**
+```logql
+{service="shell"} | json | level="ERROR" |~ "Author not found"
+```
+
+**2. Extract correlation ID from error log:**
+```json
+{
+  "timestamp": "2025-01-29T10:15:30Z",
+  "level": "ERROR",
+  "request_id": "abc12345",
+  "message": "Author not found: id=999"
+}
+```
+
+**3. Trace complete request flow:**
+```logql
+{service="shell"} | json | request_id="abc12345"
+```
+
+**Output:**
+```
+10:15:29 [INFO] app.middlewares.correlation_id: Request received
+10:15:29 [INFO] app.auth: User authenticated: user_id=u123
+10:15:29 [INFO] app.api.http.author: GET /authors/999
+10:15:29 [DEBUG] app.repositories.author: Query: SELECT * FROM authors WHERE id=999
+10:15:30 [ERROR] app.api.http.author: Author not found: id=999
+10:15:30 [INFO] app.middlewares.audit: Audit log created: outcome=error
+```
+
+**4. Check audit log in PostgreSQL:**
+```sql
+SELECT timestamp, username, action_type, resource, outcome, error_message
+FROM user_actions
+WHERE request_id = 'abc12345';
+```
+
+**Cross-Service Tracing:**
+
+For microservices, propagate correlation ID via HTTP headers:
+
+```python
+# Service A: Extract correlation ID
+from app.middlewares.correlation_id import get_correlation_id
+
+async def call_service_b():
+    correlation_id = get_correlation_id()
+
+    # Pass to downstream service
+    response = await httpx.get(
+        "http://service-b/api/resource",
+        headers={"X-Correlation-ID": correlation_id}
+    )
+
+    return response
+
+# Service B: Receives same correlation ID
+# CorrelationIDMiddleware extracts it automatically
+# All logs in Service B will have same request_id
+```
+
+**Correlation ID vs OpenTelemetry:**
+
+| Feature | Correlation ID | OpenTelemetry |
+|---------|----------------|---------------|
+| Request tracing | ✅ Via logs | ✅ Via spans |
+| Cross-service tracking | ✅ Via headers | ✅ Via context propagation |
+| Timeline visualization | ❌ Logs only | ✅ Jaeger UI |
+| Span-level timing | ❌ | ✅ |
+| Implementation complexity | Low | High |
+| Dependencies | None | Jaeger, OTLP exporter |
+| Best for | Monolithic services | Microservices |
+
+**When to Use OpenTelemetry:**
+
+Consider OpenTelemetry if:
+- Running complex microservices architecture (5+ services)
+- Need span-level timing within handlers
+- Want visualized trace graphs (Jaeger UI)
+- Require standard instrumentation across polyglot services
+
+**OpenTelemetry Integration (Optional):**
+
+If you need OpenTelemetry for advanced tracing:
 
 ```python
 # app/tracing.py
@@ -642,6 +802,8 @@ async def create_author(data: CreateAuthorInput):
         # Your code here
         pass
 ```
+
+**Best Practice:** Start with correlation IDs. Add OpenTelemetry only when scaling to complex microservices.
 
 ## Performance Monitoring
 
