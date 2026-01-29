@@ -11,6 +11,38 @@ The RBAC system provides:
 - **Co-located** - Permissions live next to the code they protect
 - **Two protocols** - Works for both HTTP and WebSocket
 
+### RBAC Flow
+
+```mermaid
+flowchart TD
+    A[Request with JWT Token] --> B{Protocol?}
+
+    B -->|HTTP| C[require_roles dependency]
+    B -->|WebSocket| D[PackageRouter.handle_request]
+
+    C --> E[Extract user roles from JWT]
+    D --> F[Check permissions_registry]
+    F --> E
+
+    E --> G{User has ALL<br/>required roles?}
+
+    G -->|No| H[403 Forbidden<br/>PermissionDeniedError]
+    G -->|Yes| I[Forward to Handler]
+
+    I --> J[Handler Executes]
+    J --> K[Response to Client]
+
+    style A fill:#e1f5ff
+    style C fill:#d4edda
+    style D fill:#d4edda
+    style E fill:#fff3cd
+    style G fill:#fff3cd
+    style H fill:#f8d7da
+    style I fill:#cce5ff
+    style J fill:#cce5ff
+    style K fill:#e1f5ff
+```
+
 ## Components
 
 ### RBACManager

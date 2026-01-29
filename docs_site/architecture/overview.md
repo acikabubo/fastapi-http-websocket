@@ -8,58 +8,70 @@ This FastAPI application implements a dual-protocol API server supporting both H
 
 ## High-Level Architecture
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                          Client Layer                           │
-├─────────────────────────────────────────────────────────────────┤
-│  HTTP Clients              │           WebSocket Clients        │
-│  (REST API calls)          │           (Real-time bidirectional)│
-└────────────┬───────────────┴──────────────────┬─────────────────┘
-             │                                  │
-             v                                  v
-┌────────────────────────────┐    ┌────────────────────────────────┐
-│  HTTP Endpoints            │    │  WebSocket Endpoint (/web)     │
-│  - /authors                │    │  - Connection auth             │
-│  - /health                 │    │  - Message routing             │
-│  - FastAPI routers         │    │  - PackageRouter dispatch      │
-└────────────┬───────────────┘    └───────────┬────────────────────┘
-             │                                 │
-             v                                 v
-┌─────────────────────────────────────────────────────────────────┐
-│                    Middleware Layer                             │
-├─────────────────────────────────────────────────────────────────┤
-│  1. AuthenticationMiddleware (Keycloak JWT validation)         │
-│  2. require_roles() dependency (RBAC permission checking)       │
-└────────────┬────────────────────────────────────────────────────┘
-             │
-             v
-┌─────────────────────────────────────────────────────────────────┐
-│                    Business Logic Layer                         │
-├─────────────────────────────────────────────────────────────────┤
-│  HTTP Handlers             │           WebSocket Handlers       │
-│  - app/api/http/           │           - app/api/ws/handlers/   │
-│                            │           - Registered with        │
-│                            │             @pkg_router.register() │
-└────────────┬───────────────┴──────────────────┬─────────────────┘
-             │                                  │
-             v                                  v
-┌─────────────────────────────────────────────────────────────────┐
-│                    Managers & Services                          │
-├─────────────────────────────────────────────────────────────────┤
-│  - RBACManager (permission checking)                            │
-│  - KeycloakManager (authentication)                             │
-│  - ConnectionManager (WebSocket connections)                    │
-│  - PackageRouter (WebSocket request routing)                    │
-└────────────┬────────────────────────────────────────────────────┘
-             │
-             v
-┌─────────────────────────────────────────────────────────────────┐
-│                    Data Layer                                   │
-├─────────────────────────────────────────────────────────────────┤
-│  PostgreSQL Database       │           Redis Cache              │
-│  - SQLModel/SQLAlchemy     │           - Session management     │
-│  - Async operations        │           - Pub/Sub                │
-└─────────────────────────────────────────────────────────────────┘
+```mermaid
+graph TB
+    subgraph "Client Layer"
+        HTTP[HTTP Clients<br/>REST API calls]
+        WS[WebSocket Clients<br/>Real-time bidirectional]
+    end
+
+    subgraph "Protocol Layer"
+        HTTPEndpoints[HTTP Endpoints<br/>- /authors<br/>- /health<br/>- FastAPI routers]
+        WSEndpoint[WebSocket Endpoint<br/>- /web<br/>- Connection auth<br/>- Message routing<br/>- PackageRouter dispatch]
+    end
+
+    subgraph "Middleware Layer"
+        Auth[AuthenticationMiddleware<br/>Keycloak JWT validation]
+        RBAC[require_roles dependency<br/>RBAC permission checking]
+    end
+
+    subgraph "Business Logic Layer"
+        HTTPHandlers[HTTP Handlers<br/>app/api/http/]
+        WSHandlers[WebSocket Handlers<br/>app/api/ws/handlers/<br/>@pkg_router.register]
+    end
+
+    subgraph "Managers & Services"
+        RBACMgr[RBACManager<br/>permission checking]
+        KCMgr[KeycloakManager<br/>authentication]
+        ConnMgr[ConnectionManager<br/>WebSocket connections]
+        PkgRouter[PackageRouter<br/>WebSocket routing]
+    end
+
+    subgraph "Data Layer"
+        DB[(PostgreSQL<br/>SQLModel/SQLAlchemy<br/>Async operations)]
+        Redis[(Redis Cache<br/>Session management<br/>Pub/Sub)]
+    end
+
+    HTTP --> HTTPEndpoints
+    WS --> WSEndpoint
+
+    HTTPEndpoints --> Auth
+    WSEndpoint --> Auth
+
+    Auth --> RBAC
+    RBAC --> HTTPHandlers
+    RBAC --> WSHandlers
+
+    HTTPHandlers --> RBACMgr
+    HTTPHandlers --> KCMgr
+    WSHandlers --> ConnMgr
+    WSHandlers --> PkgRouter
+
+    RBACMgr --> DB
+    KCMgr --> Redis
+    ConnMgr --> Redis
+    PkgRouter --> DB
+
+    style HTTP fill:#e1f5ff
+    style WS fill:#e1f5ff
+    style HTTPEndpoints fill:#fff3cd
+    style WSEndpoint fill:#fff3cd
+    style Auth fill:#d4edda
+    style RBAC fill:#d4edda
+    style HTTPHandlers fill:#cce5ff
+    style WSHandlers fill:#cce5ff
+    style DB fill:#f8d7da
+    style Redis fill:#f8d7da
 ```
 
 ## Core Components
@@ -67,42 +79,55 @@ This FastAPI application implements a dual-protocol API server supporting both H
 ### 1. Request Flow
 
 #### HTTP Request Flow
-```
-Client Request
-    ↓
-AuthenticationMiddleware (validates JWT)
-    ↓
-require_roles() FastAPI dependency (checks RBAC permissions)
-    ↓
-HTTP Handler (app/api/http/)
-    ↓
-Database/Redis operations
-    ↓
-Response to Client
+
+```mermaid
+flowchart TD
+    A[Client Request] --> B[AuthenticationMiddleware<br/>validates JWT]
+    B --> C[require_roles dependency<br/>checks RBAC permissions]
+    C --> D[HTTP Handler<br/>app/api/http/]
+    D --> E[Database/Redis<br/>operations]
+    E --> F[Response to Client]
+
+    style A fill:#e1f5ff
+    style B fill:#d4edda
+    style C fill:#d4edda
+    style D fill:#cce5ff
+    style E fill:#f8d7da
+    style F fill:#e1f5ff
 ```
 
 #### WebSocket Request Flow
-```
-Client Connection
-    ↓
-PackageAuthWebSocketEndpoint (validates JWT from query params)
-    ↓
-Connection established
-    ↓
-Client sends JSON message: {"pkg_id": 1, "req_id": "uuid", "data": {...}}
-    ↓
-PackageRouter.handle_request()
-    ↓
-1. Validate request format
-2. Check RBAC permissions (RBACManager)
-3. Validate data against JSON schema
-4. Dispatch to registered handler
-    ↓
-Handler processes request
-    ↓
-Response: {"pkg_id": 1, "req_id": "uuid", "status_code": 0, "data": {...}}
-    ↓
-Send to client via WebSocket
+
+```mermaid
+flowchart TD
+    A[Client Connection] --> B[PackageAuthWebSocketEndpoint<br/>validates JWT from query params]
+    B --> C[Connection Established]
+    C --> D[Client sends JSON message<br/>pkg_id, req_id, data]
+    D --> E[PackageRouter.handle_request]
+    E --> F[Validation Pipeline]
+
+    F --> G[1. Validate request format]
+    G --> H[2. Check RBAC permissions<br/>RBACManager]
+    H --> I[3. Validate data<br/>JSON schema]
+    I --> J[4. Dispatch to<br/>registered handler]
+
+    J --> K[Handler processes request]
+    K --> L[Response Model<br/>pkg_id, req_id, status_code, data]
+    L --> M[Send to client via WebSocket]
+
+    style A fill:#e1f5ff
+    style B fill:#d4edda
+    style C fill:#fff3cd
+    style D fill:#e1f5ff
+    style E fill:#cce5ff
+    style F fill:#cce5ff
+    style G fill:#cce5ff
+    style H fill:#d4edda
+    style I fill:#cce5ff
+    style J fill:#cce5ff
+    style K fill:#cce5ff
+    style L fill:#fff3cd
+    style M fill:#e1f5ff
 ```
 
 ### 2. Authentication System
