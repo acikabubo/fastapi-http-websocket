@@ -280,6 +280,115 @@ results, meta = await get_paginated_results(
 # meta.total will be 0, meta.pages will be 0
 ```
 
+### Layered Caching (Memory + Redis)
+
+For hot keys (frequently accessed data), use the `CacheManager` with two-tier caching.
+
+**Architecture:**
+
+- **L1 Cache (Memory)**: Fastest access, no network latency, LRU eviction
+- **L2 Cache (Redis)**: Shared across instances, persistent
+
+**When to Use:**
+
+✅ **Use CacheManager when:**
+- Hot keys accessed very frequently (> 100 requests/sec)
+- Data changes infrequently (< 1 update/minute)
+- Single-instance deployment
+- Small objects (< 100KB)
+- Redis latency is a bottleneck (> 5ms p95)
+
+⚠️ **Use with caution when:**
+- Horizontally scaled deployment (cache coherence issues)
+- Data changes frequently (> 10 updates/sec)
+- Large objects (> 1MB)
+
+**Example Usage:**
+
+```python
+from app.managers.cache_manager import get_cache_manager
+
+# Get singleton cache manager
+cache = get_cache_manager(
+    max_memory_entries=1000,  # LRU eviction after 1000 entries
+    default_ttl=300,          # 5 minutes default TTL
+)
+
+# Cache-aside pattern
+async def get_user_profile(user_id: int):
+    cache_key = f"user:profile:{user_id}"
+
+    # Try cache first
+    profile = await cache.get(cache_key)
+    if profile is not None:
+        return profile
+
+    # Cache miss - query database
+    profile = await db.query_user_profile(user_id)
+
+    # Cache result
+    await cache.set(cache_key, profile, ttl=900)  # 15 minutes
+
+    return profile
+
+# Invalidate after updates
+async def update_user_profile(user_id: int, data: dict):
+    await db.update_user_profile(user_id, data)
+
+    # CRITICAL: Invalidate cache after update
+    await cache.invalidate(f"user:profile:{user_id}")
+```
+
+**Performance Impact:**
+
+| Tier | Latency | Use Case |
+|------|---------|----------|
+| Memory (L1) | < 1ms | Hot keys, frequently accessed |
+| Redis (L2) | 1-5ms | Shared state, moderate access |
+| Database | 10-100ms | Cache miss, cold data |
+
+**Memory vs Redis-Only Caching:**
+
+```python
+# Memory + Redis (CacheManager) - Fastest for hot keys
+cache = get_cache_manager()
+await cache.set("hot:key", value)  # Cached in both memory and Redis
+value = await cache.get("hot:key")  # < 1ms (memory hit)
+
+# Redis-only (pagination_cache) - Better for shared state
+from app.utils.pagination_cache import set_cached_count
+await set_cached_count("Author", 100)  # Redis only
+count = await get_cached_count("Author")  # 1-5ms (Redis hit)
+```
+
+**Monitoring:**
+
+```promql
+# Memory cache hit rate
+rate(memory_cache_hits_total[5m]) /
+(rate(memory_cache_hits_total[5m]) + rate(memory_cache_misses_total[5m]))
+
+# Memory cache size
+memory_cache_size
+
+# LRU evictions
+rate(memory_cache_evictions_total[5m])
+```
+
+**Multi-Instance Deployment:**
+
+In horizontally scaled deployments:
+- Each instance has its own memory cache (not shared)
+- Redis cache is shared
+- Cache invalidation must happen on ALL instances
+
+**Strategies:**
+1. Use short TTL to reduce stale data window (< 1 minute)
+2. Accept eventual consistency
+3. Use Redis-only caching (skip memory layer)
+
+**See:** `examples/layered_cache_usage.py` for complete usage examples.
+
 ---
 
 ## Connection Pooling

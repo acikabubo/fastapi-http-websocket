@@ -72,6 +72,27 @@ rate_limit_hits_total = _get_or_create_counter(
     ["limit_type"],  # http, ws_connection, ws_message
 )
 
+# Memory Cache Metrics (L1 cache in CacheManager)
+memory_cache_hits_total = _get_or_create_counter(
+    "memory_cache_hits_total",
+    "Total memory cache hits (L1 cache)",
+)
+
+memory_cache_misses_total = _get_or_create_counter(
+    "memory_cache_misses_total",
+    "Total memory cache misses (L1 cache)",
+)
+
+memory_cache_evictions_total = _get_or_create_counter(
+    "memory_cache_evictions_total",
+    "Total memory cache evictions (LRU policy)",
+)
+
+memory_cache_size = _get_or_create_gauge(
+    "memory_cache_size",
+    "Current number of entries in memory cache",
+)
+
 __all__ = [
     "redis_operations_total",
     "redis_operation_duration_seconds",
@@ -81,4 +102,8 @@ __all__ = [
     "redis_pool_connections_in_use",
     "redis_pool_connections_available",
     "rate_limit_hits_total",
+    "memory_cache_hits_total",
+    "memory_cache_misses_total",
+    "memory_cache_evictions_total",
+    "memory_cache_size",
 ]
