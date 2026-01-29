@@ -490,19 +490,28 @@ The application implements circuit breaker pattern for external service dependen
 ## Diagrams
 
 ### Component Interaction
-```
-┌──────────────┐      ┌──────────────┐      ┌──────────────┐
-│   Client     │─────▶│   FastAPI    │─────▶│  Keycloak    │
-│              │      │  Application │      │    (Auth)    │
-└──────────────┘      └──────┬───────┘      └──────────────┘
-                             │
-                    ┌────────┼────────┐
-                    │        │        │
-              ┌─────▼────┐ ┌▼─────┐ ┌▼──────┐
-              │PostgreSQL│ │Redis │ │Mgrs   │
-              │   (DB)   │ │(Cache│ │(RBAC, │
-              │          │ │)     │ │Keycloak│
-              └──────────┘ └──────┘ └───────┘
+
+```mermaid
+graph TD
+    Client[Client]
+    FastAPI[FastAPI<br/>Application]
+    Keycloak[Keycloak<br/>Auth]
+    PostgreSQL[PostgreSQL<br/>DB]
+    Redis[Redis<br/>Cache]
+    Managers[Managers<br/>RBAC, Keycloak]
+
+    Client --> FastAPI
+    FastAPI --> Keycloak
+    FastAPI --> PostgreSQL
+    FastAPI --> Redis
+    FastAPI --> Managers
+
+    style Client fill:#e1f5ff,stroke:#333,stroke-width:2px
+    style FastAPI fill:#f9f,stroke:#333,stroke-width:3px
+    style Keycloak fill:#ffe1f5,stroke:#333,stroke-width:2px
+    style PostgreSQL fill:#e1ffe1,stroke:#333,stroke-width:2px
+    style Redis fill:#ffe1e1,stroke:#333,stroke-width:2px
+    style Managers fill:#fff4e1,stroke:#333,stroke-width:2px
 ```
 
 ## Maintenance

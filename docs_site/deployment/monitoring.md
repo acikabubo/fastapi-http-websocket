@@ -16,53 +16,59 @@ Comprehensive guide to monitoring, metrics, logging, and alerting for the FastAP
 
 ### Monitoring Stack
 
-```
-┌─────────────────────────────────────────────┐
-│         Application Components              │
-│  ┌─────────┐  ┌──────────┐  ┌──────────┐  │
-│  │ FastAPI │  │ Keycloak │  │ Traefik  │  │
-│  │  :8000  │  │  :9000   │  │  :8080   │  │
-│  └────┬────┘  └────┬─────┘  └────┬─────┘  │
-│       │            │             │         │
-│       └────────────┴─────────────┘         │
-│              Metrics (/metrics)            │
-└───────────────────┬─────────────────────────┘
-                    │
-            ┌───────▼────────┐
-            │   Prometheus   │  (Metrics DB)
-            │     :9090      │
-            └───────┬────────┘
-                    │
-            ┌───────▼────────┐
-            │    Grafana     │  (Visualization)
-            │     :3000      │
-            └────────────────┘
+**Metrics Flow:**
 
-┌─────────────────────────────────────────────┐
-│            Application Logs                 │
-│  ┌─────────┐  ┌──────────┐  ┌──────────┐  │
-│  │ FastAPI │  │  Docker  │  │ Traefik  │  │
-│  │  logs   │  │   logs   │  │   logs   │  │
-│  └────┬────┘  └────┬─────┘  └────┬─────┘  │
-│       │            │             │         │
-│       └────────────┴─────────────┘         │
-│            JSON logs (stdout)              │
-└───────────────────┬─────────────────────────┘
-                    │
-            ┌───────▼────────┐
-            │  Grafana Alloy │  (Log collector)
-            │    :12345      │
-            └───────┬────────┘
-                    │
-            ┌───────▼────────┐
-            │      Loki      │  (Log aggregation)
-            │     :3100      │
-            └───────┬────────┘
-                    │
-            ┌───────▼────────┐
-            │    Grafana     │  (Log queries)
-            │     :3000      │
-            └────────────────┘
+```mermaid
+graph TB
+    subgraph "Application Components"
+        FastAPI[FastAPI<br/>:8000]
+        Keycloak[Keycloak<br/>:9000]
+        Traefik[Traefik<br/>:8080]
+    end
+
+    FastAPI -->|/metrics| Prometheus
+    Keycloak -->|/metrics| Prometheus
+    Traefik -->|/metrics| Prometheus
+
+    Prometheus[Prometheus<br/>Metrics DB<br/>:9090]
+    Grafana[Grafana<br/>Visualization<br/>:3000]
+
+    Prometheus -->|Query| Grafana
+
+    style FastAPI fill:#f9f,stroke:#333,stroke-width:2px
+    style Keycloak fill:#fbf,stroke:#333,stroke-width:2px
+    style Traefik fill:#bbf,stroke:#333,stroke-width:2px
+    style Prometheus fill:#fbb,stroke:#333,stroke-width:2px
+    style Grafana fill:#bfb,stroke:#333,stroke-width:2px
+```
+
+**Logs Flow:**
+
+```mermaid
+graph TB
+    subgraph "Application Logs"
+        FastAPILogs[FastAPI<br/>JSON logs]
+        DockerLogs[Docker<br/>logs]
+        TraefikLogs[Traefik<br/>logs]
+    end
+
+    FastAPILogs -->|stdout| Alloy
+    DockerLogs -->|stdout| Alloy
+    TraefikLogs -->|stdout| Alloy
+
+    Alloy[Grafana Alloy<br/>Log Collector<br/>:12345]
+    Loki[Loki<br/>Log Aggregation<br/>:3100]
+    GrafanaLogs[Grafana<br/>Log Queries<br/>:3000]
+
+    Alloy -->|Push| Loki
+    Loki -->|Query| GrafanaLogs
+
+    style FastAPILogs fill:#f9f,stroke:#333,stroke-width:2px
+    style DockerLogs fill:#ddf,stroke:#333,stroke-width:2px
+    style TraefikLogs fill:#bbf,stroke:#333,stroke-width:2px
+    style Alloy fill:#ffd,stroke:#333,stroke-width:2px
+    style Loki fill:#dff,stroke:#333,stroke-width:2px
+    style GrafanaLogs fill:#bfb,stroke:#333,stroke-width:2px
 ```
 
 ## Metrics Collection
