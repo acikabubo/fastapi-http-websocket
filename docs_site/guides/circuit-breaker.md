@@ -8,22 +8,36 @@ The circuit breaker acts as a proxy between your application and external servic
 
 ### Circuit Breaker States
 
-```
-┌─────────┐  Failures < threshold   ┌─────────┐
-│         │◄────────────────────────│         │
-│ CLOSED  │                         │  OPEN   │
-│ (Normal)│                         │(Failing)│
-│         │                         │         │
-└────┬────┘                         └────┬────┘
-     │                                   │
-     │ Failures ≥ threshold              │ Timeout expires
-     │                                   │
-     └──────────►┌─────────┐◄───────────┘
-                 │         │
-                 │HALF-OPEN│
-                 │(Testing)│
-                 │         │
-                 └─────────┘
+```mermaid
+stateDiagram-v2
+    [*] --> CLOSED
+
+    CLOSED --> OPEN: Failures ≥ threshold
+    OPEN --> HALF_OPEN: Timeout expires
+    HALF_OPEN --> CLOSED: Request succeeds
+    HALF_OPEN --> OPEN: Request fails
+
+    CLOSED: CLOSED\n(Normal operation)
+    OPEN: OPEN\n(Failing fast)
+    HALF_OPEN: HALF-OPEN\n(Testing recovery)
+
+    note right of CLOSED
+        Requests pass through
+        Monitor failures
+        Increment counter on error
+    end note
+
+    note right of OPEN
+        Requests fail immediately
+        No service calls
+        Wait for timeout
+    end note
+
+    note right of HALF_OPEN
+        Allow single test request
+        Success → CLOSED
+        Failure → OPEN
+    end note
 ```
 
 **States:**

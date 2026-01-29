@@ -46,30 +46,47 @@ This guide covers deploying the FastAPI HTTP/WebSocket application to production
 
 ## Architecture Overview
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                         Internet                             │
-└────────────────────┬────────────────────────────────────────┘
-                     │
-            ┌────────▼────────┐
-            │  Traefik v3.0   │  (Reverse Proxy + SSL)
-            │  Port 80/443    │
-            └────────┬────────┘
-                     │
-      ┌──────────────┼──────────────┐
-      │              │              │
-┌─────▼─────┐  ┌────▼─────┐  ┌────▼────────┐
-│  FastAPI  │  │ Keycloak │  │  Grafana    │
-│  App      │  │  Auth    │  │  Dashboard  │
-│  :8000    │  │  :8080   │  │  :3000      │
-└─────┬─────┘  └────┬─────┘  └────┬────────┘
-      │             │              │
-  ┌───▼──────┬──────▼───────┬──────▼────────┐
-  │          │              │               │
-┌─▼──────┐ ┌▼────────┐  ┌──▼────────┐  ┌──▼──────┐
-│Postgres│ │  Redis  │  │Prometheus │  │  Loki   │
-│  :5432 │ │  :6379  │  │   :9090   │  │  :3100  │
-└────────┘ └─────────┘  └───────────┘  └─────────┘
+```mermaid
+graph TB
+    Internet[Internet]
+
+    Traefik[Traefik v3.0<br/>Reverse Proxy + SSL<br/>Port 80/443]
+
+    FastAPI[FastAPI App<br/>:8000]
+    Keycloak[Keycloak Auth<br/>:8080]
+    Grafana[Grafana Dashboard<br/>:3000]
+
+    Postgres[Postgres<br/>:5432]
+    Redis[Redis<br/>:6379]
+    Prometheus[Prometheus<br/>:9090]
+    Loki[Loki<br/>:3100]
+
+    Internet --> Traefik
+
+    Traefik --> FastAPI
+    Traefik --> Keycloak
+    Traefik --> Grafana
+
+    FastAPI --> Postgres
+    FastAPI --> Redis
+    FastAPI --> Prometheus
+    FastAPI --> Loki
+
+    Keycloak --> Postgres
+    Keycloak --> Prometheus
+
+    Grafana --> Prometheus
+    Grafana --> Loki
+
+    style Internet fill:#e1f5ff
+    style Traefik fill:#fff4e6
+    style FastAPI fill:#e8f5e9
+    style Keycloak fill:#e8f5e9
+    style Grafana fill:#e8f5e9
+    style Postgres fill:#f3e5f5
+    style Redis fill:#f3e5f5
+    style Prometheus fill:#f3e5f5
+    style Loki fill:#f3e5f5
 ```
 
 ## Environment Configuration
