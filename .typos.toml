@@ -2,4 +2,4 @@
 extend-exclude = [".security_reports/*", "realm-export.json"]
 
 [default]
-extend-words = { Hashi = "Hashi", RTO = "RTO", RPO = "RPO" }
+extend-words = { Hashi = "Hashi", RTO = "RTO", RPO = "RPO", Nd = "Nd" }

@@ -2885,6 +2885,127 @@ DEBUG - Cached count for Author (filters: None): 1234 (TTL: 300s)
 - Chaos tests (marked `@pytest.mark.chaos`) test resilience when dependencies fail
 - Skip slow tests with: `pytest -m "not load and not chaos"`
 
+#### Test Organization
+
+Tests are organized into subdirectories by test type for better maintainability and clarity:
+
+```
+tests/
+├── unit/              # Fast unit tests (no external dependencies)
+│   ├── commands/      # Command pattern tests
+│   │   └── test_author_commands.py
+│   ├── repositories/  # Repository pattern tests
+│   │   └── test_author_repository.py
+│   ├── pagination/    # Pagination logic tests
+│   │   ├── test_pagination.py
+│   │   ├── test_pagination_cache.py
+│   │   ├── test_pagination_edge_cases.py
+│   │   └── test_pagination_property_based.py
+│   ├── schemas/       # Schema validation tests
+│   │   ├── test_filter_schemas.py
+│   │   ├── test_protobuf_converter.py
+│   │   └── test_unix_timestamp_field.py
+│   ├── middleware/    # Middleware tests
+│   │   ├── test_logging_context.py
+│   │   ├── test_request_size_limit.py
+│   │   └── test_security_headers.py
+│   ├── rbac/          # RBAC and permissions tests
+│   │   ├── test_decorator_rbac.py
+│   │   ├── test_http_decorator_rbac.py
+│   │   └── test_routing.py
+│   ├── websocket/     # WebSocket utility tests
+│   │   ├── test_generate_ws_handler.py
+│   │   └── test_websocket_edge_cases.py
+│   ├── utils/         # Utility function tests
+│   │   ├── test_circuit_breaker.py
+│   │   ├── test_correlation_id.py
+│   │   ├── test_error_envelopes.py
+│   │   ├── test_error_handler.py
+│   │   ├── test_file_io.py
+│   │   ├── test_ip_utils.py
+│   │   ├── test_metrics.py
+│   │   └── test_profiling.py
+│   ├── edge_cases/    # Cross-cutting edge case tests
+│   │   ├── test_audit_edge_cases.py
+│   │   └── test_rate_limiter_edge_cases.py
+│   └── test_check.py  # Smoke test
+├── integration/       # Integration tests (require external services)
+│   ├── test_database.py
+│   ├── test_redis.py
+│   └── test_keycloak.py
+├── load/              # Performance and load tests (@pytest.mark.load)
+│   └── test_websocket_load.py
+├── chaos/             # Chaos engineering tests (@pytest.mark.chaos)
+│   ├── test_redis_failures.py
+│   ├── test_database_failures.py
+│   └── test_keycloak_failures.py
+├── mocks/             # Centralized mock factories
+│   ├── redis_mocks.py
+│   ├── websocket_mocks.py
+│   └── auth_mocks.py
+└── conftest.py        # Shared fixtures and configuration
+```
+
+**Directory Guidelines:**
+
+**Unit Tests (`tests/unit/`):**
+- Test individual functions/classes in isolation
+- Use mocks for all external dependencies
+- Fast execution (< 1 second per test)
+- No database, Redis, or Keycloak required
+- Examples: pagination logic, data validation, encoding/decoding
+
+**Integration Tests (`tests/integration/`):**
+- Test interaction between components
+- May use real external services (Docker containers)
+- Slower execution (1-10 seconds per test)
+- Marked with `@pytest.mark.integration`
+- Examples: database queries, Redis operations, Keycloak auth
+
+**Load Tests (`tests/load/`):**
+- Test performance under high load
+- Measure throughput, latency, resource usage
+- Very slow execution (10+ seconds)
+- Marked with `@pytest.mark.load`
+- Examples: 1000 concurrent WebSocket connections, high-frequency broadcasts
+
+**Chaos Tests (`tests/chaos/`):**
+- Test resilience when dependencies fail
+- Simulate failures, timeouts, network issues
+- Marked with `@pytest.mark.chaos`
+- Examples: Redis unavailable, database connection loss, Keycloak errors
+
+**When Creating New Tests:**
+
+1. **Determine test type**: Is it unit, integration, load, or chaos?
+2. **Place in correct directory**: Use the directory structure above
+3. **Use appropriate markers**: `@pytest.mark.integration`, `@pytest.mark.load`, `@pytest.mark.chaos`
+4. **Follow naming convention**: `test_<component>_<scenario>.py`
+5. **Use centralized mocks**: Import from `tests/mocks/` instead of creating inline
+
+**Running Tests by Category:**
+
+```bash
+# Run all unit tests (fast)
+pytest tests/unit/ -v
+
+# Run integration tests (requires Docker services)
+pytest tests/integration/ -v -m integration
+
+# Run all tests except slow ones
+pytest -m "not load and not chaos"
+
+# Run specific category
+pytest tests/chaos/ -v -m chaos
+
+# Run all tests in parallel
+pytest -n auto
+```
+
+**Migration Note:**
+
+Currently, many tests are in the root `tests/` directory. Over time, these should be migrated to the appropriate subdirectories. When adding new tests, always place them in the correct subdirectory from the start.
+
 #### Centralized Test Mocks
 
 **CRITICAL:** Always use centralized mock factories from `tests/mocks/` instead of creating inline mocks. This ensures consistency, reduces code duplication, and makes tests easier to maintain.
