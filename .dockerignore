@@ -1,2 +1,81 @@
 # Exclude the project virtual environment from image builds
 .venv
+
+# Version control
+.git
+.gitignore
+.gitattributes
+
+# CI/CD
+.github
+
+# Development files
+.vscode
+.idea
+venv
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache
+.coverage
+htmlcov
+.mypy_cache
+.ruff_cache
+
+# Documentation
+docs
+docs_site
+*.md
+!README.md
+
+# Testing
+tests
+test_*.py
+*_test.py
+pytest.ini
+.pytest_cache
+
+# Environment files
+.env
+.env.*
+!.env.example
+docker/.*.env
+docker/.env
+
+# Development tools
+Makefile
+.pre-commit-config.yaml
+.editorconfig
+
+# Logs
+logs
+*.log
+profiling_reports
+
+# Docker development files
+docker-compose.yml
+docker-compose.*.yml
+docker/Dockerfile
+
+# Temporary files
+*.tmp
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Build artifacts
+dist
+build
+*.egg-info
+
+# IDE
+.worktree
+.claude
+
+# Project-specific
+api-testing
+scripts/test_*.py
+IMPROVEMENTS.md
+BUGS_DISCOVERED_ISSUE_129.md
