@@ -3,9 +3,6 @@
 ###
 # Get a fresh access token using the helper script:
 # python scripts/get_token.py acika 12345
-#
-# Or enable debug mode (NOT for production):
-# export DEBUG_AUTH=true
 ###
 
 ### GET Request Example

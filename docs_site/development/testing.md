@@ -204,49 +204,6 @@ curl -X POST "http://localhost:8080/realms/HW-App/protocol/openid-connect/token"
 
 ---
 
-## Debug Mode (Development Only)
-
-For quick local testing, you can enable debug mode to bypass token validation.
-
-**⚠️ WARNING: NEVER enable DEBUG_AUTH in production!**
-
-### Enable Debug Mode
-
-**Option 1: Environment Variable**
-```bash
-export DEBUG_AUTH=true
-uvicorn app:application --reload
-```
-
-**Option 2: In docker/.srv_env**
-```bash
-# Add to docker/.srv_env
-DEBUG_AUTH=true
-```
-
-**Option 3: Override defaults**
-```bash
-# Custom debug user
-export DEBUG_AUTH=true
-export DEBUG_AUTH_USERNAME=testuser
-export DEBUG_AUTH_PASSWORD=testpass
-```
-
-When DEBUG_AUTH is enabled, you'll see a warning in logs:
-```
-WARNING - DEBUG_AUTH is enabled - using debug credentials. NEVER enable this in production!
-```
-
-### Disable Debug Mode
-
-```bash
-unset DEBUG_AUTH
-# or
-export DEBUG_AUTH=false
-```
-
----
-
 ## Manual Testing
 
 ### HTTP Endpoints
@@ -598,9 +555,6 @@ make get-token USER=acika PASS=12345
 
 # Run tests with coverage
 make test-with-coverage
-
-# Start server in debug mode
-make serve-debug
 ```
 
 Add to Makefile:
@@ -610,9 +564,6 @@ get-token:
 
 test-with-coverage:
 	@uv run pytest --cov=app --cov-report=html
-
-serve-debug:
-	@export DEBUG_AUTH=true && uvicorn app:application --reload
 ```
 
 ---
@@ -668,9 +619,8 @@ python scripts/get_token.py acika 12345
 2. **Use Real Tokens for Integration Tests**: Catch real-world issues
 3. **Never commit tokens**: Tokens in git history are security risks
 4. **Rotate tokens regularly**: Even in development
-5. **Disable DEBUG_AUTH in CI/CD**: Force proper authentication in pipelines
-6. **Test with different user roles**: Verify RBAC properly
-7. **Use Property-Based Testing**: Catch edge cases automatically with Hypothesis
+5. **Test with different user roles**: Verify RBAC properly
+6. **Use Property-Based Testing**: Catch edge cases automatically with Hypothesis
 
 ---
 
