@@ -151,7 +151,6 @@ Environment variables in [settings.py]({{cookiecutter.module_name}}/settings.py)
 **Keycloak (Required):**
 - `KEYCLOAK_REALM`, `KEYCLOAK_CLIENT_ID`, `KEYCLOAK_BASE_URL`
 - `KEYCLOAK_ADMIN_USERNAME`, `KEYCLOAK_ADMIN_PASSWORD`
-- `DEBUG_AUTH`, `DEBUG_AUTH_USERNAME`, `DEBUG_AUTH_PASSWORD`
 
 **Redis (Required):**
 - `REDIS_IP`, `REDIS_PORT`

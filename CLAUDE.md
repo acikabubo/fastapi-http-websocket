@@ -119,7 +119,6 @@ make new-ws-handlers
 - `AuthBackend`: Decodes Keycloak JWT from Authorization header (HTTP) or query string (WebSocket)
 - User data extracted into `UserModel` with roles
 - Excluded paths configured via `EXCLUDED_PATHS` regex in settings
-- Supports `DEBUG_AUTH` mode for development (never use in production!)
 
 **RBAC Manager ([managers/rbac_manager.py]({{cookiecutter.project_slug}}/{{cookiecutter.module_name}}/managers/rbac_manager.py)):**
 - Singleton loading role definitions from `actions.json`
@@ -304,7 +303,6 @@ Environment variables in [settings.py]({{cookiecutter.project_slug}}/{{cookiecut
 **Keycloak (Required):**
 - `KEYCLOAK_REALM`, `KEYCLOAK_CLIENT_ID`, `KEYCLOAK_BASE_URL`
 - `KEYCLOAK_ADMIN_USERNAME`, `KEYCLOAK_ADMIN_PASSWORD`
-- `DEBUG_AUTH`, `DEBUG_AUTH_USERNAME`, `DEBUG_AUTH_PASSWORD`
 
 **Redis (Required):**
 - `REDIS_IP`, `REDIS_PORT`
