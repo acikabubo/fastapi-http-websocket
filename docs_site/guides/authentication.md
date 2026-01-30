@@ -110,7 +110,6 @@ ws.onopen = () => console.log('Authenticated!');
 | `CIRCUIT_BREAKER_ENABLED` | Enable circuit breaker for Keycloak | No | `true` |
 | `KEYCLOAK_CIRCUIT_BREAKER_FAIL_MAX` | Open circuit after N failures | No | `5` |
 | `KEYCLOAK_CIRCUIT_BREAKER_TIMEOUT` | Circuit open duration (seconds) | No | `60` |
-| `DEBUG_AUTH` | Allow requests without authentication | No | `false` |
 
 ### Example .env File
 
@@ -120,7 +119,6 @@ KEYCLOAK_BASE_URL=https://keycloak.example.com
 KEYCLOAK_REALM=production
 KEYCLOAK_CLIENT_ID=prod-client
 KEYCLOAK_CLIENT_SECRET=<strong-secret>
-DEBUG_AUTH=false
 ```
 
 ---
@@ -334,43 +332,6 @@ await cache_token_claims(access_token, claims)
 # Cache hit rate
 rate(token_cache_hits_total[5m]) /
 (rate(token_cache_hits_total[5m]) + rate(token_cache_misses_total[5m]))
-```
-
----
-
-## Debug Mode
-
-⚠️ **WARNING**: `DEBUG_AUTH` allows requests without authentication. **Development only!**
-
-### Configuration
-
-```bash
-# .env
-DEBUG_AUTH=false  # Default (use real auth)
-
-# Production: automatically enforced
-ENV=production
-DEBUG_AUTH=false  # Cannot be true in production
-```
-
-### How It Works
-
-When `DEBUG_AUTH=true`, requests without token get fake user:
-
-```python
-UserModel(
-    id="debug-user-id",
-    username="debug-username",
-    roles=DEBUG_AUTH_ROLES,  # From settings
-    expired_in=9999999999
-)
-```
-
-### Security Warnings
-
-```
-WARNING - DEBUG_AUTH is enabled! All requests authenticated with fake user.
-WARNING - This is extremely insecure - development only!
 ```
 
 ---

@@ -1,6 +1,6 @@
 # Testing with Swagger UI (OpenAPI)
 
-This guide explains how to test HTTP API endpoints using FastAPI's built-in Swagger UI without the `DEBUG_AUTH` flag.
+This guide explains how to test HTTP API endpoints using FastAPI's built-in Swagger UI.
 
 ## Quick Start
 
@@ -266,39 +266,7 @@ Set a 4-minute timer after getting a token to remind you to refresh:
 python scripts/get_token.py acika 12345 && sleep 240 && echo "⏰ Token expires in 1 minute!"
 ```
 
-## Comparing with DEBUG_AUTH
-
-### With DEBUG_AUTH (Old Way)
-
-```bash
-# Set environment variable
-export DEBUG_AUTH=true
-export DEBUG_AUTH_USERNAME=debug
-export DEBUG_AUTH_PASSWORD=debug
-
-# Start server
-uvicorn app:application --reload
-
-# No need to authorize in Swagger
-# ⚠️ Security risk in staging/production
-```
-
-### With Real Tokens (New Way)
-
-```bash
-# Get token (once every 5 minutes)
-python scripts/get_token.py acika 12345
-
-# Copy token to Swagger UI "Authorize" button
-# ✅ Secure, tests real auth flow
-```
-
-**Why the new way is better:**
-- ✅ Tests actual authentication flow
-- ✅ No security risk from hardcoded credentials
-- ✅ Can test with different users and roles
-- ✅ Better audit trail (real user tokens)
-- ✅ Token expiration testing (realistic)
+---
 
 ## Troubleshooting
 

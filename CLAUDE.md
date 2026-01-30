@@ -1346,7 +1346,6 @@ The application supports multiple deployment environments with automatic configu
 
 | Setting | DEV | STAGING | PRODUCTION |
 |---------|-----|---------|------------|
-| `DEBUG_AUTH` | Allowed | Disallowed | Disallowed (enforced) |
 | `LOG_LEVEL` | DEBUG | INFO | WARNING |
 | `LOG_CONSOLE_FORMAT` | human | json | json |
 | `RATE_LIMIT_FAIL_MODE` | open | open | closed |
@@ -1368,7 +1367,6 @@ ENV=production
 **Environment-Specific Behavior:**
 
 1. **Production Environment** (`ENV=production`):
-   - `DEBUG_AUTH` is automatically disabled (cannot be enabled)
    - Rate limiting fails closed (denies requests when Redis unavailable)
    - JSON logging for Grafana Alloy/Loki integration
    - WARNING log level (minimal logging)
@@ -1444,8 +1442,6 @@ The application implements **fail-fast validation** to ensure it does not start 
 1. **`validate_settings()`** - Validates required environment variables:
    - Keycloak settings: `KEYCLOAK_REALM`, `KEYCLOAK_CLIENT_ID`, `KEYCLOAK_BASE_URL`, `KEYCLOAK_ADMIN_USERNAME`, `KEYCLOAK_ADMIN_PASSWORD`
    - Database settings: `DB_USER`, `DB_PASSWORD`
-   - Validates `DEBUG_AUTH` is disabled in production
-   - Validates `DEBUG_AUTH` credentials if enabled
 
 2. **`validate_database_connection()`** - Tests database connectivity:
    - Attempts connection to PostgreSQL
@@ -1493,13 +1489,12 @@ ERROR - Application will not start. Fix the configuration errors and try again.
 - ✅ **Clear error messages**: Actionable feedback for missing/invalid settings
 - ✅ **Early detection**: Catch configuration errors before accepting requests
 - ✅ **Service availability checks**: Verify database and Redis are reachable
-- ✅ **Production safety**: Prevents DEBUG_AUTH from being enabled in production
 
 **Testing:**
 
 Comprehensive tests in [tests/test_startup_validation.py](tests/test_startup_validation.py) cover:
 - Missing environment variables
-- Invalid configuration (e.g., DEBUG_AUTH in production)
+- Invalid configuration validation
 - Database connection failures
 - Redis connection failures
 - Validation orchestration
