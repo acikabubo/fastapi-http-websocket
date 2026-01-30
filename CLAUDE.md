@@ -211,6 +211,87 @@ uv run pytest -m load tests/load/ -v -s
 uv run pytest -m chaos tests/chaos/ -v -s
 ```
 
+## 🔒 Security Quick Reference
+
+**📖 Complete Guide:** [Security Best Practices](docs_site/guides/security-best-practices.md)
+
+### Secure Endpoint Creation
+
+```python
+# HTTP endpoint with RBAC
+from app.dependencies.permissions import require_roles
+
+@router.post("/authors", dependencies=[Depends(require_roles("create-author"))])
+async def create_author(data: CreateAuthorInput, repo: AuthorRepoDep):
+    # Authenticated user with 'create-author' role required
+    pass
+
+# WebSocket handler with RBAC
+@pkg_router.register(PkgID.DELETE_AUTHOR, roles=["delete-author", "admin"])
+async def delete_author_handler(request: RequestModel) -> ResponseModel:
+    # User must have BOTH roles
+    pass
+
+# Public endpoint (no authentication)
+@router.get("/public")
+async def public_endpoint():
+    # No require_roles() = public access
+    pass
+```
+
+### Input Validation
+
+```python
+from pydantic import BaseModel, Field, EmailStr, field_validator
+
+class CreateUserInput(BaseModel):
+    username: str = Field(min_length=3, max_length=50, pattern=r'^[a-zA-Z0-9_]+$')
+    email: EmailStr
+    bio: str = Field(max_length=500)  # Always set max length!
+
+    @field_validator('username')
+    @classmethod
+    def validate_username(cls, v: str) -> str:
+        if v.lower() in ['admin', 'root', 'system']:
+            raise ValueError('Reserved username')
+        return v.strip()
+```
+
+### Security Checklist
+
+- [ ] `ENV=production` (not development)
+- [ ] HTTPS enforced (HSTS header active)
+- [ ] `ALLOWED_WS_ORIGINS` set to specific domains (no wildcard)
+- [ ] `ALLOWED_HOSTS` configured (no wildcard)
+- [ ] Rate limiting enabled (`RATE_LIMIT_ENABLED=true`)
+- [ ] All sensitive endpoints have RBAC protection
+- [ ] Input validation on all user inputs (Pydantic)
+- [ ] Audit logging enabled (`AUDIT_LOG_ENABLED=true`)
+- [ ] Security headers verified (run scanner)
+- [ ] Dependencies updated (no known CVEs)
+
+### Common Pitfalls to Avoid
+
+```python
+# ❌ VULNERABLE - Mass assignment
+user = User(**request.data)  # Attacker can set any field!
+
+# ✅ SAFE - Pydantic validation
+user = User(**validated_input.model_dump())  # Only whitelisted fields
+
+# ❌ VULNERABLE - SQL injection
+query = f"SELECT * FROM users WHERE name = '{name}'"
+
+# ✅ SAFE - Parameterized query
+stmt = select(User).where(User.name == name)
+
+# ❌ VULNERABLE - Logging sensitive data
+logger.info(f"Login: {username}, password: {password}")
+
+# ✅ SAFE - Don't log secrets
+logger.info(f"Login: {username}")
+```
+
 ## 🔧 Git Commit Format
 
 ```bash
