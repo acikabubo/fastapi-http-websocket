@@ -43,6 +43,15 @@ stop-server: ## Stop hw-server service
 	docker compose -f docker/docker-compose.yml stop hw-server
 	docker compose -f docker/docker-compose.yml rm -f hw-server
 
+test-docker-build: ## Test production Docker build locally before pushing to main
+	@echo "🐳 Testing production Docker build..."
+	@bash scripts/test_docker_build.sh
+
+build-prod: ## Build production Docker image (quick test without full validation)
+	@echo "Building production image..."
+	docker build -f docker/Dockerfile.production -t fastapi-app:latest .
+	@echo "✅ Build complete. Image: fastapi-app:latest"
+
 ##@ Development
 
 serve: ## Start FastAPI application with hot-reload (local development)

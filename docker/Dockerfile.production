@@ -1,0 +1,91 @@
+# Multi-stage build for production
+# Stage 1: Build dependencies
+FROM python:3.13.0-slim-bullseye AS builder
+
+LABEL maintainer="Aleksandar Krsteski <krsteski_aleksandar@hotmail.com>"
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    libpq-dev \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install uv
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+
+# Set environment variables
+ENV UV_SYSTEM_PYTHON=1
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+# Copy dependency files
+WORKDIR /build
+COPY pyproject.toml ./
+
+# Install production dependencies only (no dev dependencies)
+RUN uv pip install -r pyproject.toml --no-cache
+
+# Stage 2: Production runtime
+FROM python:3.13.0-slim-bullseye AS runtime
+
+LABEL maintainer="Aleksandar Krsteski <krsteski_aleksandar@hotmail.com>"
+LABEL description="FastAPI HTTP & WebSocket Handlers - Production"
+
+# Build arguments for metadata
+ARG BUILD_DATE
+ARG VCS_REF
+ARG VERSION
+
+# Add metadata labels
+LABEL org.opencontainers.image.created="${BUILD_DATE}"
+LABEL org.opencontainers.image.revision="${VCS_REF}"
+LABEL org.opencontainers.image.version="${VERSION}"
+LABEL org.opencontainers.image.title="FastAPI WebSocket Application"
+LABEL org.opencontainers.image.description="Production-ready FastAPI application with WebSocket support"
+LABEL org.opencontainers.image.source="https://github.com/acikabubo/fastapi-http-websocket"
+
+# Install runtime dependencies only
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpq5 \
+    curl \
+    tzdata \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set timezone
+RUN cp /usr/share/zoneinfo/Europe/Skopje /etc/localtime && \
+    echo "Europe/Skopje" > /etc/timezone
+ENV TZ=Europe/Skopje
+
+# Create non-root user
+RUN groupadd --gid 1000 app && \
+    useradd --uid 1000 --gid app --shell /bin/bash --create-home app
+
+# Copy Python packages from builder
+COPY --from=builder /usr/local/lib/python3.13/site-packages /usr/local/lib/python3.13/site-packages
+COPY --from=builder /usr/local/bin /usr/local/bin
+
+# Set working directory
+WORKDIR /app
+
+# Copy application code (exclude dev files via .dockerignore)
+COPY --chown=app:app . .
+
+# Switch to non-root user
+USER app
+
+# Set Python environment variables
+ENV PYTHONPATH=/app
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+ENV ENV=production
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
+
+# Expose application port
+EXPOSE 8000
+
+# Run application with Uvicorn
+CMD ["uvicorn", "app:application", "--host", "0.0.0.0", "--port", "8000", "--workers", "4", "--proxy-headers", "--forwarded-allow-ips", "*"]
