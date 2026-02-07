@@ -350,6 +350,112 @@ def create_response_model_fixture(
 
 
 @pytest.fixture(scope="session")
+def postgres_container():
+    """
+    Provides a real PostgreSQL container for integration testing.
+
+    This fixture starts a PostgreSQL 13 container using testcontainers,
+    matching the production Docker image version. The container is
+    session-scoped to avoid overhead of starting/stopping for each test.
+
+    Yields:
+        dict: PostgreSQL connection details with keys:
+            - host: Container host IP
+            - port: Mapped port
+            - user: Database username
+            - password: Database password
+            - dbname: Database name
+
+    Example:
+        @pytest.mark.integration
+        async def test_with_real_db(setup_test_db):
+            # Database engine/session already pointing to testcontainer
+            ...
+    """
+    from testcontainers.postgres import PostgresContainer
+
+    container = PostgresContainer("postgres:13", driver="asyncpg")
+    container.start()
+
+    try:
+        yield {
+            "host": container.get_container_host_ip(),
+            "port": container.get_exposed_port(5432),
+            "user": container.username,
+            "password": container.password,
+            "dbname": container.dbname,
+        }
+    finally:
+        container.stop()
+
+
+@pytest.fixture(scope="session")
+async def setup_test_db(postgres_container):
+    """
+    Replace the module-level engine/session with a testcontainer database.
+
+    This fixture swaps the global engine and async_session in app.storage.db
+    to point to the PostgreSQL testcontainer, creates all tables, and restores
+    the originals after the test session.
+
+    Args:
+        postgres_container: Session-scoped PostgreSQL container fixture
+
+    Yields:
+        AsyncEngine: The test database engine
+
+    Example:
+        @pytest.mark.integration
+        async def test_audit_writes(setup_test_db):
+            # app.storage.db.async_session now points to testcontainer
+            await log_user_action(...)
+    """
+    import app.storage.db as db_module
+    from sqlalchemy.ext.asyncio import create_async_engine
+    from sqlalchemy.orm import sessionmaker
+    from sqlmodel import SQLModel
+    from sqlmodel.ext.asyncio.session import AsyncSession
+
+    # Import all models so SQLModel.metadata is populated
+    from app.models.author import Author  # noqa: F401
+    from app.models.user_action import UserAction  # noqa: F401
+
+    pc = postgres_container
+    test_url = (
+        f"postgresql+asyncpg://{pc['user']}:{pc['password']}"
+        f"@{pc['host']}:{pc['port']}/{pc['dbname']}"
+    )
+
+    # Create test engine and session factory
+    test_engine = create_async_engine(test_url, echo=False)
+    test_session = sessionmaker(
+        test_engine, expire_on_commit=False, class_=AsyncSession
+    )
+
+    # Save originals
+    original_engine = db_module.engine
+    original_session = db_module.async_session
+
+    # Replace module-level globals
+    db_module.engine = test_engine
+    db_module.async_session = test_session
+
+    # Create schema
+    async with test_engine.begin() as conn:
+        await conn.run_sync(SQLModel.metadata.create_all)
+
+    yield test_engine
+
+    # Cleanup: drop tables, restore originals
+    async with test_engine.begin() as conn:
+        await conn.run_sync(SQLModel.metadata.drop_all)
+    await test_engine.dispose()
+
+    db_module.engine = original_engine
+    db_module.async_session = original_session
+
+
+@pytest.fixture(scope="session")
 def keycloak_container():
     """
     Provides a real Keycloak container for integration testing.
