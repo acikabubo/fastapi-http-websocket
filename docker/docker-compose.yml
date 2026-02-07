@@ -5,6 +5,13 @@ services:
     container_name: hw-traefik
     hostname: traefik
 
+    group_add:
+      - ${DOCKER_GID}
+
+    # Disable SELinux confinement so Traefik can access the Docker socket
+    security_opt:
+      - label:disable
+
     networks:
       - hw-network
 
@@ -15,8 +22,8 @@ services:
 
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ./traefik/traefik.yml:/etc/traefik/traefik.yml:ro
-      - ./traefik/dynamic:/etc/traefik/dynamic:ro
+      - ./traefik/traefik.yml:/etc/traefik/traefik.yml:ro,z
+      - ./traefik/dynamic:/etc/traefik/dynamic:ro,z
       - traefik-certificates:/letsencrypt
       - traefik-logs:/var/log/traefik
 
@@ -56,7 +63,7 @@ services:
 
     volumes:
       - postgres-hw-data:/var/lib/postgresql/data
-      - ../db:/docker-entrypoint-initdb.d
+      - ../db:/docker-entrypoint-initdb.d:z
 
     env_file:
       - .pg_env
@@ -103,7 +110,7 @@ services:
       - "8001:8001"  # used for docs
 
     volumes:
-      - ..:/project
+      - ..:/project:z
 
     user: ${UID}:${GID}
 
@@ -183,7 +190,7 @@ services:
       - 9999:9000
 
     volumes:
-      - ../db/keycloak:/opt/keycloak/data/import
+      - ../db/keycloak:/opt/keycloak/data/import:z
 
     env_file:
       - .kc_env
@@ -233,9 +240,9 @@ services:
       - 1234:1234
 
     volumes:
-      - ..:/project:delegated
+      - ..:/project:delegated,z
       - /tmp:/tmp
-      - ~/.ssh:/home/devel/.ssh
+      - ~/.ssh:/home/devel/.ssh:ro,z
 
     # Keep container running with bash shell (no tmux to avoid ANSI codes in logs)
     command: "bash"
@@ -270,8 +277,8 @@ services:
       - "9090:9090"
 
     volumes:
-      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - ./prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro,z
+      - ./prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro,z
       - prometheus-data:/prometheus
 
     labels:
@@ -359,7 +366,7 @@ services:
 
     volumes:
       - grafana-data:/var/lib/grafana
-      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/provisioning:/etc/grafana/provisioning:z
 
     depends_on:
       - prometheus
@@ -381,7 +388,7 @@ services:
       - "3100:3100"
 
     volumes:
-      - ./loki/loki-config.yml:/etc/loki/local-config.yaml:ro
+      - ./loki/loki-config.yml:/etc/loki/local-config.yaml:ro,z
       - loki-data:/loki
 
     labels:
@@ -408,6 +415,13 @@ services:
     container_name: hw-alloy
     hostname: alloy
 
+    group_add:
+      - ${DOCKER_GID}
+
+    # Disable SELinux confinement so Alloy can access the Docker socket
+    security_opt:
+      - label:disable
+
     networks:
       - hw-network
 
@@ -415,7 +429,7 @@ services:
       - "12345:12345"  # Alloy UI
 
     volumes:
-      - ./alloy/config.alloy:/etc/alloy/config.alloy:ro
+      - ./alloy/config.alloy:/etc/alloy/config.alloy:ro,z
       - /var/run/docker.sock:/var/run/docker.sock
 
     labels:

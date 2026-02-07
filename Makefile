@@ -10,6 +10,9 @@ export UID=$(shell id -u)
 export GID=$(shell id -g)
 endif
 
+# Docker socket group ID (needed for Traefik/Alloy to access Docker API)
+export DOCKER_GID=$(shell getent group docker | cut -d: -f3)
+
 ##@ General
 
 help: ## Display this help message
