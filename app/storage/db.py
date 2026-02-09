@@ -1,6 +1,5 @@
 import asyncio
 import base64
-import math
 from typing import Any, Callable, Type
 
 from pydantic import BaseModel as PydanticBaseModel
@@ -19,7 +18,6 @@ from app.logging import logger
 from app.schemas.generic_typing import GenericSQLModelType
 from app.schemas.response import MetadataModel
 from app.settings import app_settings
-from app.utils.pagination_cache import get_cached_count, set_cached_count
 from app.utils.query_monitor import enable_query_monitoring
 
 # Enable database query performance monitoring
@@ -146,9 +144,17 @@ async def get_paginated_results(
     """
     Get paginated results from a SQLModel query with cursor and eager loading support.
 
+    BACKWARD COMPATIBLE FACADE - This function now delegates to strategy classes
+    internally while maintaining the same API for existing callers.
+
     This function supports both offset-based (traditional) and cursor-based pagination.
     Cursor-based pagination provides consistent performance for any page and stable
     results unaffected by concurrent inserts/deletes.
+
+    For new code, consider using strategies directly:
+        >>> from app.storage.pagination import OffsetPaginationStrategy
+        >>> strategy = OffsetPaginationStrategy(session, page=1)
+        >>> items, meta = await strategy.paginate(query, Author, 20)
 
     Args:
         model (Type[GenericSQLModelType]): The SQLModel class to query.
@@ -185,6 +191,12 @@ async def get_paginated_results(
         ... )
         >>> # Use meta.next_cursor for next page
     """
+    from app.storage.pagination.factory import select_strategy
+    from app.storage.pagination.query_builder import (
+        build_query,
+        convert_filters,
+    )
+
     # Use settings default if not specified, cap at MAX_PAGE_SIZE
     if per_page is None:
         per_page = app_settings.DEFAULT_PAGE_SIZE
@@ -194,110 +206,28 @@ async def get_paginated_results(
     if per_page < 1:
         raise ValueError("per_page must be >= 1")
 
-    # Convert Pydantic filters to dict (backward compatibility)
-    filter_dict: dict[str, Any] | None = None
-    if filters is not None:
-        if isinstance(filters, PydanticBaseModel):
-            # Type-safe Pydantic filter schema
-            # Use to_dict() method if available (BaseFilter), else model_dump()
-            if hasattr(filters, "to_dict"):
-                filter_dict = filters.to_dict()  # noqa: PGH003
-            else:
-                # Fallback for custom Pydantic models without to_dict()
-                filter_dict = {
-                    k: v
-                    for k, v in filters.model_dump().items()
-                    if v is not None
-                }
-        else:
-            # Legacy dict filters
-            filter_dict = filters
+    # Convert filters to dict
+    filter_dict = convert_filters(filters)
 
-    query: Select = select(model)
+    # Build query with filters and eager loading
+    query = build_query(model, filter_dict, apply_filters, eager_load)
 
-    # Apply eager loading for relationships (prevents N+1 queries)
-    if eager_load:
-        for relationship in eager_load:
-            if hasattr(model, relationship):
-                query = query.options(
-                    selectinload(getattr(model, relationship))
-                )
-            else:
-                logger.warning(
-                    f"Relationship '{relationship}' not found on {model.__name__}"
-                )
-
-    if filter_dict:
-        if apply_filters:
-            query = apply_filters(query, model, filter_dict)
-        else:
-            query = default_apply_filters(query, model, filter_dict)
-
-    async with async_session() as s:
-        # Calculate total (skip for cursor pagination or when requested)
-        use_cursor = cursor is not None
-        if skip_count or use_cursor:
-            total = 0  # Skip count query for performance
-        else:
-            # Try to get count from cache first
-            model_name = model.__name__
-            cached_total = await get_cached_count(model_name, filter_dict)
-
-            if cached_total is not None:
-                total = cached_total
-            else:
-                # More efficient count on primary key instead of subquery
-                count_query = select(func.count(model.id))
-                if filter_dict:
-                    if apply_filters:
-                        count_query = apply_filters(
-                            count_query, model, filter_dict
-                        )
-                    else:
-                        count_query = default_apply_filters(
-                            count_query, model, filter_dict
-                        )
-                total_result = await s.exec(count_query)
-                total = total_result.one()
-
-                # Cache the count result for future requests
-                await set_cached_count(model_name, total, filter_dict)
-
-        # Apply pagination strategy
-        if use_cursor and cursor:  # Type narrowing for mypy
-            # Cursor-based pagination (stable, O(1) performance)
-            last_id = decode_cursor(cursor)
-            query = query.where(model.id > last_id)
-        else:
-            # Offset-based pagination (traditional, O(n) performance)
-            query = query.offset((page - 1) * per_page)
-
-        # Fetch one extra item to determine if there are more results
-        query = query.limit(per_page + 1)
-        results = await s.exec(query)
-        items = results.all()
-
-        # Check if there are more results
-        has_more = len(items) > per_page
-        if has_more:
-            items = items[:per_page]  # Remove the extra item
-
-        # Generate next cursor
-        next_cursor = None
-        if use_cursor and has_more and items:
-            next_cursor = encode_cursor(items[-1].id)
-
-        # Collect/format meta data
-        meta_data = MetadataModel(
+    # Select and execute pagination strategy
+    async with async_session() as session:
+        strategy = select_strategy(
+            session=session,
+            cursor=cursor,
             page=page,
-            per_page=per_page,
-            total=total,
-            pages=math.ceil(total / per_page) if total > 0 else 0,
-            next_cursor=next_cursor,
-            has_more=has_more,
+            skip_count=skip_count,
+            filter_dict=filter_dict,
+            apply_filters_func=apply_filters,
         )
 
-        return items, meta_data
+        print()
+        print(f"STRATEGY: {strategy}")
+        print()
+
+        return await strategy.paginate(query, model, per_page)
 
 
 def default_apply_filters(

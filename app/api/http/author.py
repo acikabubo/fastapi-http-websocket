@@ -195,7 +195,7 @@ async def delete_author(
     "/paginated",
     response_model=PaginatedResponseModel[Author],
     summary="Get paginated list of authors",
-    description="Get paginated authors using helper function",
+    description="Get paginated authors with offset or cursor pagination",
     dependencies=[Depends(require_roles("get-authors"))],
 )
 @handle_http_errors
@@ -203,30 +203,41 @@ async def get_paginated_authors(
     repo: AuthorRepoDep,
     page: int = 1,
     per_page: int = app_settings.DEFAULT_PAGE_SIZE,
+    cursor: str | None = None,
     id: int | None = None,
     name: str | None = None,
 ) -> PaginatedResponseModel[Author]:
     """
-    Get paginated list of authors.
+    Get paginated list of authors with offset or cursor pagination.
 
-    This endpoint shows how pagination works with the pattern.
-    For now, it still uses get_paginated_results() helper, but data
-    access could be moved to repository if needed.
+    Supports both pagination strategies:
+    - **Offset Pagination**: Use `page` parameter (traditional page-based)
+    - **Cursor Pagination**: Use `cursor` parameter (high-performance)
+
+    Cursor pagination takes precedence if both are provided.
 
     Requires role: get-authors
 
     Args:
         repo: Author repository (injected via dependency).
-        page: Page number (starts at 1).
+        page: Page number (starts at 1) - used for offset pagination.
         per_page: Items per page.
+        cursor: Base64 cursor from previous response - used for cursor pagination.
         id: Optional author ID filter.
         name: Optional name filter.
 
     Returns:
         Paginated response with items and metadata.
 
-    Example:
-        GET /authors/paginated?page=1&per_page=10
+    Examples:
+        Offset pagination:
+            GET /authors/paginated?page=1&per_page=10
+
+        Cursor pagination (first page):
+            GET /authors/paginated?per_page=10&cursor=
+
+        Cursor pagination (next page):
+            GET /authors/paginated?per_page=10&cursor=MjA=
     """
     filters: dict[str, Any] = {}
     if id is not None:
@@ -235,7 +246,11 @@ async def get_paginated_authors(
         filters["name"] = name
 
     items, meta = await get_paginated_results(
-        Author, page=page, per_page=per_page, filters=filters
+        Author,
+        page=page,
+        per_page=per_page,
+        cursor=cursor,
+        filters=filters,
     )
 
     return PaginatedResponseModel(items=items, meta=meta)

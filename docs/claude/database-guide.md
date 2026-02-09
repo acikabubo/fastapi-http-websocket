@@ -428,6 +428,98 @@ authors, meta = await get_paginated_results(
 )
 ```
 
+### Strategy Pattern (Advanced Usage)
+
+The pagination system uses the **Strategy pattern** to separate different pagination algorithms into focused, testable classes. While `get_paginated_results()` provides a backward-compatible facade, you can use strategies directly for more control.
+
+#### Using Strategies Directly
+
+```python
+from app.storage.pagination import OffsetPaginationStrategy, CursorPaginationStrategy
+from sqlmodel import select
+
+async with async_session() as session:
+    # Offset pagination strategy
+    strategy = OffsetPaginationStrategy(
+        session=session,
+        page=2,
+        skip_count=False,  # Include total count
+        filter_dict={"status": "active"}
+    )
+
+    query = select(Author).where(Author.status == "active").order_by(Author.id)
+    items, meta = await strategy.paginate(query, Author, page_size=20)
+
+    # Cursor pagination strategy
+    strategy = CursorPaginationStrategy(
+        session=session,
+        cursor="MTA="  # Base64 cursor from previous page
+    )
+
+    query = select(Author).order_by(Author.id)
+    items, meta = await strategy.paginate(query, Author, page_size=20)
+```
+
+#### Package Structure
+
+```
+app/storage/pagination/
+├── __init__.py              # Exports strategy classes
+├── protocol.py              # PaginationStrategy protocol
+├── offset.py                # OffsetPaginationStrategy
+├── cursor.py                # CursorPaginationStrategy
+├── factory.py               # Strategy selector
+└── query_builder.py         # Shared filter/query utilities
+```
+
+#### Benefits of Strategy Pattern
+
+- **Clarity**: Each strategy is ~60-120 lines with single responsibility
+- **Testability**: Strategies tested independently (117 tests)
+- **Extensibility**: Easy to add new strategies (keyset, GraphQL-style)
+- **Type Safety**: Protocol-based design with mypy checking
+- **Maintainability**: Reduced complexity from 12+ branches to 2-3 per strategy
+
+#### Custom Strategies
+
+To add a custom pagination strategy:
+
+```python
+# app/storage/pagination/keyset.py
+from typing import Type
+from sqlalchemy import Select
+from app.schemas.response import MetadataModel
+from app.schemas.generic_typing import GenericSQLModelType
+
+class KeysetPaginationStrategy:
+    """Keyset pagination using composite keys."""
+
+    def __init__(self, session: AsyncSession, last_seen_key: tuple | None):
+        self.session = session
+        self.last_seen_key = last_seen_key
+
+    async def paginate(
+        self,
+        query: Select,
+        model: Type[GenericSQLModelType],
+        page_size: int,
+    ) -> tuple[list[GenericSQLModelType], MetadataModel]:
+        # Implement keyset pagination logic
+        ...
+```
+
+#### Backward Compatibility
+
+All existing code using `get_paginated_results()` works unchanged - the facade delegates to strategies internally:
+
+```python
+# This still works (uses OffsetPaginationStrategy internally)
+items, meta = await get_paginated_results(Author, page=1, per_page=20)
+
+# This also works (uses CursorPaginationStrategy internally)
+items, meta = await get_paginated_results(Author, cursor="MTA=", per_page=20)
+```
+
 ### Choosing Between Offset and Cursor Pagination
 
 **Use Cursor Pagination When:**
@@ -442,6 +534,90 @@ authors, meta = await get_paginated_results(
 - ✅ Small datasets (< 1000 items)
 - ✅ Data rarely changes
 - ✅ Admin dashboards with page selectors
+
+### Testing Pagination Endpoints
+
+The project includes comprehensive test request files for manual testing with the [REST Client](https://marketplace.visualstudio.com/items?itemName=humao.rest-client) VS Code extension.
+
+**Test file**: `api-testing/pagination-test.http`
+
+**Installation:**
+```bash
+# VS Code extension (search "REST Client" in Extensions)
+# Or install directly
+code --install-extension humao.rest-client
+```
+
+**Usage:**
+
+1. Open `api-testing/pagination-test.http` in VS Code
+2. Update the token variable at the top:
+   ```http
+   @token = YOUR_ACTUAL_TOKEN_HERE
+   ```
+3. Click "Send Request" above any test case
+4. View response in side panel
+
+**Test Coverage (33 scenarios):**
+
+- **Offset Pagination** (Tests 1-10)
+  - First/middle/last pages
+  - Filter combinations
+  - Skip count mode
+  - Page size validation
+  - Invalid inputs (defaults, boundaries)
+
+- **Cursor Pagination** (Tests 11-17)
+  - First page (empty cursor)
+  - Next page navigation
+  - Filter support
+  - Invalid cursor handling
+
+- **Eager Loading** (Tests 18-19)
+  - Offset + eager loading
+  - Cursor + eager loading
+
+- **Edge Cases** (Tests 20-24)
+  - Empty results
+  - Large page numbers
+  - Boundary values (0, negative)
+
+- **Performance Testing** (Tests 25-29)
+  - Offset O(n) degradation (pages 1, 10, 100)
+  - Cursor O(1) consistency (shallow/deep pages)
+
+- **Cache Testing** (Tests 30-33)
+  - Cache miss/hit scenarios
+  - Filter variations
+  - Skip count bypass
+
+**Example Test Request:**
+```http
+### 1. Offset Pagination - First Page
+GET {{baseUrl}}/authors/paginated?page=1&per_page=20
+Content-Type: application/json
+Authorization: Bearer {{token}}
+```
+
+**Expected Response Structure:**
+```json
+{
+  "items": [
+    {"id": 1, "name": "Author 1"},
+    {"id": 2, "name": "Author 2"}
+  ],
+  "meta": {
+    "page": 1,
+    "per_page": 20,
+    "total": 100,
+    "pages": 5,
+    "has_more": true,
+    "next_cursor": null
+  }
+}
+```
+
+**Note**: WebSocket testing through REST Client is not reliably supported. Use dedicated WebSocket clients (websocat, wscat, Postman) for WebSocket endpoint testing.
 
 ## Performance Optimizations
 

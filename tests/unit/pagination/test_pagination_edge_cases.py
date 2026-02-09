@@ -51,9 +51,9 @@ class TestInvalidPageNumbers:
         with (
             patch("app.storage.db.async_session", mock_session_maker),
             patch(
-                "app.storage.db.get_cached_count", AsyncMock(return_value=None)
+                "app.storage.pagination.offset.get_cached_count", AsyncMock(return_value=None)
             ),
-            patch("app.storage.db.set_cached_count", AsyncMock()),
+            patch("app.storage.pagination.offset.set_cached_count", AsyncMock()),
         ):
             with pytest.raises(
                 ValidationError, match="greater than or equal to 1"
@@ -80,9 +80,9 @@ class TestInvalidPageNumbers:
         with (
             patch("app.storage.db.async_session", mock_session_maker),
             patch(
-                "app.storage.db.get_cached_count", AsyncMock(return_value=None)
+                "app.storage.pagination.offset.get_cached_count", AsyncMock(return_value=None)
             ),
-            patch("app.storage.db.set_cached_count", AsyncMock()),
+            patch("app.storage.pagination.offset.set_cached_count", AsyncMock()),
         ):
             with pytest.raises(
                 ValidationError, match="greater than or equal to 1"
@@ -130,9 +130,9 @@ class TestInvalidPageNumbers:
         with (
             patch("app.storage.db.async_session", mock_session_maker),
             patch(
-                "app.storage.db.get_cached_count", AsyncMock(return_value=None)
+                "app.storage.pagination.offset.get_cached_count", AsyncMock(return_value=None)
             ),
-            patch("app.storage.db.set_cached_count", AsyncMock()),
+            patch("app.storage.pagination.offset.set_cached_count", AsyncMock()),
         ):
             results, meta = await get_paginated_results(
                 Author, page=1000, per_page=10
@@ -177,9 +177,9 @@ class TestPerPageLimits:
         with (
             patch("app.storage.db.async_session", mock_session_maker),
             patch(
-                "app.storage.db.get_cached_count", AsyncMock(return_value=None)
+                "app.storage.pagination.offset.get_cached_count", AsyncMock(return_value=None)
             ),
-            patch("app.storage.db.set_cached_count", AsyncMock()),
+            patch("app.storage.pagination.offset.set_cached_count", AsyncMock()),
         ):
             results, meta = await get_paginated_results(
                 Author,
@@ -220,9 +220,9 @@ class TestPerPageLimits:
         with (
             patch("app.storage.db.async_session", mock_session_maker),
             patch(
-                "app.storage.db.get_cached_count", AsyncMock(return_value=None)
+                "app.storage.pagination.offset.get_cached_count", AsyncMock(return_value=None)
             ),
-            patch("app.storage.db.set_cached_count", AsyncMock()),
+            patch("app.storage.pagination.offset.set_cached_count", AsyncMock()),
         ):
             results, meta = await get_paginated_results(
                 Author, page=1, per_page=MAX_PAGE_SIZE
@@ -259,9 +259,9 @@ class TestPerPageLimits:
         with (
             patch("app.storage.db.async_session", mock_session_maker),
             patch(
-                "app.storage.db.get_cached_count", AsyncMock(return_value=None)
+                "app.storage.pagination.offset.get_cached_count", AsyncMock(return_value=None)
             ),
-            patch("app.storage.db.set_cached_count", AsyncMock()),
+            patch("app.storage.pagination.offset.set_cached_count", AsyncMock()),
         ):
             # Don't specify per_page
             results, meta = await get_paginated_results(Author, page=1)
@@ -298,9 +298,9 @@ class TestEmptyResultSets:
         with (
             patch("app.storage.db.async_session", mock_session_maker),
             patch(
-                "app.storage.db.get_cached_count", AsyncMock(return_value=None)
+                "app.storage.pagination.offset.get_cached_count", AsyncMock(return_value=None)
             ),
-            patch("app.storage.db.set_cached_count", AsyncMock()),
+            patch("app.storage.pagination.offset.set_cached_count", AsyncMock()),
         ):
             results, meta = await get_paginated_results(
                 Author, page=1, per_page=10
@@ -336,9 +336,9 @@ class TestEmptyResultSets:
         with (
             patch("app.storage.db.async_session", mock_session_maker),
             patch(
-                "app.storage.db.get_cached_count", AsyncMock(return_value=None)
+                "app.storage.pagination.offset.get_cached_count", AsyncMock(return_value=None)
             ),
-            patch("app.storage.db.set_cached_count", AsyncMock()),
+            patch("app.storage.pagination.offset.set_cached_count", AsyncMock()),
         ):
             results, meta = await get_paginated_results(
                 Author, page=1, per_page=10, filters={"name": "nonexistent"}
@@ -380,9 +380,9 @@ class TestEmptyResultSets:
         with (
             patch("app.storage.db.async_session", mock_session_maker),
             patch(
-                "app.storage.db.get_cached_count", AsyncMock(return_value=None)
+                "app.storage.pagination.offset.get_cached_count", AsyncMock(return_value=None)
             ),
-            patch("app.storage.db.set_cached_count", AsyncMock()),
+            patch("app.storage.pagination.offset.set_cached_count", AsyncMock()),
         ):
             results, meta = await get_paginated_results(
                 Author, page=3, per_page=10
@@ -541,9 +541,9 @@ class TestConcurrentPaginationQueries:
                 MagicMock(return_value=mock_context_manager),
             ),
             patch(
-                "app.storage.db.get_cached_count", AsyncMock(return_value=20)
+                "app.storage.pagination.offset.get_cached_count", AsyncMock(return_value=20)
             ),
-            patch("app.storage.db.set_cached_count", AsyncMock()),
+            patch("app.storage.pagination.offset.set_cached_count", AsyncMock()),
         ):
             # Sequential requests (simpler than true concurrency)
             results1, meta1 = await get_paginated_results(
@@ -615,9 +615,9 @@ class TestConcurrentPaginationQueries:
                 MagicMock(return_value=mock_context_manager),
             ),
             patch(
-                "app.storage.db.get_cached_count", AsyncMock(return_value=30)
+                "app.storage.pagination.offset.get_cached_count", AsyncMock(return_value=30)
             ),
-            patch("app.storage.db.set_cached_count", AsyncMock()),
+            patch("app.storage.pagination.offset.set_cached_count", AsyncMock()),
         ):
             # Page 1
             results1, meta1 = await get_paginated_results(

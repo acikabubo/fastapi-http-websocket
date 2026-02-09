@@ -189,9 +189,10 @@ class TestPaginationWithPydanticFilters:
                 MagicMock(return_value=mock_context_manager),
             ),
             patch(
-                "app.storage.db.get_cached_count", AsyncMock(return_value=None)
+                "app.storage.pagination.offset.get_cached_count",
+                AsyncMock(return_value=None),
             ),
-            patch("app.storage.db.set_cached_count", AsyncMock()),
+            patch("app.storage.pagination.offset.set_cached_count", AsyncMock()),
         ):
             # Create Pydantic filter
             filters = AuthorFilters(name="Doe")
@@ -241,9 +242,10 @@ class TestPaginationWithPydanticFilters:
                 MagicMock(return_value=mock_context_manager),
             ),
             patch(
-                "app.storage.db.get_cached_count", AsyncMock(return_value=None)
+                "app.storage.pagination.offset.get_cached_count",
+                AsyncMock(return_value=None),
             ),
-            patch("app.storage.db.set_cached_count", AsyncMock()),
+            patch("app.storage.pagination.offset.set_cached_count", AsyncMock()),
         ):
             # Use legacy dict filter
             filters = {"name": "John"}
@@ -295,9 +297,10 @@ class TestPaginationWithPydanticFilters:
                 MagicMock(return_value=mock_context_manager),
             ),
             patch(
-                "app.storage.db.get_cached_count", AsyncMock(return_value=None)
+                "app.storage.pagination.offset.get_cached_count",
+                AsyncMock(return_value=None),
             ),
-            patch("app.storage.db.set_cached_count", AsyncMock()),
+            patch("app.storage.pagination.offset.set_cached_count", AsyncMock()),
         ):
             # Empty Pydantic filter
             filters = AuthorFilters()
@@ -370,9 +373,10 @@ class TestCustomPydanticFilterWithoutToDict:
                 MagicMock(return_value=mock_context_manager),
             ),
             patch(
-                "app.storage.db.get_cached_count", AsyncMock(return_value=None)
+                "app.storage.pagination.offset.get_cached_count",
+                AsyncMock(return_value=None),
             ),
-            patch("app.storage.db.set_cached_count", AsyncMock()),
+            patch("app.storage.pagination.offset.set_cached_count", AsyncMock()),
         ):
             # Custom Pydantic filter
             filters = CustomFilter(name="John", id=None)
