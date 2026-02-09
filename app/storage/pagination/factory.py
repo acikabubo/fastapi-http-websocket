@@ -20,8 +20,8 @@ def select_strategy(
     page: int,
     skip_count: bool,
     filter_dict: dict[str, Any] | None,
-    apply_filters_func=None,
-) -> PaginationStrategy:
+    apply_filters_func: Any = None,
+) -> PaginationStrategy[Any]:
     """
     Select appropriate pagination strategy based on parameters.
 

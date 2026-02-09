@@ -58,11 +58,11 @@ def build_query(
     model: Type[GenericSQLModelType],
     filter_dict: dict[str, Any] | None,
     apply_filters: Callable[
-        [Select, Type[GenericSQLModelType], dict[str, Any]], Select
+        [Select[Any], Type[GenericSQLModelType], dict[str, Any]], Select[Any]
     ]
     | None,
     eager_load: list[str] | None,
-) -> Select:
+) -> Select[Any]:
     """
     Build SQLAlchemy Select query with filters and eager loading.
 
@@ -94,7 +94,7 @@ def build_query(
         default_apply_filters,
     )
 
-    query: Select = select(model)
+    query: Select[Any] = select(model)
 
     # Apply eager loading for relationships (prevents N+1 queries)
     if eager_load:
