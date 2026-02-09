@@ -246,7 +246,9 @@ class TestOffsetPaginationStrategy:
             await strategy.paginate(query, TestOffsetModel, 10)
 
             # Verify cache was checked
-            mock_get_cache.assert_called_once_with("TestOffsetModel", filter_dict)
+            mock_get_cache.assert_called_once_with(
+                "TestOffsetModel", filter_dict
+            )
 
             # Verify count was cached
             mock_set_cache.assert_called_once_with(

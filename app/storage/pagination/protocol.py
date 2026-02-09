@@ -39,6 +39,7 @@ class PaginationStrategy(Protocol[T]):
                 # Custom pagination logic
                 ...
 
+
         # Type-checks as PaginationStrategy[Author]
         strategy: PaginationStrategy[Author] = CustomPaginationStrategy()
         ```
