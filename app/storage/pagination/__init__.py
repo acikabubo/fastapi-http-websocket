@@ -14,7 +14,9 @@ Example:
     items, meta = await get_paginated_results(Author, page=1, per_page=20)
 
     # Cursor pagination
-    items, meta = await get_paginated_results(Author, cursor="MTA=", per_page=20)
+    items, meta = await get_paginated_results(
+        Author, cursor="MTA=", per_page=20
+    )
     ```
 
     Using strategies directly (new code):

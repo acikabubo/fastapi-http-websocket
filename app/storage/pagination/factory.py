@@ -51,7 +51,7 @@ def select_strategy(
             cursor="MTA=",
             page=1,
             skip_count=False,
-            filter_dict=None
+            filter_dict=None,
         )
         # Returns CursorPaginationStrategy
 
@@ -61,7 +61,7 @@ def select_strategy(
             cursor=None,
             page=2,
             skip_count=False,
-            filter_dict={"name": "John"}
+            filter_dict={"name": "John"},
         )
         # Returns OffsetPaginationStrategy
         ```

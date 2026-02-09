@@ -9,8 +9,7 @@ from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     create_async_engine,
 )
-from sqlalchemy.orm import selectinload, sessionmaker
-from sqlmodel import func, select
+from sqlalchemy.orm import sessionmaker
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.constants import MAX_PAGE_SIZE

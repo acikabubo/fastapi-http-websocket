@@ -66,7 +66,9 @@ class TestGetPaginatedResults:
                 "app.storage.pagination.offset.get_cached_count",
                 AsyncMock(return_value=None),
             ),
-            patch("app.storage.pagination.offset.set_cached_count", AsyncMock()),
+            patch(
+                "app.storage.pagination.offset.set_cached_count", AsyncMock()
+            ),
         ):
             results, meta = await get_paginated_results(
                 Author, page=1, per_page=3
@@ -114,7 +116,9 @@ class TestGetPaginatedResults:
                 "app.storage.pagination.offset.get_cached_count",
                 AsyncMock(return_value=None),
             ),
-            patch("app.storage.pagination.offset.set_cached_count", AsyncMock()),
+            patch(
+                "app.storage.pagination.offset.set_cached_count", AsyncMock()
+            ),
         ):
             results, meta = await get_paginated_results(
                 Author, page=1, per_page=10, filters={"name": "Test"}
@@ -195,7 +199,9 @@ class TestGetPaginatedResults:
                 "app.storage.pagination.offset.get_cached_count",
                 AsyncMock(return_value=None),
             ),
-            patch("app.storage.pagination.offset.set_cached_count", AsyncMock()),
+            patch(
+                "app.storage.pagination.offset.set_cached_count", AsyncMock()
+            ),
         ):
             results, meta = await get_paginated_results(
                 Author, page=1, per_page=10
@@ -244,7 +250,9 @@ class TestGetPaginatedResults:
                 "app.storage.pagination.offset.get_cached_count",
                 AsyncMock(return_value=None),
             ),
-            patch("app.storage.pagination.offset.set_cached_count", AsyncMock()),
+            patch(
+                "app.storage.pagination.offset.set_cached_count", AsyncMock()
+            ),
         ):
             results, meta = await get_paginated_results(
                 Author, page=3, per_page=10
@@ -298,7 +306,9 @@ class TestGetPaginatedResults:
                 "app.storage.pagination.offset.get_cached_count",
                 AsyncMock(return_value=None),
             ),
-            patch("app.storage.pagination.offset.set_cached_count", AsyncMock()),
+            patch(
+                "app.storage.pagination.offset.set_cached_count", AsyncMock()
+            ),
         ):
             results, meta = await get_paginated_results(
                 Author,

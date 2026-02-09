@@ -17,7 +17,7 @@ from app.schemas.generic_typing import GenericSQLModelType
 
 
 def convert_filters(
-    filters: dict[str, Any] | PydanticBaseModel | None
+    filters: dict[str, Any] | PydanticBaseModel | None,
 ) -> dict[str, Any] | None:
     """
     Convert Pydantic filter model to dict or pass through dict filters.
@@ -57,7 +57,9 @@ def convert_filters(
 def build_query(
     model: Type[GenericSQLModelType],
     filter_dict: dict[str, Any] | None,
-    apply_filters: Callable[[Select, Type[GenericSQLModelType], dict[str, Any]], Select]
+    apply_filters: Callable[
+        [Select, Type[GenericSQLModelType], dict[str, Any]], Select
+    ]
     | None,
     eager_load: list[str] | None,
 ) -> Select:
@@ -84,10 +86,7 @@ def build_query(
         >>> from app.models.author import Author
         >>> from app.storage.db import default_apply_filters
         >>> query = build_query(
-        ...     Author,
-        ...     {"name": "John"},
-        ...     default_apply_filters,
-        ...     ["books"]
+        ...     Author, {"name": "John"}, default_apply_filters, ["books"]
         ... )
         >>> # Query has filters and eager loading, ready for pagination
     """

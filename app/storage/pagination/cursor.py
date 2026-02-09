@@ -45,7 +45,9 @@ class CursorPaginationStrategy:
 
             # Next page using cursor from first page
             if meta.next_cursor:
-                strategy2 = CursorPaginationStrategy(session, cursor=meta.next_cursor)
+                strategy2 = CursorPaginationStrategy(
+                    session, cursor=meta.next_cursor
+                )
                 items2, meta2 = await strategy2.paginate(query, Author, 20)
         ```
     """

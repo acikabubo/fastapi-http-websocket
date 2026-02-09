@@ -5,7 +5,6 @@ Tests the strategy selection logic that chooses between offset and cursor
 pagination based on request parameters.
 """
 
-import pytest
 from unittest.mock import AsyncMock
 
 from app.storage.pagination.cursor import CursorPaginationStrategy

@@ -90,7 +90,9 @@ class TestCursorPaginationStrategy:
         mock_session.exec = AsyncMock(return_value=mock_data_result)
 
         cursor = encode_cursor(10)  # Last item from previous page
-        strategy = CursorPaginationStrategy(session=mock_session, cursor=cursor)
+        strategy = CursorPaginationStrategy(
+            session=mock_session, cursor=cursor
+        )
 
         query = select(TestCursorModel).order_by(TestCursorModel.id)
         items, meta = await strategy.paginate(query, TestCursorModel, 10)
@@ -115,7 +117,9 @@ class TestCursorPaginationStrategy:
         mock_session.exec = AsyncMock(return_value=mock_data_result)
 
         cursor = encode_cursor(20)
-        strategy = CursorPaginationStrategy(session=mock_session, cursor=cursor)
+        strategy = CursorPaginationStrategy(
+            session=mock_session, cursor=cursor
+        )
 
         query = select(TestCursorModel).order_by(TestCursorModel.id)
         items, meta = await strategy.paginate(query, TestCursorModel, 10)
@@ -137,7 +141,9 @@ class TestCursorPaginationStrategy:
         mock_session.exec = AsyncMock(return_value=mock_data_result)
 
         cursor = encode_cursor(100)  # Beyond all items
-        strategy = CursorPaginationStrategy(session=mock_session, cursor=cursor)
+        strategy = CursorPaginationStrategy(
+            session=mock_session, cursor=cursor
+        )
 
         query = select(TestCursorModel).order_by(TestCursorModel.id)
         items, meta = await strategy.paginate(query, TestCursorModel, 10)
@@ -158,7 +164,9 @@ class TestCursorPaginationStrategy:
         mock_session.exec = AsyncMock(return_value=mock_data_result)
 
         cursor = encode_cursor(25)  # Base64 encoded "25"
-        strategy = CursorPaginationStrategy(session=mock_session, cursor=cursor)
+        strategy = CursorPaginationStrategy(
+            session=mock_session, cursor=cursor
+        )
 
         assert strategy.last_id == 25  # Decoded from cursor
 
@@ -213,7 +221,9 @@ class TestCursorPaginationStrategy:
         mock_session.exec = AsyncMock(return_value=mock_data_result)
 
         cursor = encode_cursor(50)
-        strategy = CursorPaginationStrategy(session=mock_session, cursor=cursor)
+        strategy = CursorPaginationStrategy(
+            session=mock_session, cursor=cursor
+        )
 
         query = select(TestCursorModel).order_by(TestCursorModel.id)
         items, meta = await strategy.paginate(query, TestCursorModel, 10)
@@ -238,7 +248,9 @@ class TestCursorPaginationStrategy:
         mock_session.exec = AsyncMock(return_value=mock_data_result)
 
         cursor = encode_cursor(97)
-        strategy = CursorPaginationStrategy(session=mock_session, cursor=cursor)
+        strategy = CursorPaginationStrategy(
+            session=mock_session, cursor=cursor
+        )
 
         query = select(TestCursorModel).order_by(TestCursorModel.id)
         items, meta = await strategy.paginate(query, TestCursorModel, 10)
@@ -325,9 +337,7 @@ class TestCursorPaginationStrategy:
         assert meta.total == 0
         assert meta.pages == 0
         assert isinstance(meta.has_more, bool)
-        assert (
-            meta.next_cursor is None or isinstance(meta.next_cursor, str)
-        )
+        assert meta.next_cursor is None or isinstance(meta.next_cursor, str)
 
     @pytest.mark.asyncio
     async def test_paginate_limit_includes_extra_item(self):
