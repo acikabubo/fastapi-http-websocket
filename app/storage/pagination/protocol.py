@@ -6,14 +6,13 @@ strategies without requiring explicit inheritance. This follows the same pattern
 app.protocols.Repository.
 """
 
-from typing import Protocol, Type, TypeVar
+from typing import Any, Protocol, Type, TypeVar
 
 from sqlalchemy import Select
 
-from app.schemas.generic_typing import GenericSQLModelType
 from app.schemas.response import MetadataModel
 
-T = TypeVar("T", bound=GenericSQLModelType)
+T = TypeVar("T")
 
 
 class PaginationStrategy(Protocol[T]):
@@ -47,7 +46,7 @@ class PaginationStrategy(Protocol[T]):
 
     async def paginate(
         self,
-        query: Select,
+        query: Select[Any],
         model: Type[T],
         page_size: int,
     ) -> tuple[list[T], MetadataModel]:

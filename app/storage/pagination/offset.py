@@ -6,7 +6,7 @@ user-facing interfaces where users expect "Page 1, 2, 3..." navigation.
 """
 
 import math
-from typing import Any, Type
+from typing import Any, Callable, Type
 
 from sqlalchemy import Select
 from sqlmodel import func, select
@@ -55,7 +55,11 @@ class OffsetPaginationStrategy:
         page: int = 1,
         skip_count: bool = False,
         filter_dict: dict[str, Any] | None = None,
-        apply_filters_func=None,
+        apply_filters_func: Callable[
+            [Select[Any], Type[GenericSQLModelType], dict[str, Any]],
+            Select[Any],
+        ]
+        | None = None,
     ):
         """
         Initialize offset pagination strategy.
@@ -78,7 +82,7 @@ class OffsetPaginationStrategy:
 
     async def paginate(
         self,
-        query: Select,
+        query: Select[Any],
         model: Type[GenericSQLModelType],
         page_size: int,
     ) -> tuple[list[GenericSQLModelType], MetadataModel]:
@@ -113,7 +117,7 @@ class OffsetPaginationStrategy:
             if cached_total is not None:
                 total = cached_total
             else:
-                # Execute count query
+                # Execute count query - build count query
                 count_query = select(func.count(model.id))
 
                 # Apply same filters as data query

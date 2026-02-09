@@ -6,7 +6,7 @@ APIs, infinite scroll, and real-time feeds where performance and stability
 matter more than showing total pages.
 """
 
-from typing import Type
+from typing import Any, Type
 
 from sqlalchemy import Select
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -74,7 +74,7 @@ class CursorPaginationStrategy:
 
     async def paginate(
         self,
-        query: Select,
+        query: Select[Any],
         model: Type[GenericSQLModelType],
         page_size: int,
     ) -> tuple[list[GenericSQLModelType], MetadataModel]:
