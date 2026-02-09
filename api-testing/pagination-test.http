@@ -1,0 +1,258 @@
+###############################################################################
+# Pagination Strategy Pattern Testing - HTTP Endpoints
+# Test all scenarios for offset and cursor pagination
+###############################################################################
+
+@baseUrl = http://localhost:8000
+@token = YOUR_TOKEN_HERE
+
+###############################################################################
+# HTTP Endpoints - Offset Pagination
+###############################################################################
+
+### 1. Offset Pagination - First Page
+GET {{baseUrl}}/authors/paginated?page=1&per_page=20
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+### 2. Offset Pagination - Middle Page
+GET {{baseUrl}}/authors/paginated?page=3&per_page=20
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+### 3. Offset Pagination - Last Page
+GET {{baseUrl}}/authors/paginated?page=10&per_page=20
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+### 4. Offset Pagination - With Filters (name)
+GET {{baseUrl}}/authors/paginated?page=1&per_page=20&name=John
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+### 5. Offset Pagination - With Multiple Filters
+GET {{baseUrl}}/authors/paginated?page=1&per_page=20&name=Smith&status=active
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+### 6. Offset Pagination - Skip Count (Performance Mode)
+GET {{baseUrl}}/authors/paginated?page=1&per_page=20&skip_count=true
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+### 7. Offset Pagination - Large Page Size (Test MAX_PAGE_SIZE)
+GET {{baseUrl}}/authors/paginated?page=1&per_page=150
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+### 8. Offset Pagination - Small Page Size
+GET {{baseUrl}}/authors/paginated?page=1&per_page=5
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+### 9. Offset Pagination - Invalid Page (Should default to 1)
+GET {{baseUrl}}/authors/paginated?page=0&per_page=20
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+### 10. Offset Pagination - Negative Page (Should default to 1)
+GET {{baseUrl}}/authors/paginated?page=-1&per_page=20
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+###############################################################################
+# HTTP Endpoints - Cursor Pagination
+###############################################################################
+
+### 11. Cursor Pagination - First Page (Empty Cursor)
+GET {{baseUrl}}/authors/paginated?per_page=20&cursor=
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+### 12. Cursor Pagination - First Page (No Cursor Parameter)
+GET {{baseUrl}}/authors/paginated?per_page=20
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+### 13. Cursor Pagination - Next Page
+# INSTRUCTIONS: Copy next_cursor from previous response and replace MjA= below
+GET {{baseUrl}}/authors/paginated?per_page=20&cursor=MjA=
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+### 14. Cursor Pagination - Third Page (Example cursor)
+GET {{baseUrl}}/authors/paginated?per_page=20&cursor=NDA=
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+### 15. Cursor Pagination - With Filters
+GET {{baseUrl}}/authors/paginated?per_page=20&cursor=&name=Smith
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+### 16. Cursor Pagination - Small Page Size
+GET {{baseUrl}}/authors/paginated?per_page=5&cursor=
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+### 17. Cursor Pagination - Invalid Cursor (Should return error)
+GET {{baseUrl}}/authors/paginated?per_page=20&cursor=invalid!!!
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+###############################################################################
+# HTTP Endpoints - Eager Loading
+###############################################################################
+
+### 18. Offset Pagination - With Eager Loading
+GET {{baseUrl}}/authors/paginated?page=1&per_page=20&eager_load=books
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+### 19. Cursor Pagination - With Eager Loading
+GET {{baseUrl}}/authors/paginated?per_page=20&cursor=&eager_load=books
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+###############################################################################
+# HTTP Endpoints - Edge Cases
+###############################################################################
+
+### 20. Empty Results - Non-existent Filter
+GET {{baseUrl}}/authors/paginated?page=1&per_page=20&name=NonExistentAuthor12345
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+### 21. Very Large Page Number
+GET {{baseUrl}}/authors/paginated?page=999999&per_page=20
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+### 22. Minimum Valid Page Size
+GET {{baseUrl}}/authors/paginated?page=1&per_page=1
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+### 23. Zero Per Page (Should default)
+GET {{baseUrl}}/authors/paginated?page=1&per_page=0
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+### 24. Negative Per Page (Should default)
+GET {{baseUrl}}/authors/paginated?page=1&per_page=-10
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+###############################################################################
+# Performance Testing - Compare Offset vs Cursor
+###############################################################################
+
+### 25. Offset - Page 1 (Baseline)
+GET {{baseUrl}}/authors/paginated?page=1&per_page=50
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+### 26. Offset - Page 10 (O(n) degradation)
+GET {{baseUrl}}/authors/paginated?page=10&per_page=50
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+### 27. Offset - Page 100 (Significant O(n) cost)
+GET {{baseUrl}}/authors/paginated?page=100&per_page=50
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+### 28. Cursor - First Page (O(1) baseline)
+GET {{baseUrl}}/authors/paginated?per_page=50&cursor=
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+### 29. Cursor - Deep Page (Still O(1))
+# INSTRUCTIONS: Replace with actual cursor from deep in dataset
+GET {{baseUrl}}/authors/paginated?per_page=50&cursor=NTAwMA==
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+###############################################################################
+# Cache Testing - Redis Count Cache
+# Run these sequentially to test Redis caching behavior
+###############################################################################
+
+### 30. Cache Test - First Request (Cache Miss - COUNT query executed)
+GET {{baseUrl}}/authors/paginated?page=1&per_page=20
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+### 31. Cache Test - Second Request Same Filters (Cache Hit - No COUNT query)
+GET {{baseUrl}}/authors/paginated?page=2&per_page=20
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+### 32. Cache Test - Different Filters (Cache Miss - New filter combination)
+GET {{baseUrl}}/authors/paginated?page=1&per_page=20&name=Test
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+### 33. Cache Test - Skip Count (Bypass Cache)
+GET {{baseUrl}}/authors/paginated?page=1&per_page=20&skip_count=true
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+###############################################################################
+# Expected Response Structures
+###############################################################################
+
+# Offset Pagination Response:
+# {
+#   "data": [
+#     {"id": 1, "name": "Author 1"},
+#     {"id": 2, "name": "Author 2"}
+#   ],
+#   "meta": {
+#     "page": 1,
+#     "per_page": 20,
+#     "total": 100,       // Total count from database
+#     "pages": 5,         // Total pages calculated
+#     "has_more": true,   // More results available
+#     "next_cursor": null // Always null for offset pagination
+#   }
+# }
+
+# Cursor Pagination Response:
+# {
+#   "data": [
+#     {"id": 1, "name": "Author 1"},
+#     {"id": 2, "name": "Author 2"}
+#   ],
+#   "meta": {
+#     "page": 1,
+#     "per_page": 20,
+#     "total": 0,              // Always 0 (count skipped for performance)
+#     "pages": 0,              // Always 0 (not applicable)
+#     "has_more": true,        // More results available
+#     "next_cursor": "MjA="    // Base64 encoded last item ID
+#   }
+# }
+
+###############################################################################
+# Strategy Pattern Architecture Notes
+###############################################################################
+
+# The pagination system uses the Strategy pattern:
+#
+# 1. get_paginated_results() - Facade that delegates to strategies
+# 2. OffsetPaginationStrategy - Traditional page-based (uses Redis cache)
+# 3. CursorPaginationStrategy - High-performance cursor-based
+# 4. Strategy selection:
+#    - If cursor parameter provided → CursorPaginationStrategy
+#    - Otherwise → OffsetPaginationStrategy
+#
+# Redis Cache Keys (for offset pagination):
+# - No filters: "pagination:count:Author:all"
+# - With filters: "pagination:count:Author:{md5_hash}"
+# - TTL: 300 seconds (5 minutes)
+#
+# Performance Comparison:
+# - Offset Page 1: ~5ms (+ COUNT query)
+# - Offset Page 100: ~50ms (+ COUNT query, large offset)
+# - Cursor Any Page: ~5ms (no COUNT query, no offset)
