@@ -1,4 +1,4 @@
-FROM python:3.13.0-slim-bullseye
+FROM python:3.13.6-slim-bullseye
 # FROM ghcr.io/astral-sh/uv:python3.13-alpine
 
 LABEL maintainer="Aleksandar Krsteski <aleksandar.krsteski@ved.mk>"
