@@ -19,15 +19,9 @@ from sqlalchemy.exc import SQLAlchemyError
 from app.api.ws.constants import RSPCode
 from app.exceptions import AppException
 from app.logging import logger
-from app.schemas.errors import ErrorCode
+from app.schemas.errors import ErrorCode, ErrorEnvelope, HTTPErrorResponse
 from app.schemas.request import RequestModel
 from app.schemas.response import ResponseModel
-from app.utils.error_formatter import (
-    http_error_from_exception,
-    http_error_response,
-    ws_error_from_exception,
-    ws_error_response,
-)
 
 
 def handle_http_errors(func: Callable[..., Any]) -> Callable[..., Any]:
@@ -75,23 +69,23 @@ def handle_http_errors(func: Callable[..., Any]) -> Callable[..., Any]:
                 f"AppException in {func.__name__}: {ex.message}",
                 extra={"exception_type": type(ex).__name__},
             )
-            error_response = http_error_from_exception(ex)
             return JSONResponse(
                 status_code=ex.http_status,
-                content=error_response.model_dump(),
+                content=ex.to_http_response().model_dump(),
             )
         except SQLAlchemyError as ex:
             logger.error(
                 f"Database error in {func.__name__}: {ex}",
                 exc_info=True,
             )
-            error_response = http_error_response(
-                code=ErrorCode.DATABASE_ERROR,
-                msg="Database error occurred",
-            )
             return JSONResponse(
                 status_code=500,
-                content=error_response.model_dump(),
+                content=HTTPErrorResponse(
+                    error=ErrorEnvelope(
+                        code=ErrorCode.DATABASE_ERROR,
+                        msg="Database error occurred",
+                    )
+                ).model_dump(),
             )
 
     return wrapper
@@ -158,9 +152,7 @@ def handle_ws_errors(func: Callable[..., Any]) -> Callable[..., Any]:
                     "req_id": request.req_id,
                 },
             )
-            error_response = ws_error_from_exception(
-                ex, request.pkg_id, request.req_id
-            )
+            error_response = ex.to_ws_response(request.pkg_id, request.req_id)
             # Convert to ResponseModel for backward compatibility
             return ResponseModel(
                 pkg_id=error_response.pkg_id,
@@ -174,19 +166,14 @@ def handle_ws_errors(func: Callable[..., Any]) -> Callable[..., Any]:
                 extra={"pkg_id": request.pkg_id, "req_id": request.req_id},
                 exc_info=True,
             )
-            error_response = ws_error_response(
-                request.pkg_id,
-                request.req_id,
-                code=ErrorCode.DATABASE_ERROR,
-                msg="Database error occurred",
-                status_code=RSPCode.ERROR,
-            )
-            # Convert to ResponseModel for backward compatibility
             return ResponseModel(
-                pkg_id=error_response.pkg_id,
-                req_id=error_response.req_id,
-                status_code=error_response.status_code,
-                data=error_response.data,
+                pkg_id=request.pkg_id,
+                req_id=request.req_id,
+                status_code=RSPCode.ERROR,
+                data=ErrorEnvelope(
+                    code=ErrorCode.DATABASE_ERROR,
+                    msg="Database error occurred",
+                ).model_dump(),
             )
 
     return wrapper
