@@ -11,12 +11,18 @@ imports continue to work:
     from app.utils.metrics import http_requests_total
     from app.utils.metrics import ws_connections_active
     from app.utils.metrics import db_query_duration_seconds
+
+New code should use the MetricsCollector facade for better maintainability:
+
+    from app.utils.metrics import MetricsCollector
+    MetricsCollector.record_ws_message_received()
 """
 
 from app.utils.metrics._helpers import (
     _get_or_create_counter,
     _get_or_create_gauge,
 )
+from app.utils.metrics.collector import MetricsCollector
 
 # Import all metrics from submodules
 from app.utils.metrics.audit import (
@@ -89,6 +95,8 @@ app_info = _get_or_create_gauge(
 
 # Export all metrics for backward compatibility
 __all__ = [
+    # Metrics Collector Facade (NEW - recommended for new code)
+    "MetricsCollector",
     # HTTP metrics
     "http_requests_total",
     "http_request_duration_seconds",

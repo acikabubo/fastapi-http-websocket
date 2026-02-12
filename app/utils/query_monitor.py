@@ -11,7 +11,7 @@ from sqlalchemy import event
 from sqlalchemy.engine import Engine
 
 from app.logging import logger
-from app.utils.metrics import db_query_duration_seconds, db_slow_queries_total
+from app.utils.metrics import MetricsCollector
 
 # Slow query threshold in seconds (default: 100ms)
 SLOW_QUERY_THRESHOLD = 0.1
@@ -87,13 +87,11 @@ def after_cursor_execute(  # type: ignore[no-untyped-def]
     duration = time.time() - start_time
     operation = _get_query_operation(statement)
 
-    # Record query duration metric
-    db_query_duration_seconds.labels(operation=operation).observe(duration)
+    # Record query duration metric and check for slow queries
+    MetricsCollector.record_db_query(operation, duration, slow_threshold=SLOW_QUERY_THRESHOLD)
 
-    # Check for slow queries
+    # Log slow query details if threshold exceeded
     if duration > SLOW_QUERY_THRESHOLD:
-        # Increment slow query counter
-        db_slow_queries_total.labels(operation=operation).inc()
 
         # Log slow query details
         # Truncate statement for logging (first 500 chars)

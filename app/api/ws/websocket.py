@@ -15,7 +15,7 @@ from app.schemas.response import BroadcastDataModel, ResponseModel
 from app.schemas.user import UserModel
 from app.settings import app_settings
 from app.storage.redis import get_auth_redis_connection
-from app.utils.metrics import ws_connections_active, ws_connections_total
+from app.utils.metrics import MetricsCollector
 from app.utils.rate_limiter import connection_limiter
 
 
@@ -212,7 +212,7 @@ class PackageAuthWebSocketEndpoint(WebSocketEndpoint):  # type: ignore[misc]
             logger.warning(
                 f"Rejected WebSocket from untrusted origin: {origin}"
             )
-            ws_connections_total.labels(status="rejected_origin").inc()
+            MetricsCollector.record_ws_connection_rejected("origin")
             await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
             return
 
@@ -243,7 +243,7 @@ class PackageAuthWebSocketEndpoint(WebSocketEndpoint):  # type: ignore[misc]
             logger.debug(
                 "Client is not logged in, websocket connection will be closed!"
             )
-            ws_connections_total.labels(status="rejected_auth").inc()
+            MetricsCollector.record_ws_connection_rejected("auth")
             await websocket.close()
             return
 
@@ -272,7 +272,7 @@ class PackageAuthWebSocketEndpoint(WebSocketEndpoint):  # type: ignore[misc]
             logger.warning(
                 f"Connection limit exceeded for user {self.user.username}"
             )
-            ws_connections_total.labels(status="rejected_limit").inc()
+            MetricsCollector.record_ws_connection_rejected("limit")
             await websocket.close(
                 code=status.WS_1008_POLICY_VIOLATION,
                 reason="Maximum concurrent connections exceeded",
@@ -289,8 +289,7 @@ class PackageAuthWebSocketEndpoint(WebSocketEndpoint):  # type: ignore[misc]
 
         # Register connection in connection manager (replaces old ws_clients dict)
         connection_manager.connect(self.session_key, websocket)
-        ws_connections_total.labels(status="accepted").inc()
-        ws_connections_active.inc()
+        MetricsCollector.record_ws_connection_accepted()
         logger.debug(
             f"Client connected to websocket (connection_id: {self.connection_id})"
         )
@@ -320,7 +319,7 @@ class PackageAuthWebSocketEndpoint(WebSocketEndpoint):  # type: ignore[misc]
                 user_id=self.user.username, connection_id=self.connection_id
             )
             # Decrement active connections metric
-            ws_connections_active.dec()
+            MetricsCollector.record_ws_disconnection()
 
         log_msg = (
             f"Client of user {self.user.username} disconnected with code {close_code}"
