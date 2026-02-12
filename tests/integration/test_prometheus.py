@@ -42,49 +42,27 @@ class TestPrometheusMiddleware:
 
         with (
             patch(
-                "app.middlewares.prometheus.http_requests_total"
-            ) as mock_total,
+                "app.middlewares.prometheus.MetricsCollector.record_http_request_start"
+            ) as mock_start,
             patch(
-                "app.middlewares.prometheus.http_request_duration_seconds"
-            ) as mock_duration,
-            patch(
-                "app.middlewares.prometheus.http_requests_in_progress"
-            ) as mock_in_progress,
+                "app.middlewares.prometheus.MetricsCollector.record_http_request_end"
+            ) as mock_end,
         ):
-            # Setup label chain
-            mock_total_labels = MagicMock()
-            mock_total.labels.return_value = mock_total_labels
-
-            mock_duration_labels = MagicMock()
-            mock_duration.labels.return_value = mock_duration_labels
-
-            mock_in_progress_labels = MagicMock()
-            mock_in_progress.labels.return_value = mock_in_progress_labels
-
             response = await middleware.dispatch(request, call_next)
 
             assert response.status_code == 200
 
-            # Check that in_progress was incremented and decremented
-            mock_in_progress.labels.assert_called_with(
-                method="GET", endpoint="/api/authors"
-            )
-            assert mock_in_progress_labels.inc.call_count == 1
-            assert mock_in_progress_labels.dec.call_count == 1
-
-            # Check that duration was recorded
-            mock_duration.labels.assert_called_with(
-                method="GET", endpoint="/api/authors"
-            )
-            mock_duration_labels.observe.assert_called_once()
-            duration = mock_duration_labels.observe.call_args[0][0]
+            # Check that start and end were called
+            mock_start.assert_called_once_with("GET", "/api/authors")
+            mock_end.assert_called_once()
+            # Verify the end call has correct method, path, and status code
+            call_args = mock_end.call_args[0]
+            assert call_args[0] == "GET"
+            assert call_args[1] == "/api/authors"
+            assert call_args[2] == 200
+            # Verify duration is >= 0
+            duration = call_args[3]
             assert duration >= 0
-
-            # Check that request was counted
-            mock_total.labels.assert_called_with(
-                method="GET", endpoint="/api/authors", status_code=200
-            )
-            mock_total_labels.inc.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_middleware_tracks_error_response(self, app):
@@ -99,33 +77,23 @@ class TestPrometheusMiddleware:
 
         with (
             patch(
-                "app.middlewares.prometheus.http_requests_total"
-            ) as mock_total,
+                "app.middlewares.prometheus.MetricsCollector.record_http_request_start"
+            ) as mock_start,
             patch(
-                "app.middlewares.prometheus.http_request_duration_seconds"
-            ) as mock_duration,
-            patch(
-                "app.middlewares.prometheus.http_requests_in_progress"
-            ) as mock_in_progress,
+                "app.middlewares.prometheus.MetricsCollector.record_http_request_end"
+            ) as mock_end,
         ):
-            mock_total_labels = MagicMock()
-            mock_total.labels.return_value = mock_total_labels
-
-            mock_duration_labels = MagicMock()
-            mock_duration.labels.return_value = mock_duration_labels
-
-            mock_in_progress_labels = MagicMock()
-            mock_in_progress.labels.return_value = mock_in_progress_labels
-
             response = await middleware.dispatch(request, call_next)
 
             assert response.status_code == 500
 
-            # Check that 500 error was tracked
-            mock_total.labels.assert_called_with(
-                method="POST", endpoint="/api/authors", status_code=500
-            )
-            mock_total_labels.inc.assert_called_once()
+            # Check that start and end were called with 500 status
+            mock_start.assert_called_once_with("POST", "/api/authors")
+            mock_end.assert_called_once()
+            call_args = mock_end.call_args[0]
+            assert call_args[0] == "POST"
+            assert call_args[1] == "/api/authors"
+            assert call_args[2] == 500
 
     @pytest.mark.asyncio
     async def test_middleware_tracks_exception(self, app):
@@ -141,42 +109,25 @@ class TestPrometheusMiddleware:
 
         with (
             patch(
-                "app.middlewares.prometheus.http_requests_total"
-            ) as mock_total,
+                "app.middlewares.prometheus.MetricsCollector.record_http_request_start"
+            ) as mock_start,
             patch(
-                "app.middlewares.prometheus.http_request_duration_seconds"
-            ) as mock_duration,
-            patch(
-                "app.middlewares.prometheus.http_requests_in_progress"
-            ) as mock_in_progress,
+                "app.middlewares.prometheus.MetricsCollector.record_http_request_end"
+            ) as mock_end,
         ):
-            mock_total_labels = MagicMock()
-            mock_total.labels.return_value = mock_total_labels
-
-            mock_duration_labels = MagicMock()
-            mock_duration.labels.return_value = mock_duration_labels
-
-            mock_in_progress_labels = MagicMock()
-            mock_in_progress.labels.return_value = mock_in_progress_labels
-
             # Should re-raise the exception
             with pytest.raises(ValueError, match="Test error"):
                 await middleware.dispatch(request, call_next)
 
-            # Check that duration was still recorded
-            mock_duration.labels.assert_called_with(
-                method="DELETE", endpoint="/api/crash"
-            )
-            mock_duration_labels.observe.assert_called_once()
+            # Check that start was called
+            mock_start.assert_called_once_with("DELETE", "/api/crash")
 
             # Check that exception was tracked as 500 error
-            mock_total.labels.assert_called_with(
-                method="DELETE", endpoint="/api/crash", status_code=500
-            )
-            mock_total_labels.inc.assert_called_once()
-
-            # Check that in_progress was decremented (in finally block)
-            assert mock_in_progress_labels.dec.call_count == 1
+            mock_end.assert_called_once()
+            call_args = mock_end.call_args[0]
+            assert call_args[0] == "DELETE"
+            assert call_args[1] == "/api/crash"
+            assert call_args[2] == 500
 
     @pytest.mark.asyncio
     async def test_middleware_different_http_methods(self, app):
@@ -194,38 +145,23 @@ class TestPrometheusMiddleware:
 
             with (
                 patch(
-                    "app.middlewares.prometheus.http_requests_total"
-                ) as mock_total,
+                    "app.middlewares.prometheus.MetricsCollector.record_http_request_start"
+                ) as mock_start,
                 patch(
-                    "app.middlewares.prometheus.http_request_duration_seconds"
-                ) as mock_duration,
-                patch(
-                    "app.middlewares.prometheus.http_requests_in_progress"
-                ) as mock_in_progress,
+                    "app.middlewares.prometheus.MetricsCollector.record_http_request_end"
+                ) as mock_end,
             ):
-                mock_total_labels = MagicMock()
-                mock_total.labels.return_value = mock_total_labels
-
-                mock_duration_labels = MagicMock()
-                mock_duration.labels.return_value = mock_duration_labels
-
-                mock_in_progress_labels = MagicMock()
-                mock_in_progress.labels.return_value = mock_in_progress_labels
-
                 response = await middleware.dispatch(request, call_next)
 
                 assert response.status_code == 200
 
                 # Verify method was tracked correctly
-                mock_in_progress.labels.assert_called_with(
-                    method=method, endpoint="/api/test"
-                )
-                mock_duration.labels.assert_called_with(
-                    method=method, endpoint="/api/test"
-                )
-                mock_total.labels.assert_called_with(
-                    method=method, endpoint="/api/test", status_code=200
-                )
+                mock_start.assert_called_with(method, "/api/test")
+                mock_end.assert_called_once()
+                call_args = mock_end.call_args[0]
+                assert call_args[0] == method
+                assert call_args[1] == "/api/test"
+                assert call_args[2] == 200
 
     @pytest.mark.asyncio
     async def test_middleware_different_endpoints(self, app):
@@ -243,35 +179,20 @@ class TestPrometheusMiddleware:
 
             with (
                 patch(
-                    "app.middlewares.prometheus.http_requests_total"
-                ) as mock_total,
+                    "app.middlewares.prometheus.MetricsCollector.record_http_request_start"
+                ) as mock_start,
                 patch(
-                    "app.middlewares.prometheus.http_request_duration_seconds"
-                ) as mock_duration,
-                patch(
-                    "app.middlewares.prometheus.http_requests_in_progress"
-                ) as mock_in_progress,
+                    "app.middlewares.prometheus.MetricsCollector.record_http_request_end"
+                ) as mock_end,
             ):
-                mock_total_labels = MagicMock()
-                mock_total.labels.return_value = mock_total_labels
-
-                mock_duration_labels = MagicMock()
-                mock_duration.labels.return_value = mock_duration_labels
-
-                mock_in_progress_labels = MagicMock()
-                mock_in_progress.labels.return_value = mock_in_progress_labels
-
                 response = await middleware.dispatch(request, call_next)
 
                 assert response.status_code == 200
 
                 # Verify endpoint was tracked correctly
-                mock_in_progress.labels.assert_called_with(
-                    method="GET", endpoint=endpoint
-                )
-                mock_duration.labels.assert_called_with(
-                    method="GET", endpoint=endpoint
-                )
-                mock_total.labels.assert_called_with(
-                    method="GET", endpoint=endpoint, status_code=200
-                )
+                mock_start.assert_called_with("GET", endpoint)
+                mock_end.assert_called_once()
+                call_args = mock_end.call_args[0]
+                assert call_args[0] == "GET"
+                assert call_args[1] == endpoint
+                assert call_args[2] == 200
