@@ -19,7 +19,10 @@ class MetricsCollector:
     @staticmethod
     def record_ws_connection_accepted() -> None:
         """Record successful WebSocket connection."""
-        from app.utils.metrics import ws_connections_active, ws_connections_total
+        from app.utils.metrics import (
+            ws_connections_active,
+            ws_connections_total,
+        )
 
         ws_connections_total.labels(status="accepted").inc()
         ws_connections_active.inc()
@@ -68,7 +71,9 @@ class MetricsCollector:
         """
         from app.utils.metrics import ws_message_processing_duration_seconds
 
-        ws_message_processing_duration_seconds.labels(pkg_id=str(pkg_id)).observe(duration)
+        ws_message_processing_duration_seconds.labels(
+            pkg_id=str(pkg_id)
+        ).observe(duration)
 
     # ========== Authentication Metrics ==========
 
@@ -80,8 +85,12 @@ class MetricsCollector:
             keycloak_operation_duration_seconds,
         )
 
-        keycloak_auth_attempts_total.labels(status="success", method="password").inc()
-        keycloak_operation_duration_seconds.labels(operation="login").observe(duration)
+        keycloak_auth_attempts_total.labels(
+            status="success", method="password"
+        ).inc()
+        keycloak_operation_duration_seconds.labels(operation="login").observe(
+            duration
+        )
 
     @staticmethod
     def record_keycloak_login_failure(duration: float) -> None:
@@ -91,8 +100,12 @@ class MetricsCollector:
             keycloak_operation_duration_seconds,
         )
 
-        keycloak_auth_attempts_total.labels(status="failure", method="password").inc()
-        keycloak_operation_duration_seconds.labels(operation="login").observe(duration)
+        keycloak_auth_attempts_total.labels(
+            status="failure", method="password"
+        ).inc()
+        keycloak_operation_duration_seconds.labels(operation="login").observe(
+            duration
+        )
 
     @staticmethod
     def record_keycloak_login_error(duration: float) -> None:
@@ -102,8 +115,12 @@ class MetricsCollector:
             keycloak_operation_duration_seconds,
         )
 
-        keycloak_auth_attempts_total.labels(status="error", method="password").inc()
-        keycloak_operation_duration_seconds.labels(operation="login").observe(duration)
+        keycloak_auth_attempts_total.labels(
+            status="error", method="password"
+        ).inc()
+        keycloak_operation_duration_seconds.labels(operation="login").observe(
+            duration
+        )
 
     @staticmethod
     def record_token_validation_success(duration: float) -> None:
@@ -113,10 +130,12 @@ class MetricsCollector:
             keycloak_token_validation_total,
         )
 
-        keycloak_token_validation_total.labels(status="valid", reason="success").inc()
-        keycloak_operation_duration_seconds.labels(operation="validate_token").observe(
-            duration
-        )
+        keycloak_token_validation_total.labels(
+            status="valid", reason="success"
+        ).inc()
+        keycloak_operation_duration_seconds.labels(
+            operation="validate_token"
+        ).observe(duration)
 
     @staticmethod
     def record_token_validation_expired(duration: float) -> None:
@@ -126,10 +145,12 @@ class MetricsCollector:
             keycloak_token_validation_total,
         )
 
-        keycloak_token_validation_total.labels(status="expired", reason="token_expired").inc()
-        keycloak_operation_duration_seconds.labels(operation="validate_token").observe(
-            duration
-        )
+        keycloak_token_validation_total.labels(
+            status="expired", reason="token_expired"
+        ).inc()
+        keycloak_operation_duration_seconds.labels(
+            operation="validate_token"
+        ).observe(duration)
 
     @staticmethod
     def record_token_validation_invalid(reason: str, duration: float) -> None:
@@ -145,10 +166,12 @@ class MetricsCollector:
             keycloak_token_validation_total,
         )
 
-        keycloak_token_validation_total.labels(status="invalid", reason=reason).inc()
-        keycloak_operation_duration_seconds.labels(operation="validate_token").observe(
-            duration
-        )
+        keycloak_token_validation_total.labels(
+            status="invalid", reason=reason
+        ).inc()
+        keycloak_operation_duration_seconds.labels(
+            operation="validate_token"
+        ).observe(duration)
 
     @staticmethod
     def record_token_validation_error(duration: float) -> None:
@@ -158,10 +181,12 @@ class MetricsCollector:
             keycloak_token_validation_total,
         )
 
-        keycloak_token_validation_total.labels(status="error", reason="service_error").inc()
-        keycloak_operation_duration_seconds.labels(operation="validate_token").observe(
-            duration
-        )
+        keycloak_token_validation_total.labels(
+            status="error", reason="service_error"
+        ).inc()
+        keycloak_operation_duration_seconds.labels(
+            operation="validate_token"
+        ).observe(duration)
 
     @staticmethod
     def record_auth_backend_request(request_type: str, outcome: str) -> None:
@@ -174,7 +199,9 @@ class MetricsCollector:
         """
         from app.utils.metrics import auth_backend_requests_total
 
-        auth_backend_requests_total.labels(type=request_type, outcome=outcome).inc()
+        auth_backend_requests_total.labels(
+            type=request_type, outcome=outcome
+        ).inc()
 
     @staticmethod
     def record_token_cache_hit() -> None:
@@ -193,7 +220,9 @@ class MetricsCollector:
     # ========== Database Metrics ==========
 
     @staticmethod
-    def record_db_query(operation: str, duration: float, slow_threshold: float = 1.0) -> None:
+    def record_db_query(
+        operation: str, duration: float, slow_threshold: float = 1.0
+    ) -> None:
         """
         Record database query duration and track slow queries.
 
@@ -202,7 +231,10 @@ class MetricsCollector:
             duration: Query duration in seconds
             slow_threshold: Threshold for slow query detection (default: 1.0s)
         """
-        from app.utils.metrics import db_query_duration_seconds, db_slow_queries_total
+        from app.utils.metrics import (
+            db_query_duration_seconds,
+            db_slow_queries_total,
+        )
 
         db_query_duration_seconds.labels(operation=operation).observe(duration)
         if duration > slow_threshold:
@@ -240,9 +272,13 @@ class MetricsCollector:
             db_pool_overflow_count,
         )
 
-        db_pool_max_connections.labels(pool_name=pool_name).set(max_connections)
+        db_pool_max_connections.labels(pool_name=pool_name).set(
+            max_connections
+        )
         db_pool_connections_in_use.labels(pool_name=pool_name).set(in_use)
-        db_pool_connections_available.labels(pool_name=pool_name).set(available)
+        db_pool_connections_available.labels(pool_name=pool_name).set(
+            available
+        )
         db_pool_overflow_count.labels(pool_name=pool_name).set(overflow_count)
         db_pool_info.labels(
             pool_name=pool_name,
@@ -264,7 +300,10 @@ class MetricsCollector:
         health_check_interval: int,
     ) -> None:
         """Record Redis pool configuration info."""
-        from app.utils.metrics.redis import redis_pool_info, redis_pool_max_connections
+        from app.utils.metrics.redis import (
+            redis_pool_info,
+            redis_pool_max_connections,
+        )
 
         db_label = str(db)
         redis_pool_max_connections.labels(db=db_label).set(max_connections)
@@ -278,7 +317,9 @@ class MetricsCollector:
         ).set(1)
 
     @staticmethod
-    def record_redis_pool_metrics(db: int, in_use: int, available: int, created: int) -> None:
+    def record_redis_pool_metrics(
+        db: int, in_use: int, available: int, created: int
+    ) -> None:
         """
         Record Redis connection pool metrics.
 
@@ -344,7 +385,9 @@ class MetricsCollector:
 
         # Update state gauge (0=closed, 1=open, 2=half_open)
         state_mapping = {"closed": 0, "open": 1, "half_open": 2}
-        circuit_breaker_state.labels(service=service).set(state_mapping.get(to_state, 0))
+        circuit_breaker_state.labels(service=service).set(
+            state_mapping.get(to_state, 0)
+        )
 
         # Track state change
         circuit_breaker_state_changes_total.labels(
@@ -434,7 +477,9 @@ class MetricsCollector:
         """Record HTTP request start."""
         from app.utils.metrics import http_requests_in_progress
 
-        http_requests_in_progress.labels(method=method, endpoint=endpoint).inc()
+        http_requests_in_progress.labels(
+            method=method, endpoint=endpoint
+        ).inc()
 
     @staticmethod
     def record_http_request_end(
@@ -458,8 +503,12 @@ class MetricsCollector:
         http_requests_total.labels(
             method=method, endpoint=endpoint, status_code=status_code
         ).inc()
-        http_request_duration_seconds.labels(method=method, endpoint=endpoint).observe(duration)
-        http_requests_in_progress.labels(method=method, endpoint=endpoint).dec()
+        http_request_duration_seconds.labels(
+            method=method, endpoint=endpoint
+        ).observe(duration)
+        http_requests_in_progress.labels(
+            method=method, endpoint=endpoint
+        ).dec()
 
     # ========== Memory Cache Metrics ==========
 

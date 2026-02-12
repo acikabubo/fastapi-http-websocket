@@ -119,7 +119,9 @@ class Web(PackageAuthWebSocketEndpoint):
             duration_ms = int(duration * 1000)
 
             # Record processing duration
-            MetricsCollector.record_ws_message_processing(request.pkg_id, duration)
+            MetricsCollector.record_ws_message_processing(
+                request.pkg_id, duration
+            )
 
             # Send response in the same format as request
             try:

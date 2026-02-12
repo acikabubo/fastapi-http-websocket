@@ -69,6 +69,8 @@ class PrometheusMiddleware(BaseHTTPMiddleware):  # type: ignore[misc]
         except Exception as exc:
             # Track failed request
             duration = time.time() - start_time
-            MetricsCollector.record_http_request_end(method, path, 500, duration)
+            MetricsCollector.record_http_request_end(
+                method, path, 500, duration
+            )
 
             raise exc
