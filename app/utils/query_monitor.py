@@ -88,11 +88,12 @@ def after_cursor_execute(  # type: ignore[no-untyped-def]
     operation = _get_query_operation(statement)
 
     # Record query duration metric and check for slow queries
-    MetricsCollector.record_db_query(operation, duration, slow_threshold=SLOW_QUERY_THRESHOLD)
+    MetricsCollector.record_db_query(
+        operation, duration, slow_threshold=SLOW_QUERY_THRESHOLD
+    )
 
     # Log slow query details if threshold exceeded
     if duration > SLOW_QUERY_THRESHOLD:
-
         # Log slow query details
         # Truncate statement for logging (first 500 chars)
         statement_preview = (
