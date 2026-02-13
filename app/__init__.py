@@ -5,18 +5,10 @@ from contextlib import asynccontextmanager
 from typing import Any
 
 from fastapi import FastAPI
-from starlette.middleware.authentication import AuthenticationMiddleware
-from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from app.auth import AuthBackend
 from app.logging import logger
-from app.middlewares.audit_middleware import AuditMiddleware
-from app.middlewares.correlation_id import CorrelationIDMiddleware
-from app.middlewares.logging_context import LoggingContextMiddleware
-from app.middlewares.prometheus import PrometheusMiddleware
-from app.middlewares.rate_limit import RateLimitMiddleware
-from app.middlewares.request_size_limit import RequestSizeLimitMiddleware
-from app.middlewares.security_headers import SecurityHeadersMiddleware
+from app.middlewares.pipeline import MiddlewarePipeline
 from app.routing import collect_subrouters
 from app.settings import app_settings
 from app.storage.db import wait_and_init_db
@@ -217,22 +209,14 @@ def application() -> FastAPI:
 
     app.openapi = custom_openapi
 
-    # Middlewares (execute in REVERSE order of registration)
-    # Execution flow: TrustedHostMiddleware → CorrelationIDMiddleware → LoggingContextMiddleware →
-    # AuthenticationMiddleware → RateLimitMiddleware → RequestSizeLimitMiddleware → AuditMiddleware →
-    # SecurityHeadersMiddleware → PrometheusMiddleware
+    # Apply middleware pipeline with explicit ordering and dependency validation
     # Note: RBAC is now handled via FastAPI dependencies (require_roles) instead of middleware
-    app.add_middleware(PrometheusMiddleware)
-    app.add_middleware(SecurityHeadersMiddleware)
-    app.add_middleware(AuditMiddleware)
-    app.add_middleware(RequestSizeLimitMiddleware)
-    app.add_middleware(RateLimitMiddleware)
-    app.add_middleware(AuthenticationMiddleware, backend=AuthBackend())
-    app.add_middleware(LoggingContextMiddleware)
-    app.add_middleware(CorrelationIDMiddleware)
-    app.add_middleware(
-        TrustedHostMiddleware, allowed_hosts=app_settings.ALLOWED_HOSTS
+    pipeline = MiddlewarePipeline(
+        allowed_hosts=app_settings.ALLOWED_HOSTS,
+        auth_backend=AuthBackend(),
     )
+    pipeline.validate_dependencies()
+    pipeline.apply_to_app(app)
 
     return app
 
