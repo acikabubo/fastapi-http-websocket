@@ -4,6 +4,7 @@ This guide covers Prometheus metrics, alerting, centralized logging with Loki, a
 
 ## Table of Contents
 
+- [Using MetricsCollector (Recommended)](#using-metricscollector-recommended)
 - [Prometheus Metrics](#prometheus-metrics)
 - [Monitoring Keycloak](#monitoring-keycloak)
 - [Prometheus Alerting](#prometheus-alerting)
@@ -11,6 +12,130 @@ This guide covers Prometheus metrics, alerting, centralized logging with Loki, a
 - [Audit Logs Dashboard](#audit-logs-dashboard)
 - [Connection Pool Monitoring](#connection-pool-monitoring)
 - [Related Documentation](#related-documentation)
+
+## Using MetricsCollector (Recommended)
+
+**New code should use the MetricsCollector facade** instead of importing metrics directly. This provides better maintainability, easier testing, and clearer intent.
+
+### Quick Start
+
+```python
+from app.utils.metrics import MetricsCollector
+
+# WebSocket metrics
+MetricsCollector.record_ws_message_received()
+MetricsCollector.record_ws_message_processing(pkg_id=5, duration=0.123)
+MetricsCollector.record_ws_connection_accepted()
+MetricsCollector.record_ws_disconnection()
+
+# Authentication metrics
+MetricsCollector.record_keycloak_login_success(duration=0.045)
+MetricsCollector.record_token_validation_success(duration=0.012)
+MetricsCollector.record_token_cache_hit()
+
+# Database metrics
+MetricsCollector.record_db_query("select", duration=0.5)
+MetricsCollector.record_db_pool_metrics(
+    pool_name="main",
+    max_connections=20,
+    in_use=5,
+    available=15,
+    overflow_count=0,
+    pool_size=20,
+    max_overflow=10,
+    timeout=30
+)
+
+# HTTP metrics (automatically handled by middleware)
+MetricsCollector.record_http_request_start("GET", "/api/authors")
+MetricsCollector.record_http_request_end("GET", "/api/authors", 200, 0.234)
+
+# Circuit breaker metrics
+MetricsCollector.record_circuit_breaker_state_change(
+    service="keycloak",
+    from_state="closed",
+    to_state="open"
+)
+
+# Audit metrics
+MetricsCollector.record_audit_batch_write(batch_size=25, duration=0.089)
+MetricsCollector.record_audit_log("success")
+```
+
+### Benefits
+
+1. **Single Import** - One import instead of 3-5 per file
+2. **Easy to Mock** - Mock one facade class in tests instead of 10+ individual metrics
+3. **Clear Intent** - Method names clearly describe what's being tracked
+4. **Decoupled** - Easy to swap Prometheus for other monitoring backends
+5. **Type Safe** - Full type hints and IDE autocomplete
+
+### Available Methods
+
+**WebSocket Metrics:**
+- `record_ws_connection_accepted()` - Track successful connection
+- `record_ws_connection_rejected(reason)` - Track rejected connection ('auth', 'origin', 'limit')
+- `record_ws_disconnection()` - Track disconnection
+- `record_ws_message_received()` - Track received message
+- `record_ws_message_sent()` - Track sent message
+- `record_ws_message_processing(pkg_id, duration)` - Track message processing time
+
+**Authentication Metrics:**
+- `record_keycloak_login_success(duration)` - Successful login
+- `record_keycloak_login_failure(duration)` - Failed login
+- `record_keycloak_login_error(duration)` - Login service error
+- `record_token_validation_success(duration)` - Valid token
+- `record_token_validation_expired(duration)` - Expired token
+- `record_token_validation_invalid(reason, duration)` - Invalid token
+- `record_token_validation_error(duration)` - Validation service error
+- `record_auth_backend_request(request_type, outcome)` - Auth backend call
+- `record_token_cache_hit()` - Token cache hit
+- `record_token_cache_miss()` - Token cache miss
+
+**Database Metrics:**
+- `record_db_query(operation, duration, slow_threshold=1.0)` - Query with automatic slow detection
+- `record_db_pool_metrics(...)` - Connection pool stats
+
+**Redis Metrics:**
+- `record_redis_pool_info(...)` - Redis pool configuration
+- `record_redis_pool_metrics(db, in_use, available, created)` - Redis pool stats
+- `record_rate_limit_hit(limit_type)` - Rate limit hit
+
+**Circuit Breaker Metrics:**
+- `record_circuit_breaker_failure(service)` - Circuit breaker failure
+- `record_circuit_breaker_state_change(service, from_state, to_state)` - State transition
+- `initialize_circuit_breaker_state(service)` - Initialize to closed state
+
+**Audit Metrics:**
+- `record_audit_log(outcome)` - Individual audit log entry
+- `record_audit_batch_write(batch_size, duration)` - Batch write metrics
+- `record_audit_log_error(error_type)` - Audit log error
+- `record_audit_log_dropped()` - Dropped log (queue full)
+- `set_audit_queue_size(size)` - Current queue size
+
+**HTTP Metrics:**
+- `record_http_request_start(method, endpoint)` - Request start
+- `record_http_request_end(method, endpoint, status_code, duration)` - Request completion
+
+**Memory Cache Metrics:**
+- `record_memory_cache_hit()` - Cache hit
+- `record_memory_cache_miss()` - Cache miss
+- `record_memory_cache_eviction()` - Cache eviction
+- `set_memory_cache_size(size)` - Current cache size
+
+### Migration from Direct Metrics
+
+Old code using direct metric imports will continue to work:
+
+```python
+# Old approach (still works, backward compatible)
+from app.utils.metrics import ws_messages_received_total
+ws_messages_received_total.inc()
+
+# New approach (recommended)
+from app.utils.metrics import MetricsCollector
+MetricsCollector.record_ws_message_received()
+```
 
 ## Prometheus Metrics
 

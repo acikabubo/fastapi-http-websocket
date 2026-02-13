@@ -11,11 +11,7 @@ from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import ASGIApp
 
-from app.utils.metrics import (
-    http_request_duration_seconds,
-    http_requests_in_progress,
-    http_requests_total,
-)
+from app.utils.metrics import MetricsCollector
 
 
 class PrometheusMiddleware(BaseHTTPMiddleware):  # type: ignore[misc]
@@ -52,8 +48,8 @@ class PrometheusMiddleware(BaseHTTPMiddleware):  # type: ignore[misc]
         method = request.method
         path = request.url.path
 
-        # Increment in-progress requests
-        http_requests_in_progress.labels(method=method, endpoint=path).inc()
+        # Track request start
+        MetricsCollector.record_http_request_start(method, path)
 
         # Track request duration
         start_time = time.time()
@@ -62,34 +58,19 @@ class PrometheusMiddleware(BaseHTTPMiddleware):  # type: ignore[misc]
             # Process request
             response = await call_next(request)
 
-            # Track successful request
+            # Track successful request completion
             duration = time.time() - start_time
-            http_request_duration_seconds.labels(
-                method=method, endpoint=path
-            ).observe(duration)
-
-            http_requests_total.labels(
-                method=method, endpoint=path, status_code=response.status_code
-            ).inc()
+            MetricsCollector.record_http_request_end(
+                method, path, response.status_code, duration
+            )
 
             return response
 
         except Exception as exc:
             # Track failed request
             duration = time.time() - start_time
-            http_request_duration_seconds.labels(
-                method=method, endpoint=path
-            ).observe(duration)
-
-            # Track as 500 error
-            http_requests_total.labels(
-                method=method, endpoint=path, status_code=500
-            ).inc()
+            MetricsCollector.record_http_request_end(
+                method, path, 500, duration
+            )
 
             raise exc
-
-        finally:
-            # Decrement in-progress requests
-            http_requests_in_progress.labels(
-                method=method, endpoint=path
-            ).dec()

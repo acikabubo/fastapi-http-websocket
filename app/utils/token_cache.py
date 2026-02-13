@@ -72,16 +72,16 @@ async def get_cached_token_claims(token: str) -> dict[str, Any] | None:
 
         if cached_data:
             # Track cache hit
-            from app.utils.metrics import token_cache_hits_total
+            from app.utils.metrics import MetricsCollector
 
-            token_cache_hits_total.inc()
+            MetricsCollector.record_token_cache_hit()
             logger.debug(f"Token claims cache hit: {token_hash[:8]}...")
             return json.loads(cached_data)
 
         # Track cache miss
-        from app.utils.metrics import token_cache_misses_total
+        from app.utils.metrics import MetricsCollector
 
-        token_cache_misses_total.inc()
+        MetricsCollector.record_token_cache_miss()
         logger.debug(f"Token claims cache miss: {token_hash[:8]}...")
         return None
 

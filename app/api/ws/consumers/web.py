@@ -15,11 +15,7 @@ from app.schemas.request import RequestModel
 from app.settings import app_settings
 from app.types import RequestId, UserId, Username
 from app.utils.audit_logger import log_user_action
-from app.utils.metrics import (
-    ws_message_processing_duration_seconds,
-    ws_messages_received_total,
-    ws_messages_sent_total,
-)
+from app.utils.metrics import MetricsCollector
 from app.utils.protobuf_converter import (
     proto_to_pydantic_request,
     serialize_response,
@@ -68,7 +64,7 @@ class Web(PackageAuthWebSocketEndpoint):
             Connection errors during send are logged but don't crash the server.
         """
         # Track received message
-        ws_messages_received_total.inc()
+        MetricsCollector.record_ws_message_received()
 
         # Check message rate limit (fail-open on errors)
         try:
@@ -123,9 +119,9 @@ class Web(PackageAuthWebSocketEndpoint):
             duration_ms = int(duration * 1000)
 
             # Record processing duration
-            ws_message_processing_duration_seconds.labels(
-                pkg_id=str(request.pkg_id)
-            ).observe(duration)
+            MetricsCollector.record_ws_message_processing(
+                request.pkg_id, duration
+            )
 
             # Send response in the same format as request
             try:
@@ -135,7 +131,7 @@ class Web(PackageAuthWebSocketEndpoint):
                 else:
                     await websocket.send_response(response)
 
-                ws_messages_sent_total.inc()
+                MetricsCollector.record_ws_message_sent()
                 logger.debug(
                     f"Successfully sent {message_format} response for {request.pkg_id}"
                 )
