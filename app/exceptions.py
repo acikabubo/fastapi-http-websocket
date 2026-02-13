@@ -11,8 +11,9 @@ methods.
 """
 
 from typing import Any
+from uuid import UUID
 
-from app.api.ws.constants import RSPCode
+from app.api.ws.constants import PkgID, RSPCode
 from app.schemas.errors import (
     ErrorCode,
     ErrorEnvelope,
@@ -52,7 +53,9 @@ class AppException(Exception):
         self.message = message
         super().__init__(message)
 
-    def to_http_response(self, details: dict[str, Any] | None = None) -> HTTPErrorResponse:
+    def to_http_response(
+        self, details: dict[str, Any] | None = None
+    ) -> HTTPErrorResponse:
         """
         Convert exception to HTTP error response.
 
@@ -67,8 +70,7 @@ class AppException(Exception):
             ex = ValidationError("Invalid name")
             response = ex.to_http_response(details={"field": "name"})
             return JSONResponse(
-                status_code=ex.http_status,
-                content=response.model_dump()
+                status_code=ex.http_status, content=response.model_dump()
             )
             ```
         """
@@ -82,16 +84,16 @@ class AppException(Exception):
 
     def to_ws_response(
         self,
-        pkg_id: int,
-        req_id: str,
+        pkg_id: int | PkgID,
+        req_id: str | UUID,
         details: dict[str, Any] | None = None,
     ) -> WebSocketErrorResponse:
         """
         Convert exception to WebSocket error response.
 
         Args:
-            pkg_id: Package identifier from request.
-            req_id: Request identifier from request.
+            pkg_id: Package identifier from request (int or PkgID enum).
+            req_id: Request identifier from request (str or UUID).
             details: Optional additional context to include.
 
         Returns:
@@ -109,9 +111,13 @@ class AppException(Exception):
             )
             ```
         """
+        # Convert to proper types for WebSocketErrorResponse
+        pkg_id_enum = PkgID(pkg_id) if isinstance(pkg_id, int) else pkg_id
+        req_id_uuid = UUID(req_id) if isinstance(req_id, str) else req_id
+
         return WebSocketErrorResponse(
-            pkg_id=pkg_id,
-            req_id=req_id,
+            pkg_id=pkg_id_enum,
+            req_id=req_id_uuid,
             status_code=self.ws_status,
             data=ErrorEnvelope(
                 code=self.error_code,

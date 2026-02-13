@@ -10,7 +10,12 @@ Tests verify that:
 from uuid import uuid4
 
 from app.api.ws.constants import PkgID, RSPCode
-from app.schemas.errors import ErrorCode, ErrorEnvelope, HTTPErrorResponse, WebSocketErrorResponse
+from app.schemas.errors import (
+    ErrorCode,
+    ErrorEnvelope,
+    HTTPErrorResponse,
+    WebSocketErrorResponse,
+)
 
 
 class TestErrorEnvelopeModels:

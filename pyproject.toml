@@ -204,6 +204,7 @@ exclude = [
 ]
 
 [tool.mypy]
+python_version = "3.13"
 exclude = [
     "app/schemas/proto/",  # Exclude auto-generated protobuf files
     "benchmarks/",  # Exclude benchmark scripts (temporary, remove when orjson adopted)

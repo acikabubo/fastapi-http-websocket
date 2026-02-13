@@ -14,7 +14,11 @@ from app.exceptions import (
     RedisError,
     ValidationError,
 )
-from app.schemas.errors import ErrorCode, HTTPErrorResponse, WebSocketErrorResponse
+from app.schemas.errors import (
+    ErrorCode,
+    HTTPErrorResponse,
+    WebSocketErrorResponse,
+)
 
 
 class TestHTTPConversion:
@@ -91,7 +95,9 @@ class TestHTTPConversion:
     def test_to_http_with_details(self):
         """Test conversion with optional details."""
         ex = ValidationError("Name too short")
-        response = ex.to_http_response(details={"field": "name", "min_length": 3})
+        response = ex.to_http_response(
+            details={"field": "name", "min_length": 3}
+        )
 
         assert response.error.code == ErrorCode.VALIDATION_ERROR
         assert response.error.msg == "Name too short"
@@ -210,7 +216,9 @@ class TestErrorCodeMapping:
         assert ValidationError.error_code == ErrorCode.VALIDATION_ERROR
         assert NotFoundError.error_code == ErrorCode.NOT_FOUND
         assert DatabaseError.error_code == ErrorCode.DATABASE_ERROR
-        assert AuthenticationError.error_code == ErrorCode.AUTHENTICATION_FAILED
+        assert (
+            AuthenticationError.error_code == ErrorCode.AUTHENTICATION_FAILED
+        )
         assert AuthorizationError.error_code == ErrorCode.PERMISSION_DENIED
         assert RateLimitError.error_code == ErrorCode.RATE_LIMIT_EXCEEDED
         assert RedisError.error_code == ErrorCode.REDIS_ERROR
@@ -223,7 +231,9 @@ class TestErrorCodeMapping:
         assert ValidationError.error_code == ErrorCode.VALIDATION_ERROR
 
         assert AuthenticationError.http_status == 401
-        assert AuthenticationError.error_code == ErrorCode.AUTHENTICATION_FAILED
+        assert (
+            AuthenticationError.error_code == ErrorCode.AUTHENTICATION_FAILED
+        )
 
         assert AuthorizationError.http_status == 403
         assert AuthorizationError.error_code == ErrorCode.PERMISSION_DENIED
@@ -284,8 +294,12 @@ class TestExceptionAttributes:
         """Verify WebSocket status codes are set correctly."""
         assert ValidationError("test").ws_status == RSPCode.INVALID_DATA
         assert NotFoundError("test").ws_status == RSPCode.ERROR
-        assert AuthenticationError("test").ws_status == RSPCode.PERMISSION_DENIED
-        assert AuthorizationError("test").ws_status == RSPCode.PERMISSION_DENIED
+        assert (
+            AuthenticationError("test").ws_status == RSPCode.PERMISSION_DENIED
+        )
+        assert (
+            AuthorizationError("test").ws_status == RSPCode.PERMISSION_DENIED
+        )
         assert ConflictError("test").ws_status == RSPCode.INVALID_DATA
         assert RateLimitError("test").ws_status == RSPCode.ERROR
         assert DatabaseError("test").ws_status == RSPCode.ERROR

@@ -152,7 +152,9 @@ def handle_ws_errors(func: Callable[..., Any]) -> Callable[..., Any]:
                     "req_id": request.req_id,
                 },
             )
-            error_response = ex.to_ws_response(request.pkg_id, request.req_id)
+            error_response = ex.to_ws_response(
+                request.pkg_id, str(request.req_id)
+            )
             # Convert to ResponseModel for backward compatibility
             return ResponseModel(
                 pkg_id=error_response.pkg_id,

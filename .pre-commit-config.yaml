@@ -53,6 +53,7 @@ repos:
     hooks:
       - id: mypy
         name: "mypy: Static type checker"
+        language_version: python3.13
         args: [--strict, --ignore-missing-imports, --config-file=pyproject.toml]
         exclude: ^(app/schemas/proto/.*_pb2\.pyi?|get_token\.py|tests/.*|scripts/.*|examples/.*|benchmarks/.*|cli\.py|test_protobuf_websocket\.py)$
 
@@ -82,11 +83,13 @@ repos:
     hooks:
       - id: vulture
         name: "vulture: Dead code detector"
-        entry: uvx vulture app/
+        entry: uvx vulture app/ --exclude app/schemas/response.py
         language: system
         pass_filenames: false
         files: ^app/.*\.py$
         stages: [pre-push]  # Only run on push, not on every commit
+        # TODO: Remove --exclude when vulture supports PEP 695 syntax (Python 3.12+)
+        # Track: https://github.com/jendrikseipp/vulture/issues/368
 
       - id: pytest-coverage
         name: "pytest-cov: Code coverage checker (serial)"
