@@ -1,6 +1,6 @@
 """Tests for exception self-conversion methods."""
 
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 from app.api.ws.constants import PkgID, RSPCode
 from app.exceptions import (
