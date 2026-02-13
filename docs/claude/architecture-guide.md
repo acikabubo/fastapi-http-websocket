@@ -193,12 +193,43 @@ async def create_author_ws(request: RequestModel) -> ResponseModel:
 
 ### Error Handler
 
-**Location**: `app/utils/error_handler.py`
+**Location**: `app/utils/error_handler.py` and `app/exceptions.py`
 
-- Centralized error handling utilities for HTTP and WebSocket endpoints
-- `handle_http_errors` decorator: Unified error handling for HTTP endpoints
-- Standardized error response format
+- **Self-converting exceptions**: All exceptions inherit from `AppException` and can convert themselves to error responses
+- Exception classes define their own `error_code`, `http_status`, and `ws_status` attributes
+- `to_http_response()` method converts exception to `HTTPErrorResponse`
+- `to_ws_response(pkg_id, req_id)` method converts exception to `WebSocketErrorResponse`
+- `handle_http_errors` decorator: Catches exceptions and calls `to_http_response()`
+- `handle_ws_errors` decorator: Catches exceptions and calls `to_ws_response()`
+- Standardized error response format across HTTP and WebSocket
 - Reduces boilerplate try/except blocks
+
+**Example:**
+```python
+# Exception defines its own error code and conversion logic
+class ValidationError(AppException):
+    http_status = 400
+    ws_status = RSPCode.INVALID_DATA
+    error_code = ErrorCode.VALIDATION_ERROR  # Single source of truth
+
+    # Inherited from AppException:
+    # def to_http_response(self, details=None) -> HTTPErrorResponse
+    # def to_ws_response(self, pkg_id, req_id, details=None) -> WebSocketErrorResponse
+
+# Usage in handlers - just raise the exception
+@router.post("/authors")
+@handle_http_errors
+async def create_author(data: CreateAuthorInput):
+    if not data.name:
+        raise ValidationError("Name is required")  # Auto-converted to HTTP response
+    return author
+```
+
+**Benefits:**
+- **Type safety**: Error codes are class attributes, not manual dict mapping
+- **Co-location**: Error conversion logic lives with exception definition
+- **Single source of truth**: Error code defined once on exception class
+- **Simplified decorators**: One-line conversion (`ex.to_http_response()`)
 
 ## Directory Structure
 
