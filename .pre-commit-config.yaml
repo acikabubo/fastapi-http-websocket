@@ -81,6 +81,14 @@ repos:
   # Local hooks
   - repo: local
     hooks:
+      - id: check-rbac-coverage
+        name: "check-rbac: Verify RBAC protection on endpoints"
+        entry: uv run python scripts/check_rbac_coverage.py
+        language: system
+        pass_filenames: false
+        files: ^app/api/(http|ws/handlers)/.*\.py$
+        stages: [pre-commit]  # Run on every commit for security
+
       - id: vulture
         name: "vulture: Dead code detector"
         entry: uvx vulture app/ --exclude app/schemas/response.py

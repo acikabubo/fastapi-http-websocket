@@ -20,6 +20,8 @@ async def get_status() -> dict[str, Any]:
     """
     Get current profiling configuration and status.
 
+    Public endpoint - available for development and debugging.
+
     Returns profiling configuration, availability of Scalene,
     and instructions for running profiling.
 
@@ -46,6 +48,8 @@ async def get_status() -> dict[str, Any]:
 async def list_reports() -> dict[str, Any]:
     """
     List all available profiling reports.
+
+    Public endpoint - available for development and debugging.
 
     Returns a list of profiling report files with metadata.
 
@@ -96,6 +100,8 @@ async def get_report(filename: str) -> FileResponse:
     """
     Download a specific profiling report.
 
+    Public endpoint - available for development and debugging.
+
     Args:
         filename: Name of the report file (e.g., websocket_profile_20250123_143000.html)
 
@@ -138,6 +144,8 @@ async def get_report(filename: str) -> FileResponse:
 async def delete_report(filename: str) -> JSONResponse:
     """
     Delete a specific profiling report.
+
+    Public endpoint - available for development and debugging.
 
     Args:
         filename: Name of the report file to delete.

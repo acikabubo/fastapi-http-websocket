@@ -16,6 +16,8 @@ async def metrics() -> Response:
     """
     Expose Prometheus metrics for monitoring.
 
+    Public endpoint - no authentication required for Prometheus scraping.
+
     This endpoint returns all registered Prometheus metrics in the
     text-based exposition format that Prometheus can scrape.
 

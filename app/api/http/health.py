@@ -43,6 +43,8 @@ async def health_check(response: Response) -> HealthResponse:
     """
     Check health status of the application and its dependencies.
 
+    Public endpoint - no authentication required for health monitoring.
+
     This endpoint verifies:
     - Database connectivity (PostgreSQL)
     - Redis connectivity
