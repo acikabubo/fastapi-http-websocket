@@ -4,82 +4,23 @@ from functools import partial
 from json import loads
 from typing import Any, Callable
 
-from pybreaker import (
-    CircuitBreaker,
-    CircuitBreakerError,
-    CircuitBreakerListener,
-    CircuitBreakerState,
-)
+from pybreaker import CircuitBreaker, CircuitBreakerError
 from redis.asyncio import ConnectionPool, Redis
 from redis.exceptions import RedisError
 
 from app.constants import KC_SESSION_EXPIRY_BUFFER_SECONDS
+from app.listeners.metrics import CircuitBreakerMetricsListener
 from app.logging import logger
 from app.schemas.user import UserModel
 from app.settings import app_settings
-
-
-class RedisCircuitBreakerListener(CircuitBreakerListener):  # type: ignore[misc]
-    """
-    Listener for Redis circuit breaker events.
-
-    Tracks state changes and failures, updating Prometheus metrics.
-    """
-
-    def before_call(
-        self,
-        _cb: CircuitBreaker,
-        func: Callable[..., Any],
-        *args: Any,
-        **kwargs: Any,
-    ) -> None:
-        """Called before circuit breaker calls the function."""
-        pass  # No action needed before call
-
-    def success(self, _cb: CircuitBreaker) -> None:
-        """Called when circuit breaker call succeeds."""
-        pass  # No action needed on success
-
-    def failure(self, _cb: CircuitBreaker, exc: BaseException) -> None:
-        """Called when circuit breaker call fails."""
-        logger.error(f"Redis circuit breaker failure: {exc}")
-
-        from app.utils.metrics import circuit_breaker_failures_total
-
-        circuit_breaker_failures_total.labels(service="redis").inc()
-
-    def state_change(
-        self,
-        _cb: CircuitBreaker,
-        old_state: CircuitBreakerState | None,
-        new_state: CircuitBreakerState,
-    ) -> None:
-        """Called when circuit breaker state changes."""
-        old_state_name = old_state.name if old_state else "unknown"
-        new_state_name = new_state.name
-
-        logger.warning(
-            f"Redis circuit breaker state changed: "
-            f"{old_state_name} → {new_state_name}"
-        )
-
-        # Lazy import to avoid circular dependency
-        from app.utils.metrics import (
-            circuit_breaker_state,
-            circuit_breaker_state_changes_total,
-        )
-
-        # Map states to numeric values for Gauge metric
-        state_mapping = {"closed": 0, "open": 1, "half_open": 2}
-
-        circuit_breaker_state.labels(service="redis").set(
-            state_mapping.get(new_state_name, 0)
-        )
-        circuit_breaker_state_changes_total.labels(
-            service="redis",
-            from_state=old_state_name,
-            to_state=new_state_name,
-        ).inc()
+from app.utils.metrics import (
+    circuit_breaker_state,
+    redis_pool_connections_available,
+    redis_pool_connections_created_total,
+    redis_pool_connections_in_use,
+    redis_pool_info,
+    redis_pool_max_connections,
+)
 
 
 # Initialize Redis circuit breaker
@@ -90,7 +31,7 @@ if app_settings.CIRCUIT_BREAKER_ENABLED:
         fail_max=app_settings.REDIS_CIRCUIT_BREAKER_FAIL_MAX,
         reset_timeout=app_settings.REDIS_CIRCUIT_BREAKER_TIMEOUT,
         name="redis",
-        listeners=[RedisCircuitBreakerListener()],
+        listeners=[CircuitBreakerMetricsListener(service_name="redis")],
     )
     logger.info(
         f"Redis circuit breaker initialized "
@@ -99,8 +40,6 @@ if app_settings.CIRCUIT_BREAKER_ENABLED:
     )
 
     # Initialize metrics with default values (circuit breaker starts in closed state)
-    from app.utils.metrics import circuit_breaker_state
-
     circuit_breaker_state.labels(service="redis").set(0)  # 0 = closed
 else:
     logger.info("Redis circuit breaker disabled")
@@ -161,11 +100,6 @@ class RedisPool:
         cls.__pools[db] = pool
 
         # Update Prometheus metrics for this pool
-        from app.utils.metrics import (
-            redis_pool_info,
-            redis_pool_max_connections,
-        )
-
         redis_pool_max_connections.labels(db=str(db)).set(pool.max_connections)
         redis_pool_info.labels(
             db=str(db),
@@ -261,12 +195,6 @@ class RedisPool:
         Should be called periodically (e.g., every 10-30 seconds) to keep
         metrics current.
         """
-        from app.utils.metrics import (
-            redis_pool_connections_available,
-            redis_pool_connections_created_total,
-            redis_pool_connections_in_use,
-        )
-
         for db, pool in cls.__pools.items():
             db_label = str(db)
 

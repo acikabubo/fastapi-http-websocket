@@ -91,13 +91,15 @@ repos:
 
       - id: vulture
         name: "vulture: Dead code detector"
-        entry: uvx vulture app/ --exclude app/schemas/response.py
+        entry: uvx vulture app/ --exclude app/schemas/response.py,app/protocols.py
         language: system
         pass_filenames: false
         files: ^app/.*\.py$
         stages: [pre-push]  # Only run on push, not on every commit
         # TODO: Remove --exclude when vulture supports PEP 695 syntax (Python 3.12+)
         # Track: https://github.com/jendrikseipp/vulture/issues/368
+        # NOTE: app/protocols.py is excluded because Protocol definitions have
+        # intentionally unused parameters that define the interface contract
 
       - id: pytest-coverage
         name: "pytest-cov: Code coverage checker (serial)"

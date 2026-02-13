@@ -1,77 +1,12 @@
-from typing import Any, Callable
+from typing import Any
 
 from keycloak import KeycloakOpenID
-from pybreaker import (
-    CircuitBreaker,
-    CircuitBreakerListener,
-    CircuitBreakerState,
-)
+from pybreaker import CircuitBreaker
 
+from app.listeners.metrics import CircuitBreakerMetricsListener
 from app.logging import logger
 from app.settings import app_settings
-
-
-class KeycloakCircuitBreakerListener(CircuitBreakerListener):  # type: ignore[misc]
-    """
-    Listener for Keycloak circuit breaker events.
-
-    Tracks state changes and failures, updating Prometheus metrics.
-    """
-
-    def before_call(
-        self,
-        _cb: CircuitBreaker,
-        func: Callable[..., Any],
-        *args: Any,
-        **kwargs: Any,
-    ) -> None:
-        """Called before circuit breaker calls the function."""
-        pass  # No action needed before call
-
-    def success(self, _cb: CircuitBreaker) -> None:
-        """Called when circuit breaker call succeeds."""
-        pass  # No action needed on success
-
-    def failure(self, _cb: CircuitBreaker, exc: BaseException) -> None:
-        """Called when circuit breaker call fails."""
-        logger.error(f"Keycloak circuit breaker failure: {exc}")
-
-        from app.utils.metrics import circuit_breaker_failures_total
-
-        circuit_breaker_failures_total.labels(service="keycloak").inc()
-
-    def state_change(
-        self,
-        _cb: CircuitBreaker,
-        old_state: CircuitBreakerState | None,
-        new_state: CircuitBreakerState,
-    ) -> None:
-        """Called when circuit breaker state changes."""
-        old_state_name = old_state.name if old_state else "unknown"
-        new_state_name = new_state.name
-
-        logger.warning(
-            f"Keycloak circuit breaker state changed: "
-            f"{old_state_name} → {new_state_name}"
-        )
-
-        # Lazy import to avoid circular dependency
-        from app.utils.metrics import (
-            circuit_breaker_state,
-            circuit_breaker_state_changes_total,
-        )
-
-        # Map states to numeric values for Gauge metric
-        state_mapping = {"closed": 0, "open": 1, "half_open": 2}
-
-        circuit_breaker_state.labels(service="keycloak").set(
-            state_mapping.get(new_state_name, 0)
-        )
-        circuit_breaker_state_changes_total.labels(
-            service="keycloak",
-            from_state=old_state_name,
-            to_state=new_state_name,
-        ).inc()
+from app.utils.metrics import circuit_breaker_state
 
 
 class KeycloakManager:
@@ -100,11 +35,13 @@ class KeycloakManager:
 
         # Initialize circuit breaker for Keycloak operations
         if app_settings.CIRCUIT_BREAKER_ENABLED:
-            self.circuit_breaker = CircuitBreaker(
+            self.circuit_breaker: CircuitBreaker | None = CircuitBreaker(
                 fail_max=app_settings.KEYCLOAK_CIRCUIT_BREAKER_FAIL_MAX,
                 reset_timeout=app_settings.KEYCLOAK_CIRCUIT_BREAKER_TIMEOUT,
                 name="keycloak",
-                listeners=[KeycloakCircuitBreakerListener()],
+                listeners=[
+                    CircuitBreakerMetricsListener(service_name="keycloak")
+                ],
             )
             logger.info(
                 f"Keycloak circuit breaker initialized "
@@ -113,8 +50,6 @@ class KeycloakManager:
             )
 
             # Initialize metrics with default values (circuit breaker starts in closed state)
-            from app.utils.metrics import circuit_breaker_state
-
             circuit_breaker_state.labels(service="keycloak").set(
                 0
             )  # 0 = closed

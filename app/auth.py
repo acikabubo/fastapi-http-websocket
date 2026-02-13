@@ -1,3 +1,4 @@
+import time
 from typing import Annotated, Any
 from urllib.parse import parse_qsl
 
@@ -16,6 +17,12 @@ from app.logging import logger
 from app.managers.keycloak_manager import keycloak_manager
 from app.schemas.user import UserModel
 from app.settings import app_settings
+from app.utils.metrics import (
+    auth_backend_requests_total,
+    keycloak_operation_duration_seconds,
+    keycloak_token_validation_total,
+)
+from app.utils.token_cache import cache_token_claims, get_cached_token_claims
 
 
 class AuthBackend(AuthenticationBackend):  # type: ignore[misc]
@@ -64,18 +71,6 @@ class AuthBackend(AuthenticationBackend):  # type: ignore[misc]
         Raises:
             AuthenticationError: When authentication fails with specific reason codes
         """
-        import time
-
-        from app.utils.metrics import (
-            auth_backend_requests_total,
-            keycloak_operation_duration_seconds,
-            keycloak_token_validation_total,
-        )
-        from app.utils.token_cache import (
-            cache_token_claims,
-            get_cached_token_claims,
-        )
-
         logger.debug(f"Request type -> {request.scope['type']}")
 
         request_type = (

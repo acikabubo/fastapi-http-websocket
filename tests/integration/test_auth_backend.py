@@ -34,13 +34,13 @@ class TestAuthBackendTokenCaching:
         with patch("app.auth.keycloak_manager", mock_kc_manager):
             # Mock cache hit - returns user data from cache
             with patch(
-                "app.utils.token_cache.get_cached_token_claims",
+                "app.auth.get_cached_token_claims",
                 new_callable=AsyncMock,
                 return_value=mock_user_data,
             ):
                 # Mock cache_token_claims to verify it's NOT called
                 with patch(
-                    "app.utils.token_cache.cache_token_claims",
+                    "app.auth.cache_token_claims",
                     new_callable=AsyncMock,
                 ) as mock_cache:
                     result = await auth_backend.authenticate(request)
@@ -76,13 +76,13 @@ class TestAuthBackendTokenCaching:
         with patch("app.auth.keycloak_manager", mock_kc_manager):
             # Mock cache miss - returns None
             with patch(
-                "app.utils.token_cache.get_cached_token_claims",
+                "app.auth.get_cached_token_claims",
                 new_callable=AsyncMock,
                 return_value=None,
             ):
                 # Mock cache_token_claims to verify it's called
                 with patch(
-                    "app.utils.token_cache.cache_token_claims",
+                    "app.auth.cache_token_claims",
                     new_callable=AsyncMock,
                 ) as mock_cache:
                     result = await auth_backend.authenticate(request)
@@ -125,23 +125,23 @@ class TestAuthBackendMetrics:
 
         with patch("app.auth.keycloak_manager", mock_kc_manager):
             with patch(
-                "app.utils.token_cache.get_cached_token_claims",
+                "app.auth.get_cached_token_claims",
                 new_callable=AsyncMock,
                 return_value=None,
             ):
                 with patch(
-                    "app.utils.token_cache.cache_token_claims",
+                    "app.auth.cache_token_claims",
                     new_callable=AsyncMock,
                 ):
                     # Mock metrics
                     with patch(
-                        "app.utils.metrics.keycloak_token_validation_total"
+                        "app.auth.keycloak_token_validation_total"
                     ) as mock_validation:
                         with patch(
-                            "app.utils.metrics.auth_backend_requests_total"
+                            "app.auth.auth_backend_requests_total"
                         ) as mock_backend:
                             with patch(
-                                "app.utils.metrics.keycloak_operation_duration_seconds"
+                                "app.auth.keycloak_operation_duration_seconds"
                             ) as mock_duration:
                                 await auth_backend.authenticate(request)
 
@@ -183,22 +183,20 @@ class TestAuthBackendMetrics:
 
         with patch("app.auth.keycloak_manager", mock_kc_manager):
             with patch(
-                "app.utils.token_cache.get_cached_token_claims",
+                "app.auth.get_cached_token_claims",
                 new_callable=AsyncMock,
                 return_value=None,
             ):
                 with patch(
-                    "app.utils.token_cache.cache_token_claims",
+                    "app.auth.cache_token_claims",
                     new_callable=AsyncMock,
                 ):
                     with patch(
-                        "app.utils.metrics.auth_backend_requests_total"
+                        "app.auth.auth_backend_requests_total"
                     ) as mock_backend:
-                        with patch(
-                            "app.utils.metrics.keycloak_token_validation_total"
-                        ):
+                        with patch("app.auth.keycloak_token_validation_total"):
                             with patch(
-                                "app.utils.metrics.keycloak_operation_duration_seconds"
+                                "app.auth.keycloak_operation_duration_seconds"
                             ):
                                 await auth_backend.authenticate(request)
 
@@ -226,18 +224,18 @@ class TestAuthBackendMetrics:
 
         with patch("app.auth.keycloak_manager", mock_kc_manager):
             with patch(
-                "app.utils.token_cache.get_cached_token_claims",
+                "app.auth.get_cached_token_claims",
                 new_callable=AsyncMock,
                 return_value=None,
             ):
                 with patch(
-                    "app.utils.metrics.keycloak_token_validation_total"
+                    "app.auth.keycloak_token_validation_total"
                 ) as mock_validation:
                     with patch(
-                        "app.utils.metrics.auth_backend_requests_total"
+                        "app.auth.auth_backend_requests_total"
                     ) as mock_backend:
                         with patch(
-                            "app.utils.metrics.keycloak_operation_duration_seconds"
+                            "app.auth.keycloak_operation_duration_seconds"
                         ) as mock_duration:
                             with pytest.raises(AuthenticationError):
                                 await auth_backend.authenticate(request)
@@ -279,12 +277,12 @@ class TestAuthBackendWebSocketSuccess:
 
         with patch("app.auth.keycloak_manager", mock_kc_manager):
             with patch(
-                "app.utils.token_cache.get_cached_token_claims",
+                "app.auth.get_cached_token_claims",
                 new_callable=AsyncMock,
                 return_value=None,
             ):
                 with patch(
-                    "app.utils.token_cache.cache_token_claims",
+                    "app.auth.cache_token_claims",
                     new_callable=AsyncMock,
                 ):
                     result = await auth_backend.authenticate(request)
@@ -321,12 +319,12 @@ class TestAuthBackendWebSocketSuccess:
 
         with patch("app.auth.keycloak_manager", mock_kc_manager):
             with patch(
-                "app.utils.token_cache.get_cached_token_claims",
+                "app.auth.get_cached_token_claims",
                 new_callable=AsyncMock,
                 return_value=None,
             ):
                 with patch(
-                    "app.utils.token_cache.cache_token_claims",
+                    "app.auth.cache_token_claims",
                     new_callable=AsyncMock,
                 ):
                     result = await auth_backend.authenticate(request)
@@ -361,7 +359,7 @@ class TestAuthBackendEdgeCases:
 
         with patch("app.auth.keycloak_manager", mock_kc_manager):
             with patch(
-                "app.utils.token_cache.get_cached_token_claims",
+                "app.auth.get_cached_token_claims",
                 new_callable=AsyncMock,
                 return_value=None,
             ):
@@ -390,7 +388,7 @@ class TestAuthBackendEdgeCases:
 
         with patch("app.auth.keycloak_manager", mock_kc_manager):
             with patch(
-                "app.utils.token_cache.get_cached_token_claims",
+                "app.auth.get_cached_token_claims",
                 new_callable=AsyncMock,
                 return_value=None,
             ):
@@ -419,7 +417,7 @@ class TestAuthBackendEdgeCases:
 
         with patch("app.auth.keycloak_manager", mock_kc_manager):
             with patch(
-                "app.utils.token_cache.get_cached_token_claims",
+                "app.auth.get_cached_token_claims",
                 new_callable=AsyncMock,
                 return_value=None,
             ):
@@ -445,7 +443,7 @@ class TestAuthBackendEdgeCases:
 
         with patch("app.auth.keycloak_manager", mock_kc_manager):
             with patch(
-                "app.utils.token_cache.get_cached_token_claims",
+                "app.auth.get_cached_token_claims",
                 new_callable=AsyncMock,
                 return_value=None,
             ):
@@ -475,22 +473,20 @@ class TestAuthBackendRequestTypeDifferentiation:
 
         with patch("app.auth.keycloak_manager", mock_kc_manager):
             with patch(
-                "app.utils.token_cache.get_cached_token_claims",
+                "app.auth.get_cached_token_claims",
                 new_callable=AsyncMock,
                 return_value=None,
             ):
                 with patch(
-                    "app.utils.token_cache.cache_token_claims",
+                    "app.auth.cache_token_claims",
                     new_callable=AsyncMock,
                 ):
                     with patch(
-                        "app.utils.metrics.auth_backend_requests_total"
+                        "app.auth.auth_backend_requests_total"
                     ) as mock_metric:
-                        with patch(
-                            "app.utils.metrics.keycloak_token_validation_total"
-                        ):
+                        with patch("app.auth.keycloak_token_validation_total"):
                             with patch(
-                                "app.utils.metrics.keycloak_operation_duration_seconds"
+                                "app.auth.keycloak_operation_duration_seconds"
                             ):
                                 await auth_backend.authenticate(request)
 
@@ -517,22 +513,20 @@ class TestAuthBackendRequestTypeDifferentiation:
 
         with patch("app.auth.keycloak_manager", mock_kc_manager):
             with patch(
-                "app.utils.token_cache.get_cached_token_claims",
+                "app.auth.get_cached_token_claims",
                 new_callable=AsyncMock,
                 return_value=None,
             ):
                 with patch(
-                    "app.utils.token_cache.cache_token_claims",
+                    "app.auth.cache_token_claims",
                     new_callable=AsyncMock,
                 ):
                     with patch(
-                        "app.utils.metrics.auth_backend_requests_total"
+                        "app.auth.auth_backend_requests_total"
                     ) as mock_metric:
-                        with patch(
-                            "app.utils.metrics.keycloak_token_validation_total"
-                        ):
+                        with patch("app.auth.keycloak_token_validation_total"):
                             with patch(
-                                "app.utils.metrics.keycloak_operation_duration_seconds"
+                                "app.auth.keycloak_operation_duration_seconds"
                             ):
                                 await auth_backend.authenticate(request)
 
