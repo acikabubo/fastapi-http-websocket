@@ -1,6 +1,8 @@
 # FastAPI HTTP & WebSocket Template
 
-A production-ready FastAPI template implementing both HTTP REST API and WebSocket handlers with role-based access control (RBAC), Keycloak authentication, PostgreSQL database integration, and comprehensive monitoring.
+> **Note:** This is a hobby project used for research, testing, and exploring best practices in FastAPI development. Feel free to use it as a reference, report issues, or suggest improvements! Contributions and feedback are always welcome.
+
+A comprehensive FastAPI template implementing both HTTP REST API and WebSocket handlers with role-based access control (RBAC), Keycloak authentication, PostgreSQL database integration, and comprehensive monitoring.
 
 📚 **[View Full Documentation](https://acikabubo.github.io/fastapi-http-websocket/)** | 🚀 **[Quick Start Guide](https://acikabubo.github.io/fastapi-http-websocket/getting-started/quickstart/)** | 🎯 **[Development Guide](CLAUDE.md)**
 
