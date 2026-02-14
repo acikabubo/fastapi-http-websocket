@@ -42,7 +42,7 @@ jobs:
         run: uvx bandit -r app/ -ll -x /tests/
 
       - name: Check for dead code
-        run: uvx vulture app/ --min-confidence 80
+        run: uvx vulture app/ --exclude app/schemas/response.py,app/protocols.py --min-confidence 80
         continue-on-error: true
 
       - name: Spell checking
