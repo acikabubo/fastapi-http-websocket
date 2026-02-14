@@ -1,25 +1,21 @@
 import time
 from typing import Any
+from urllib.parse import parse_qsl
 
 from fastapi import APIRouter
 from google.protobuf.message import DecodeError
 from pydantic import ValidationError
 from starlette import status
 
+from app.api.ws.formats import select_message_format_strategy
 from app.api.ws.handlers import load_handlers
 from app.api.ws.websocket import PackageAuthWebSocketEndpoint
 from app.logging import logger
 from app.routing import pkg_router
-from app.schemas.proto import Request as ProtoRequest
-from app.schemas.request import RequestModel
 from app.settings import app_settings
 from app.types import RequestId, UserId, Username
 from app.utils.audit_logger import log_user_action
 from app.utils.metrics import MetricsCollector
-from app.utils.protobuf_converter import (
-    proto_to_pydantic_request,
-    serialize_response,
-)
 from app.utils.rate_limiter import rate_limiter
 
 load_handlers()  # type: ignore[no-untyped-call]
@@ -37,22 +33,44 @@ class Web(PackageAuthWebSocketEndpoint):
     - `on_receive`: Called when data is received on the WebSocket connection. Logs the received data, creates a `RequestModel` instance from the data, handles the request using the `pkg_router`, and sends the response back to the client.
     """
 
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        """
+        Initialize WebSocket endpoint with message format strategy.
+
+        Parses the 'format' query parameter to select appropriate strategy:
+        - ?format=json (default)
+        - ?format=protobuf
+        """
+        super().__init__(*args, **kwargs)
+
+        # Parse query parameters for format negotiation
+        query_params = dict(
+            parse_qsl(self.scope.get("query_string", b"").decode())
+        )
+        format_name = query_params.get("format", "json").lower()
+
+        # Select and initialize strategy
+        self.format_strategy = select_message_format_strategy(format_name)
+
+        logger.debug(
+            f"WebSocket initialized with {self.format_strategy.format_name} format"
+        )
+
     async def on_receive(  # type: ignore[no-untyped-def]
         self, websocket, data: dict[str, Any] | bytes
     ) -> None:
         """
         Handles incoming WebSocket messages by processing the request and sending back a response.
 
-        Supports both JSON and Protocol Buffers formats based on connection negotiation.
+        Uses message format strategy (selected during connection initialization) for serialization.
 
         This method performs the following steps:
         1. Checks message rate limit for the user (with fail-open on Redis errors)
-        2. Detects message format (JSON dict or Protobuf bytes)
-        3. Validates and converts the received data into a RequestModel
-        4. Routes the request through pkg_router with user authentication
-        5. Sends the response back in the same format (handles connection failures gracefully)
-        6. Logs audit trail for all operations (including errors)
-        7. Closes the connection on validation or critical errors
+        2. Deserializes data using the connection's format strategy
+        3. Routes the request through pkg_router with user authentication
+        4. Serializes and sends the response using the same format strategy
+        5. Logs audit trail for all operations (including errors)
+        6. Closes the connection on validation or critical errors
 
         Args:
             websocket: The WebSocket connection instance
@@ -92,23 +110,12 @@ class Web(PackageAuthWebSocketEndpoint):
             )
 
         try:
-            # Parse request based on message format
-            if isinstance(data, bytes):
-                # Protobuf format
-                proto_request = ProtoRequest()
-                proto_request.ParseFromString(data)  # May raise DecodeError
-                request = proto_to_pydantic_request(
-                    proto_request
-                )  # May raise ValueError
-                logger.debug(
-                    f"Received protobuf request: pkg_id={request.pkg_id}"
-                )
-                message_format = "protobuf"
-            else:
-                # JSON format
-                request = RequestModel(**data)  # May raise ValidationError
-                logger.debug(f"Received JSON request: {data}")
-                message_format = "json"
+            # Deserialize using strategy
+            request = await self.format_strategy.deserialize(data)
+            logger.debug(
+                f"Received {self.format_strategy.format_name} request: "
+                f"pkg_id={request.pkg_id}"
+            )
 
             # Track message processing duration
             start_time = time.time()
@@ -123,17 +130,21 @@ class Web(PackageAuthWebSocketEndpoint):
                 request.pkg_id, duration
             )
 
-            # Send response in the same format as request
+            # Serialize and send response using strategy
             try:
-                if message_format == "protobuf":
-                    response_data = serialize_response(response, "protobuf")
+                response_data = await self.format_strategy.serialize(response)
+
+                # Send appropriate message type
+                if isinstance(response_data, bytes):
                     await websocket.send_bytes(response_data)
                 else:
+                    # Use send_response() for JSON to handle UUID encoding
                     await websocket.send_response(response)
 
                 MetricsCollector.record_ws_message_sent()
                 logger.debug(
-                    f"Successfully sent {message_format} response for {request.pkg_id}"
+                    f"Successfully sent {self.format_strategy.format_name} response "
+                    f"for {request.pkg_id}"
                 )
             except (RuntimeError, ConnectionError) as e:
                 # Connection closed during send - log but don't crash

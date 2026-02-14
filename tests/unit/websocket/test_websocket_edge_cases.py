@@ -466,8 +466,13 @@ class TestProtobufEdgeCases:
     @pytest.mark.asyncio
     async def test_valid_protobuf_message_processing(self, mock_user):
         """Test successful protobuf message processing."""
+        # Include format=protobuf in query string for strategy selection
         consumer = Web(
-            scope={"type": "websocket", "user": mock_user},
+            scope={
+                "type": "websocket",
+                "user": mock_user,
+                "query_string": b"format=protobuf",
+            },
             receive=None,
             send=None,
         )
