@@ -211,6 +211,29 @@ uv run pytest -m load tests/load/ -v -s
 uv run pytest -m chaos tests/chaos/ -v -s
 ```
 
+### Docker Image Builds (CI/CD)
+
+```bash
+# Automated builds on push to main
+# - Workflow: .github/workflows/docker-build.yml
+# - Registry: GitHub Container Registry (ghcr.io)
+# - Platforms: linux/amd64, linux/arm64
+
+# Pull latest image
+docker pull ghcr.io/acikabubo/fastapi-http-websocket:latest
+
+# Pull specific commit
+docker pull ghcr.io/acikabubo/fastapi-http-websocket:main-abc1234
+
+# Run pulled image
+docker run -d -p 8000:8000 \
+  --name fastapi-app \
+  ghcr.io/acikabubo/fastapi-http-websocket:latest
+
+# Manual workflow trigger
+# GitHub UI → Actions → "Build and Push Docker Image" → Run workflow
+```
+
 ## 🔒 Security Quick Reference
 
 **📖 Complete Guide:** [Security Best Practices](docs_site/guides/security-best-practices.md)

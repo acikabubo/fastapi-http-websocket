@@ -662,7 +662,52 @@ services:
 
 ## Build and Deploy Workflow
 
-### CI/CD Pipeline Example
+### Automated Image Builds
+
+This project includes automated Docker image builds via GitHub Actions. Every push to `main` branch triggers a build and push to GitHub Container Registry (ghcr.io).
+
+**Workflow file:** `.github/workflows/docker-build.yml`
+
+**Features:**
+- ✅ Multi-platform builds (linux/amd64, linux/arm64)
+- ✅ Automatic tagging (latest, commit SHA, branch name)
+- ✅ Layer caching for faster builds
+- ✅ Push to GitHub Container Registry (ghcr.io)
+
+**Generated image tags:**
+```bash
+ghcr.io/acikabubo/fastapi-http-websocket:latest
+ghcr.io/acikabubo/fastapi-http-websocket:main-abc1234
+ghcr.io/acikabubo/fastapi-http-websocket:main
+```
+
+### Pulling Images
+
+```bash
+# Pull latest image
+docker pull ghcr.io/acikabubo/fastapi-http-websocket:latest
+
+# Pull specific commit
+docker pull ghcr.io/acikabubo/fastapi-http-websocket:main-abc1234
+
+# Run pulled image
+docker run -d -p 8000:8000 \
+  --name fastapi-app \
+  ghcr.io/acikabubo/fastapi-http-websocket:latest
+```
+
+### Manual Workflow Trigger
+
+The workflow can also be triggered manually from GitHub Actions UI:
+
+1. Go to **Actions** tab in GitHub
+2. Select **Build and Push Docker Image** workflow
+3. Click **Run workflow**
+4. Choose branch and click **Run**
+
+### CI/CD Pipeline Example (with Deployment)
+
+If you want to add automatic deployment after image build:
 
 ```yaml
 # .github/workflows/deploy.yml
@@ -680,7 +725,7 @@ jobs:
 
       - name: Build Docker image
         run: |
-          docker build -f docker/Dockerfile.production \
+          docker build -f docker/Dockerfile \
             -t ghcr.io/user/fastapi-app:${{ github.sha }} \
             -t ghcr.io/user/fastapi-app:latest .
 
