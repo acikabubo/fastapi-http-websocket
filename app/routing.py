@@ -259,6 +259,48 @@ class PackageRouter:
         handler = self.__get_handler(request.pkg_id)
         return await handler(request)
 
+    def verify_all_handlers_registered(self) -> None:
+        """
+        Verify that all PkgID enum values have registered handlers.
+
+        This method should be called at application startup to ensure
+        that all package IDs have corresponding handlers registered.
+
+        Excludes test-only PkgID constants (e.g., UNREGISTERED_HANDLER).
+
+        Raises:
+            RuntimeError: If any PkgID is missing a handler registration.
+
+        Example:
+            >>> # In app startup
+            >>> pkg_router.verify_all_handlers_registered()
+        """
+        # Exclude test-only constants that intentionally have no handler
+        excluded_pkg_ids = {
+            PkgID.UNREGISTERED_HANDLER,  # Used for testing "handler not found"
+        }
+
+        # Get all PkgID enum values except excluded ones
+        all_pkg_ids = set(PkgID) - excluded_pkg_ids
+        registered_pkg_ids = set(self.handlers_registry.keys())
+
+        # Find missing handlers
+        missing = all_pkg_ids - registered_pkg_ids
+
+        if missing:
+            missing_names = [
+                pkg.name for pkg in sorted(missing, key=lambda x: x.value)
+            ]
+            raise RuntimeError(
+                f"Missing handlers for {len(missing)} PkgID(s): {', '.join(missing_names)}. "
+                f"Each PkgID must have a registered handler."
+            )
+
+        logger.info(
+            f"Handler registry verification complete: "
+            f"{len(registered_pkg_ids)}/{len(all_pkg_ids)} handlers registered"
+        )
+
 
 pkg_router = PackageRouter()
 

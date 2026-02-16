@@ -121,3 +121,68 @@ class TestCollectSubrouters:
 
         # Check for known WebSocket route
         assert any("/web" in path for path in route_paths)
+
+
+class TestHandlerRegistryVerification:
+    """Test WebSocket handler registry verification."""
+
+    def test_verify_all_handlers_registered_success(self):
+        """Test verification passes when all handlers are registered."""
+        router = PackageRouter()
+
+        # Register all non-excluded PkgID handlers
+        for pkg_id in PkgID:
+            if pkg_id != PkgID.UNREGISTERED_HANDLER:
+
+                @router.register(pkg_id)
+                async def test_handler(request: RequestModel) -> ResponseModel:
+                    return ResponseModel.success(
+                        request.pkg_id, request.req_id, data={}
+                    )
+
+        # Should not raise - all handlers registered
+        router.verify_all_handlers_registered()
+
+    def test_verify_all_handlers_registered_missing_handler(self):
+        """Test verification fails when handler is missing."""
+        import pytest
+
+        router = PackageRouter()
+
+        # Only register some handlers (not all)
+        @router.register(PkgID.GET_AUTHORS)
+        async def test_handler(request: RequestModel) -> ResponseModel:
+            return ResponseModel.success(
+                request.pkg_id, request.req_id, data={}
+            )
+
+        # Should raise RuntimeError about missing handlers
+        with pytest.raises(RuntimeError, match="Missing handlers for"):
+            router.verify_all_handlers_registered()
+
+    def test_verify_all_handlers_excludes_test_constants(self):
+        """Test that UNREGISTERED_HANDLER is excluded from verification."""
+        router = PackageRouter()
+
+        # Register all handlers except UNREGISTERED_HANDLER
+        for pkg_id in PkgID:
+            if pkg_id != PkgID.UNREGISTERED_HANDLER:
+
+                @router.register(pkg_id)
+                async def test_handler(request: RequestModel) -> ResponseModel:
+                    return ResponseModel.success(
+                        request.pkg_id, request.req_id, data={}
+                    )
+
+        # Should pass - UNREGISTERED_HANDLER is intentionally excluded
+        router.verify_all_handlers_registered()
+
+    def test_verify_all_handlers_empty_registry(self):
+        """Test verification fails with empty registry."""
+        import pytest
+
+        router = PackageRouter()
+
+        # No handlers registered
+        with pytest.raises(RuntimeError, match="Missing handlers for"):
+            router.verify_all_handlers_registered()

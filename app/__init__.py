@@ -50,6 +50,12 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     await run_all_validations()
 
+    # Verify WebSocket handler registry completeness (fail-fast if handlers missing)
+    from app.routing import pkg_router
+
+    pkg_router.verify_all_handlers_registered()
+    logger.info("Verified WebSocket handler registry completeness")
+
     # Create the database and tables
     await wait_and_init_db()
     logger.info("Initialized database and tables")
