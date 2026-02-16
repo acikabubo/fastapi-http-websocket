@@ -23,7 +23,10 @@ help: ## Display this help message
 build: ## Build Docker containers
 	docker compose -f docker/docker-compose.yml build
 
-start: ## Start all services (PostgreSQL, Redis, Keycloak, Prometheus, Grafana, Loki)
+pull: ## Pull latest Docker image from GHCR
+	docker pull ghcr.io/acikabubo/fastapi-http-websocket:latest
+
+start: ## Start all services (uses pre-built image from GHCR, override with IMAGE_TAG=main-abc1234)
 	docker compose -f docker/docker-compose.yml up -d
 
 stop: ## Stop all Docker services

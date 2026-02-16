@@ -95,9 +95,9 @@ services:
       start_period: 5s
 
   hw-server:
-    build:
-      context: ..
-      dockerfile: docker/Dockerfile
+    # Use pre-built image from GitHub Container Registry
+    # Override with IMAGE_TAG env var: IMAGE_TAG=main-abc1234 docker compose up
+    image: ghcr.io/acikabubo/fastapi-http-websocket:${IMAGE_TAG:-latest}
 
     container_name: hw-server
     hostname: hw-server

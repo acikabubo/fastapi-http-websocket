@@ -24,21 +24,56 @@ uvicorn app:application --host 0.0.0.0 --reload
 
 ## Docker Development
 
-### Build and Run
+### Quick Start with Pre-Built Images
+
+The `hw-server` service uses pre-built images from GitHub Container Registry (GHCR) by default:
 
 ```bash
-# Build containers
-make build
+# Pull latest image from GHCR
+make pull
 
 # Start services (PostgreSQL, Redis, Keycloak, etc.)
 make start
 
 # Stop services
 make stop
-
-# Enter development shell
-make shell
 ```
+
+### Using Specific Image Versions
+
+```bash
+# Use latest image (default)
+make start
+
+# Use specific commit version
+IMAGE_TAG=main-abc1234 make start
+
+# Use specific tag
+IMAGE_TAG=v1.0.0 make start
+```
+
+### Development with Local Build
+
+For active development with code changes, use the shell service:
+
+```bash
+# Enter development shell (builds locally with volume mount)
+make shell
+
+# Inside the shell, run the server with hot-reload
+uvicorn app:application --host 0.0.0.0 --port 8000 --reload
+```
+
+### Manual Build (Optional)
+
+If you need to build containers locally:
+
+```bash
+# Build the shell service (for development)
+make build
+```
+
+**Note:** The `hw-server` service uses pre-built images from GHCR. The `shell` service extends `hw-server` but builds locally for development purposes.
 
 ## WebSocket Handler Management
 
