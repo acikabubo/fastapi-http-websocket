@@ -394,23 +394,24 @@ async def get_authors_handler(request: RequestModel) -> ResponseModel:
 
 #### Authentication Backend
 
-[app/auth.py](app/auth.py) - Keycloak JWT token validation:
+[app/auth.py](app/auth.py) - Keycloak JWT token validation powered by [`fastapi-keycloak-rbac`](https://github.com/acikabubo/fastapi-keycloak-rbac) ([PyPI](https://pypi.org/project/fastapi-keycloak-rbac/)):
 - Decodes JWT tokens from Authorization header (HTTP) or query string (WebSocket)
 - Extracts user data into `UserModel` with roles
 - Configurable excluded paths via `EXCLUDED_PATHS` regex
 
 #### RBAC Manager
 
-[app/managers/rbac_manager.py](app/managers/rbac_manager.py) - Singleton permission manager:
+[app/managers/rbac_manager.py](app/managers/rbac_manager.py) - Singleton permission manager backed by [`fastapi-keycloak-rbac`](https://github.com/acikabubo/fastapi-keycloak-rbac) ([PyPI](https://pypi.org/project/fastapi-keycloak-rbac/)):
 - `check_ws_permission(pkg_id, user)` - Validates WebSocket permissions from `pkg_router.permissions_registry`
 - `require_roles(*roles)` - FastAPI dependency for HTTP permission checking
 - Permissions defined in code via decorators, not external config files
 
 #### Keycloak Manager
 
-[app/managers/keycloak_manager.py](app/managers/keycloak_manager.py) - Singleton Keycloak client:
-- Manages `KeycloakAdmin` and `KeycloakOpenID` clients
-- `login(username, password)` - Returns access token
+[app/managers/keycloak_manager.py](app/managers/keycloak_manager.py) - Singleton Keycloak client wrapping [`fastapi-keycloak-rbac`](https://github.com/acikabubo/fastapi-keycloak-rbac) ([PyPI](https://pypi.org/project/fastapi-keycloak-rbac/)):
+- Adds circuit breaker protection (pybreaker) and Prometheus metrics on top of the package
+- `login_async(username, password)` - Returns access token
+- `decode_token(token)` - Decodes and validates a JWT token
 - Configured via environment variables
 
 #### WebSocket Connection Manager
