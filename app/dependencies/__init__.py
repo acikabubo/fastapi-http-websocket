@@ -23,13 +23,16 @@ Example:
 """
 
 from functools import lru_cache
-from typing import Annotated, Any
+from typing import Annotated
 
 from fastapi import Depends
+from fastapi_keycloak_rbac.manager import KeycloakManager
+from fastapi_keycloak_rbac.rbac import RBACManager
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.managers.keycloak_manager import KeycloakManager, keycloak_manager
-from app.managers.rbac_manager import RBACManager, rbac_manager
+from app.managers.keycloak_manager import keycloak_manager
+from app.managers.rbac_manager import rbac_manager
+from app.repositories.author_repository import AuthorRepository
 from app.storage.db import get_session
 
 # ============================================================================
@@ -81,7 +84,7 @@ KeycloakDep = Annotated[KeycloakManager, Depends(get_keycloak_manager)]
 # ============================================================================
 
 
-def get_author_repository(session: SessionDep) -> Any:
+def get_author_repository(session: SessionDep) -> AuthorRepository:
     """
     Get author repository with injected database session.
 
@@ -91,9 +94,7 @@ def get_author_repository(session: SessionDep) -> Any:
     Returns:
         AuthorRepository instance with session.
     """
-    from app.repositories.author_repository import AuthorRepository
-
     return AuthorRepository(session)
 
 
-AuthorRepoDep = Annotated[Any, Depends(get_author_repository)]
+AuthorRepoDep = Annotated[AuthorRepository, Depends(get_author_repository)]

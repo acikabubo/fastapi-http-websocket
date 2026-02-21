@@ -113,7 +113,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):  # type: ignore[misc]
             Rate limit key string.
         """
         # Try to get user from request (set by authentication middleware)
-        user: UserModel = getattr(request, "user", None)  # type: ignore[assignment]
+        user: UserModel | None = getattr(request, "user", None)
 
         if user and user.username:
             return f"user:{user.username}"
