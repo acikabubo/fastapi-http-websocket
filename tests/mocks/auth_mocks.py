@@ -76,6 +76,18 @@ def create_mock_keycloak_manager():
         }
     )
 
+    # Top-level async decode_token (used by package AuthBackend)
+    manager_mock.decode_token = AsyncMock(
+        return_value={
+            "sub": "user-id-123",
+            "preferred_username": "testuser",
+            "email": "test@example.com",
+            "realm_access": {"roles": ["admin", "user"]},
+            "azp": "test-client",
+            "resource_access": {"test-client": {"roles": ["admin", "user"]}},
+        }
+    )
+
     manager_mock.admin = Mock()
     return manager_mock
 
