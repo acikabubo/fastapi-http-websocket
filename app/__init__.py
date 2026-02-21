@@ -8,6 +8,7 @@ from fastapi import FastAPI
 
 from app.auth import AuthBackend
 from app.logging import logger
+from app.managers.keycloak_manager import keycloak_manager
 from app.middlewares.pipeline import MiddlewarePipeline
 from app.routing import collect_subrouters
 from app.settings import app_settings
@@ -219,7 +220,7 @@ def application() -> FastAPI:
     # Note: RBAC is now handled via FastAPI dependencies (require_roles) instead of middleware
     pipeline = MiddlewarePipeline(
         allowed_hosts=app_settings.ALLOWED_HOSTS,
-        auth_backend=AuthBackend(),
+        auth_backend=AuthBackend(manager=keycloak_manager),
     )
     pipeline.validate_dependencies()
     pipeline.apply_to_app(app)
