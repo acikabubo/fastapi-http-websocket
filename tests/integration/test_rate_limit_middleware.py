@@ -11,7 +11,7 @@ import pytest
 from fastapi import FastAPI, Request, Response
 
 from app.middlewares.rate_limit import RateLimitMiddleware
-from app.schemas.user import UserModel
+from fastapi_keycloak_rbac.models import UserModel
 
 
 @pytest.fixture

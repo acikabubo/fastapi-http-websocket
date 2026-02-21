@@ -27,7 +27,7 @@ from app.commands.author_commands import (
     UpdateAuthorInput,
 )
 from app.dependencies import AuthorRepoDep
-from app.dependencies.permissions import require_roles
+from fastapi_keycloak_rbac.dependencies import require_roles
 from app.models.author import Author
 from app.schemas.response import PaginatedResponseModel
 from app.settings import app_settings

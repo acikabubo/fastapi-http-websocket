@@ -6,6 +6,7 @@
 *.pyc
 logs/*
 .hypothesis/*
+tests/.hypothesis/*
 
 # MkDocs build output
 site/

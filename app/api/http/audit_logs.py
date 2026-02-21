@@ -6,7 +6,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, Query
 from sqlmodel import select
 
-from app.dependencies.permissions import require_roles
+from fastapi_keycloak_rbac.dependencies import require_roles
 from app.models.user_action import UserAction
 from app.schemas.response import PaginatedResponseModel
 from app.settings import app_settings

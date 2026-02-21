@@ -5,8 +5,8 @@ from contextlib import asynccontextmanager
 from typing import Any
 
 from fastapi import FastAPI
+from fastapi_keycloak_rbac.backend import AuthBackend
 
-from app.auth import AuthBackend
 from app.logging import logger
 from app.managers.keycloak_manager import keycloak_manager
 from app.middlewares.pipeline import MiddlewarePipeline

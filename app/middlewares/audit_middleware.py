@@ -10,7 +10,7 @@ from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import ASGIApp
 
-from app.schemas.user import UserModel
+from fastapi_keycloak_rbac.models import UserModel
 from app.settings import app_settings
 from app.types import AuditOutcome, RequestId, UserId, Username
 from app.utils.audit_logger import extract_ip_address, log_user_action

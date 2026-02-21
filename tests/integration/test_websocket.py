@@ -16,7 +16,7 @@ from app.api.ws.consumers.web import Web
 from app.api.ws.websocket import PackageAuthWebSocketEndpoint
 from app.routing import pkg_router
 from app.schemas.request import RequestModel
-from app.schemas.user import UserModel
+from fastapi_keycloak_rbac.models import UserModel
 from tests.mocks.websocket_mocks import (
     create_mock_connection_manager,
     create_mock_websocket,

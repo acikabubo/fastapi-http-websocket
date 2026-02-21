@@ -12,7 +12,7 @@ from fastapi import FastAPI, Response
 from starlette.requests import Request
 
 from app.middlewares.audit_middleware import AuditMiddleware
-from app.schemas.user import UserModel
+from fastapi_keycloak_rbac.models import UserModel
 
 
 @pytest.fixture

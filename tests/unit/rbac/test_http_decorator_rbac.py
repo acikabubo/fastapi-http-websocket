@@ -11,8 +11,8 @@ import pytest
 from fastapi import Depends, FastAPI, Request
 from starlette.authentication import UnauthenticatedUser
 
-from app.managers.rbac_manager import RBACManager
-from app.schemas.user import UserModel
+from fastapi_keycloak_rbac.rbac import RBACManager
+from fastapi_keycloak_rbac.models import UserModel
 
 
 rbac = RBACManager()

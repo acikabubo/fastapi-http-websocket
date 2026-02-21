@@ -9,10 +9,10 @@ import pytest
 from unittest.mock import patch
 
 from app.api.ws.constants import PkgID, RSPCode
-from app.managers.rbac_manager import RBACManager
+from fastapi_keycloak_rbac.rbac import RBACManager
 from app.routing import pkg_router
 from app.schemas.request import RequestModel
-from app.schemas.user import UserModel
+from fastapi_keycloak_rbac.models import UserModel
 
 
 class TestMockAuthentication:

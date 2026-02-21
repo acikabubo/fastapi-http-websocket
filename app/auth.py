@@ -2,11 +2,10 @@ from typing import Annotated
 
 from fastapi import Depends, HTTPException
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
-from fastapi_keycloak_rbac.backend import AuthBackend as AuthBackend  # noqa: F401
 from keycloak.exceptions import KeycloakAuthenticationError
 
 from app.managers.keycloak_manager import keycloak_manager
-from app.schemas.user import UserModel
+from fastapi_keycloak_rbac.models import UserModel
 
 
 # USED FOR DEVELOP

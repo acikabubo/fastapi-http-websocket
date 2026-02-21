@@ -15,7 +15,7 @@ import time
 import pytest
 from keycloak.exceptions import KeycloakAuthenticationError
 
-from app.schemas.user import UserModel
+from fastapi_keycloak_rbac.models import UserModel
 
 
 @pytest.mark.integration

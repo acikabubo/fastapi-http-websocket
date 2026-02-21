@@ -10,7 +10,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from app.schemas.user import UserModel
+from fastapi_keycloak_rbac.models import UserModel
 from app.storage.redis import (
     REventHandler,
     RedisHandler,
