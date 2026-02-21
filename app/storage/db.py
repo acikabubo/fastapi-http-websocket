@@ -222,10 +222,6 @@ async def get_paginated_results(
             apply_filters_func=apply_filters,
         )
 
-        print()
-        print(f"STRATEGY: {strategy}")
-        print()
-
         return await strategy.paginate(query, model, per_page)
 
 
