@@ -12,7 +12,7 @@ from starlette.websockets import WebSocket, WebSocketDisconnect
 from app.logging import logger, set_log_context
 from app.managers.websocket_connection_manager import connection_manager
 from app.schemas.response import BroadcastDataModel, ResponseModel
-from app.schemas.user import UserModel
+from fastapi_keycloak_rbac.models import UserModel
 from app.settings import app_settings
 from app.storage.redis import get_auth_redis_connection
 from app.utils.metrics import MetricsCollector

@@ -30,7 +30,7 @@ from app.managers.keycloak_manager import KeycloakManager
 from app.models.author import Author
 from app.schemas.request import RequestModel
 from app.schemas.response import ResponseModel
-from app.schemas.user import UserModel
+from fastapi_keycloak_rbac.models import UserModel
 
 # Load WebSocket handlers to register them with the router
 from app.api.ws.handlers import load_handlers

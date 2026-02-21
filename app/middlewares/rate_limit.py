@@ -5,11 +5,11 @@ Provides request rate limiting for HTTP endpoints based on user ID or IP address
 """
 
 from fastapi import Request, Response, status
+from fastapi_keycloak_rbac.models import UserModel
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import ASGIApp
 
-from app.logging import logger, set_log_context
-from app.schemas.user import UserModel
+from app.logging import logger
 from app.settings import app_settings
 from app.utils.ip_utils import get_client_ip
 from app.utils.metrics import MetricsCollector

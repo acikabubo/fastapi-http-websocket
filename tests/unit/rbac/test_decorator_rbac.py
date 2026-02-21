@@ -9,7 +9,7 @@ from app.api.ws.constants import PkgID
 from app.routing import PackageRouter
 from app.schemas.request import RequestModel
 from app.schemas.response import ResponseModel
-from app.schemas.user import UserModel
+from fastapi_keycloak_rbac.models import UserModel
 
 
 def create_test_user(username="test_user", roles=None):
@@ -183,7 +183,7 @@ class TestRBACManagerIntegration:
 
     def test_rbac_manager_uses_decorator_permissions(self):
         """Test that RBACManager reads permissions from decorator."""
-        from app.managers.rbac_manager import RBACManager
+        from fastapi_keycloak_rbac.rbac import RBACManager
         from app.routing import pkg_router
 
         # RBACManager is a singleton, it should use the global pkg_router
@@ -200,7 +200,7 @@ class TestRBACManagerIntegration:
 
     def test_rbac_manager_denies_without_role(self):
         """Test that RBACManager denies access without required role."""
-        from app.managers.rbac_manager import RBACManager
+        from fastapi_keycloak_rbac.rbac import RBACManager
         from app.routing import pkg_router
 
         rbac = RBACManager()
@@ -215,7 +215,7 @@ class TestRBACManagerIntegration:
 
     def test_rbac_manager_allows_public_endpoint(self):
         """Test that RBACManager allows access to public endpoints."""
-        from app.managers.rbac_manager import RBACManager
+        from fastapi_keycloak_rbac.rbac import RBACManager
         from app.routing import pkg_router
 
         rbac = RBACManager()

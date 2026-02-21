@@ -8,7 +8,7 @@ from fastapi.security import HTTPBasicCredentials
 from keycloak.exceptions import KeycloakAuthenticationError
 
 from app.auth import basic_auth_keycloak_user
-from app.schemas.user import UserModel
+from fastapi_keycloak_rbac.models import UserModel
 from tests.mocks.auth_mocks import create_mock_keycloak_manager
 
 

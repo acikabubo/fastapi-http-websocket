@@ -18,15 +18,6 @@ from app.utils.metrics import (
 )
 
 
-def _make_settings() -> KeycloakAuthSettings:
-    """Build KeycloakAuthSettings from project app_settings."""
-    return KeycloakAuthSettings(
-        server_url=f"{app_settings.KEYCLOAK_BASE_URL}/",
-        realm=app_settings.KEYCLOAK_REALM,
-        client_id=app_settings.KEYCLOAK_CLIENT_ID,
-    )
-
-
 class _KeycloakManagerWithMetrics:
     """
     Wraps the package KeycloakManager adding circuit breaker and Prometheus metrics.
@@ -36,7 +27,13 @@ class _KeycloakManagerWithMetrics:
     """
 
     def __init__(self) -> None:
-        self._manager = _BaseKeycloakManager(settings=_make_settings())
+        self._manager = _BaseKeycloakManager(
+            settings=KeycloakAuthSettings(
+                server_url=f"{app_settings.KEYCLOAK_BASE_URL}/",
+                realm=app_settings.KEYCLOAK_REALM,
+                client_id=app_settings.KEYCLOAK_CLIENT_ID,
+            )
+        )
         # Expose openid client directly (used by auth.py for basic auth)
         self.openid = self._manager.openid
 
