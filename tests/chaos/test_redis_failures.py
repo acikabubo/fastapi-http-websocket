@@ -27,7 +27,7 @@ class TestRedisConnectionFailures:
         limiter = RateLimiter()
 
         with patch(
-            "app.utils.rate_limiter.get_redis_connection",
+            "app.utils.redis_mixin.get_redis_connection",
             AsyncMock(return_value=None),
         ):
             # Rate limiter should fail open (allow requests)
@@ -53,7 +53,7 @@ class TestRedisConnectionFailures:
         )
 
         with patch(
-            "app.utils.rate_limiter.get_redis_connection",
+            "app.utils.redis_mixin.get_redis_connection",
             AsyncMock(return_value=mock_redis),
         ):
             # Should handle timeout gracefully
@@ -78,7 +78,7 @@ class TestRedisConnectionFailures:
         )
 
         with patch(
-            "app.utils.rate_limiter.get_redis_connection",
+            "app.utils.redis_mixin.get_redis_connection",
             AsyncMock(return_value=mock_redis),
         ):
             # Should handle connection error gracefully
@@ -98,7 +98,7 @@ class TestRedisConnectionFailures:
         limiter = ConnectionLimiter()
 
         with patch(
-            "app.utils.rate_limiter.get_redis_connection",
+            "app.utils.redis_mixin.get_redis_connection",
             AsyncMock(return_value=None),
         ):
             # Should deny connection when Redis unavailable (fail-closed for security)
@@ -122,7 +122,7 @@ class TestRedisConnectionFailures:
         )
 
         with patch(
-            "app.utils.rate_limiter.get_redis_connection",
+            "app.utils.redis_mixin.get_redis_connection",
             AsyncMock(return_value=mock_redis),
         ):
             # Should handle error gracefully
@@ -153,7 +153,7 @@ class TestRedisPartialFailures:
         )
 
         with patch(
-            "app.utils.rate_limiter.get_redis_connection",
+            "app.utils.redis_mixin.get_redis_connection",
             AsyncMock(return_value=mock_redis),
         ):
             # Should still process the request even if EXPIRE fails
@@ -178,7 +178,7 @@ class TestRedisPartialFailures:
         )  # Expire fails
 
         with patch(
-            "app.utils.rate_limiter.get_redis_connection",
+            "app.utils.redis_mixin.get_redis_connection",
             AsyncMock(return_value=mock_redis),
         ):
             # Should still add connection even if EXPIRE fails
@@ -202,7 +202,7 @@ class TestRedisIntermittentFailures:
 
         # First call: Redis fails
         with patch(
-            "app.utils.rate_limiter.get_redis_connection",
+            "app.utils.redis_mixin.get_redis_connection",
             AsyncMock(return_value=None),
         ):
             is_allowed, remaining = await limiter.check_rate_limit(
@@ -224,7 +224,7 @@ class TestRedisIntermittentFailures:
         mock_redis.expire = AsyncMock(return_value=True)
 
         with patch(
-            "app.utils.rate_limiter.get_redis_connection",
+            "app.utils.redis_mixin.get_redis_connection",
             AsyncMock(return_value=mock_redis),
         ):
             is_allowed, remaining = await limiter.check_rate_limit(
@@ -246,7 +246,7 @@ class TestRedisIntermittentFailures:
         mock_redis_1.expire = AsyncMock(return_value=True)
 
         with patch(
-            "app.utils.rate_limiter.get_redis_connection",
+            "app.utils.redis_mixin.get_redis_connection",
             AsyncMock(return_value=mock_redis_1),
         ):
             limiter1 = ConnectionLimiter()
@@ -255,7 +255,7 @@ class TestRedisIntermittentFailures:
 
         # Round 2: Redis fails (new limiter instance to avoid caching)
         with patch(
-            "app.utils.rate_limiter.get_redis_connection",
+            "app.utils.redis_mixin.get_redis_connection",
             AsyncMock(return_value=None),
         ):
             limiter2 = ConnectionLimiter()
@@ -273,7 +273,7 @@ class TestRedisIntermittentFailures:
         mock_redis_3.expire = AsyncMock(return_value=True)
 
         with patch(
-            "app.utils.rate_limiter.get_redis_connection",
+            "app.utils.redis_mixin.get_redis_connection",
             AsyncMock(return_value=mock_redis_3),
         ):
             limiter3 = ConnectionLimiter()

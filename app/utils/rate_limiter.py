@@ -7,15 +7,15 @@ connections using Redis as the backend storage.
 
 import time
 
-from redis.asyncio import Redis, RedisError as AsyncRedisError
+from redis.asyncio import RedisError as AsyncRedisError
 from redis.exceptions import RedisError as SyncRedisError
 
 from app.logging import logger
 from app.settings import app_settings
-from app.storage.redis import get_redis_connection
+from app.utils.redis_mixin import RedisClientMixin
 
 
-class RateLimiter:
+class RateLimiter(RedisClientMixin):
     """
     Redis-based rate limiter using sliding window algorithm.
 
@@ -25,14 +25,8 @@ class RateLimiter:
 
     def __init__(self) -> None:
         """Initialize the rate limiter with Redis connection."""
-        self.redis: Redis | None = None
+        super().__init__()
         self.enabled = app_settings.RATE_LIMIT_ENABLED
-
-    async def _get_redis(self) -> Redis | None:
-        """Get or create Redis connection."""
-        if self.redis is None:
-            self.redis = await get_redis_connection()
-        return self.redis
 
     async def check_rate_limit(
         self,
@@ -163,7 +157,7 @@ class RateLimiter:
             )
 
 
-class ConnectionLimiter:
+class ConnectionLimiter(RedisClientMixin):
     """
     Manages per-user connection limits for WebSocket connections.
 
@@ -172,14 +166,8 @@ class ConnectionLimiter:
 
     def __init__(self) -> None:
         """Initialize the connection limiter with Redis connection."""
-        self.redis: Redis | None = None
+        super().__init__()
         self.max_connections = app_settings.WS_MAX_CONNECTIONS_PER_USER
-
-    async def _get_redis(self) -> Redis | None:
-        """Get or create Redis connection."""
-        if self.redis is None:
-            self.redis = await get_redis_connection()
-        return self.redis
 
     async def add_connection(self, user_id: str, connection_id: str) -> bool:
         """

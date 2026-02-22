@@ -24,9 +24,7 @@ def mock_redis():
 @pytest.fixture
 def rate_limiter_with_mock_redis(mock_redis):
     """Provides a RateLimiter instance with mocked Redis."""
-    with patch(
-        "app.utils.rate_limiter.get_redis_connection"
-    ) as mock_get_redis:
+    with patch("app.utils.redis_mixin.get_redis_connection") as mock_get_redis:
         mock_get_redis.return_value = mock_redis
 
         limiter = RateLimiter()
@@ -39,9 +37,7 @@ def rate_limiter_with_mock_redis(mock_redis):
 @pytest.fixture
 def connection_limiter_with_mock_redis(mock_redis):
     """Provides a ConnectionLimiter instance with mocked Redis."""
-    with patch(
-        "app.utils.rate_limiter.get_redis_connection"
-    ) as mock_get_redis:
+    with patch("app.utils.redis_mixin.get_redis_connection") as mock_get_redis:
         mock_get_redis.return_value = mock_redis
 
         limiter = ConnectionLimiter()
@@ -429,7 +425,7 @@ class TestRateLimiterDisabled:
     async def test_rate_limiter_disabled_allows_all(self, mock_redis):
         """Test that disabled rate limiter allows all requests."""
         with patch(
-            "app.utils.rate_limiter.get_redis_connection"
+            "app.utils.redis_mixin.get_redis_connection"
         ) as mock_get_redis:
             mock_get_redis.return_value = mock_redis
 
@@ -449,7 +445,7 @@ class TestRateLimiterDisabled:
     async def test_rate_limiter_none_redis_allows_all(self):
         """Test that rate limiter with None redis allows all requests."""
         with patch(
-            "app.utils.rate_limiter.get_redis_connection"
+            "app.utils.redis_mixin.get_redis_connection"
         ) as mock_get_redis:
             mock_get_redis.return_value = None  # Redis unavailable
 

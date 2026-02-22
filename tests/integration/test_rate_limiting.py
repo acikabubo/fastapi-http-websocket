@@ -35,9 +35,7 @@ def rate_limiter_with_mock_redis(mock_redis):
     Yields:
         RateLimiter: Rate limiter with mocked Redis
     """
-    with patch(
-        "app.utils.rate_limiter.get_redis_connection"
-    ) as mock_get_redis:
+    with patch("app.utils.redis_mixin.get_redis_connection") as mock_get_redis:
         mock_get_redis.return_value = mock_redis
 
         limiter = RateLimiter()
@@ -58,9 +56,7 @@ def connection_limiter_with_mock_redis(mock_redis):
     Yields:
         ConnectionLimiter: Connection limiter with mocked Redis
     """
-    with patch(
-        "app.utils.rate_limiter.get_redis_connection"
-    ) as mock_get_redis:
+    with patch("app.utils.redis_mixin.get_redis_connection") as mock_get_redis:
         mock_get_redis.return_value = mock_redis
 
         limiter = ConnectionLimiter()
@@ -274,7 +270,7 @@ class TestHTTPRateLimitMiddleware:
 
         # Test allowed request
         with patch(
-            "app.utils.rate_limiter.get_redis_connection",
+            "app.utils.redis_mixin.get_redis_connection",
             AsyncMock(return_value=mock_redis),
         ):
             mock_redis.zcard.return_value = 5
@@ -286,7 +282,7 @@ class TestHTTPRateLimitMiddleware:
 
         # Test denied request
         with patch(
-            "app.utils.rate_limiter.get_redis_connection",
+            "app.utils.redis_mixin.get_redis_connection",
             AsyncMock(return_value=mock_redis),
         ):
             mock_redis.zcard.return_value = 60
@@ -344,7 +340,7 @@ class TestRateLimiterErrorHandling:
         from app.utils.rate_limiter import RateLimiter
 
         with patch(
-            "app.utils.rate_limiter.get_redis_connection",
+            "app.utils.redis_mixin.get_redis_connection",
             return_value=None,
         ):
             limiter = RateLimiter()
@@ -371,7 +367,7 @@ class TestRateLimiterErrorHandling:
 
         with (
             patch(
-                "app.utils.rate_limiter.get_redis_connection",
+                "app.utils.redis_mixin.get_redis_connection",
                 return_value=mock_redis,
             ),
             patch("app.utils.rate_limiter.app_settings") as mock_settings,
@@ -402,7 +398,7 @@ class TestRateLimiterErrorHandling:
 
         with (
             patch(
-                "app.utils.rate_limiter.get_redis_connection",
+                "app.utils.redis_mixin.get_redis_connection",
                 return_value=mock_redis,
             ),
             patch("app.utils.rate_limiter.app_settings") as mock_settings,
@@ -428,7 +424,7 @@ class TestRateLimiterErrorHandling:
         mock_redis.zcard.side_effect = ValueError("Invalid value")
 
         with patch(
-            "app.utils.rate_limiter.get_redis_connection",
+            "app.utils.redis_mixin.get_redis_connection",
             return_value=mock_redis,
         ):
             limiter = RateLimiter()
@@ -449,7 +445,7 @@ class TestRateLimiterErrorHandling:
         from app.utils.rate_limiter import RateLimiter
 
         with patch(
-            "app.utils.rate_limiter.get_redis_connection",
+            "app.utils.redis_mixin.get_redis_connection",
             return_value=None,
         ):
             limiter = RateLimiter()
@@ -466,7 +462,7 @@ class TestRateLimiterErrorHandling:
         mock_redis.delete.side_effect = RedisError("Connection error")
 
         with patch(
-            "app.utils.rate_limiter.get_redis_connection",
+            "app.utils.redis_mixin.get_redis_connection",
             return_value=mock_redis,
         ):
             limiter = RateLimiter()
@@ -484,7 +480,7 @@ class TestConnectionLimiterErrorHandling:
         from app.utils.rate_limiter import ConnectionLimiter
 
         with patch(
-            "app.utils.rate_limiter.get_redis_connection",
+            "app.utils.redis_mixin.get_redis_connection",
             return_value=None,
         ):
             limiter = ConnectionLimiter()
@@ -505,7 +501,7 @@ class TestConnectionLimiterErrorHandling:
         mock_redis.scard.side_effect = RedisError("Connection error")
 
         with patch(
-            "app.utils.rate_limiter.get_redis_connection",
+            "app.utils.redis_mixin.get_redis_connection",
             return_value=mock_redis,
         ):
             limiter = ConnectionLimiter()
@@ -525,7 +521,7 @@ class TestConnectionLimiterErrorHandling:
         mock_redis.scard.side_effect = ValueError("Invalid value")
 
         with patch(
-            "app.utils.rate_limiter.get_redis_connection",
+            "app.utils.redis_mixin.get_redis_connection",
             return_value=mock_redis,
         ):
             limiter = ConnectionLimiter()
@@ -543,7 +539,7 @@ class TestConnectionLimiterErrorHandling:
         from app.utils.rate_limiter import ConnectionLimiter
 
         with patch(
-            "app.utils.rate_limiter.get_redis_connection",
+            "app.utils.redis_mixin.get_redis_connection",
             return_value=None,
         ):
             limiter = ConnectionLimiter()
@@ -562,7 +558,7 @@ class TestConnectionLimiterErrorHandling:
         mock_redis.srem.side_effect = RedisError("Connection error")
 
         with patch(
-            "app.utils.rate_limiter.get_redis_connection",
+            "app.utils.redis_mixin.get_redis_connection",
             return_value=mock_redis,
         ):
             limiter = ConnectionLimiter()
@@ -578,7 +574,7 @@ class TestConnectionLimiterErrorHandling:
         from app.utils.rate_limiter import ConnectionLimiter
 
         with patch(
-            "app.utils.rate_limiter.get_redis_connection",
+            "app.utils.redis_mixin.get_redis_connection",
             return_value=None,
         ):
             limiter = ConnectionLimiter()
@@ -597,7 +593,7 @@ class TestConnectionLimiterErrorHandling:
         mock_redis.scard.side_effect = RedisError("Connection error")
 
         with patch(
-            "app.utils.rate_limiter.get_redis_connection",
+            "app.utils.redis_mixin.get_redis_connection",
             return_value=mock_redis,
         ):
             limiter = ConnectionLimiter()
