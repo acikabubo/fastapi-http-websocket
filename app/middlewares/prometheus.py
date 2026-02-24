@@ -72,5 +72,8 @@ class PrometheusMiddleware(BaseHTTPMiddleware):  # type: ignore[misc]
             MetricsCollector.record_http_request_end(
                 method, path, 500, duration
             )
+            MetricsCollector.record_app_error(
+                error_type=type(exc).__name__, handler=path
+            )
 
             raise exc

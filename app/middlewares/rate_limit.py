@@ -12,6 +12,7 @@ from app.logging import logger
 from app.schemas.user import UserModel
 from app.settings import app_settings
 from app.utils.ip_utils import get_client_ip
+from app.utils.metrics import MetricsCollector
 from app.utils.rate_limiter import rate_limiter
 
 
@@ -69,6 +70,10 @@ class RateLimitMiddleware(BaseHTTPMiddleware):  # type: ignore[misc]
                 f"Rate limit exceeded for {rate_limit_key} "
                 f"on {request.method} {request.url.path}"
             )
+            limit_type = (
+                "per_user" if rate_limit_key.startswith("user:") else "per_ip"
+            )
+            MetricsCollector.record_rate_limit_hit(limit_type)
             return Response(
                 content='{"detail":"Rate limit exceeded. Please try again later."}',
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,

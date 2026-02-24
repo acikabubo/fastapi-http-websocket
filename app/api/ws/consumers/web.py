@@ -97,6 +97,7 @@ class Web(PackageAuthWebSocketEndpoint):
                 logger.warning(
                     f"WebSocket message rate limit exceeded for user {self.user.username}"
                 )
+                MetricsCollector.record_rate_limit_hit("websocket")
                 await websocket.close(
                     code=status.WS_1008_POLICY_VIOLATION,
                     reason="Message rate limit exceeded",
@@ -204,6 +205,9 @@ class Web(PackageAuthWebSocketEndpoint):
             logger.error(
                 f"Unexpected error processing message from {self.user.username}: {e}",
                 exc_info=True,
+            )
+            MetricsCollector.record_app_error(
+                error_type=type(e).__name__, handler="websocket"
             )
 
             # Log unexpected error

@@ -601,7 +601,7 @@
         "type": "loki",
         "uid": "loki"
       },
-      "description": "Rate limit violations and warnings. Shows when users hit rate limits. LogQL: {service=~\"shell|hw-server\"} | json |~ \"(?i)(rate limit|too many requests)\"",
+      "description": "Rate limit violations. Matches warning logs and uvicorn access logs with HTTP 429. LogQL: {service=~\\\"shell|hw-server\\\"} |~ \\\"(?i)(rate.?limit|too many requests|status_code\\\": 429|HTTP 429)\\\"",
       "gridPos": {
         "h": 8,
         "w": 12,
@@ -626,7 +626,7 @@
             "uid": "loki"
           },
           "editorMode": "code",
-          "expr": "{service=~\"shell|hw-server\"} | json |~ \"(?i)(rate limit|too many requests)\"",
+          "expr": "{service=~\"shell|hw-server\"} |~ \"(?i)(rate.?limit|too many requests|\\\"status_code\\\": 429|HTTP/[0-9.]+ 429)\"",
           "queryType": "range",
           "refId": "A"
         }
