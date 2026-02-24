@@ -26,8 +26,6 @@ import time
 from collections import OrderedDict
 from typing import Any, TypeVar
 
-from redis.exceptions import RedisError
-
 from app.logging import logger
 from app.storage.redis import RedisPool
 from app.utils.metrics.redis import (
@@ -36,6 +34,7 @@ from app.utils.metrics.redis import (
     memory_cache_misses_total,
     memory_cache_size,
 )
+from app.utils.redis_safe import redis_safe
 
 T = TypeVar("T")
 
@@ -156,29 +155,25 @@ class CacheManager:
             memory_cache_misses_total.inc()
 
         # Try Redis cache (L2)
-        try:
-            redis = await RedisPool.get_instance()
-            if redis is None:
-                logger.warning("Redis unavailable, cache lookup failed")
-                return None
+        return await self._get_from_redis(key)
 
-            cached_value = await redis.get(key)
-            if cached_value is not None:
-                # Redis hit - deserialize and populate memory cache
-                value = json.loads(cached_value)
-                logger.debug(f"Redis cache hit: {key}")
-
-                # Populate memory cache for future requests
-                await self._set_memory(key, value, ttl=self.default_ttl)
-
-                return value
-
-            logger.debug(f"Cache miss (both tiers): {key}")
+    @redis_safe(fail_value=None, operation_name="cache_manager_get_redis")
+    async def _get_from_redis(self, key: str) -> Any | None:
+        """Fetch from Redis (L2) and back-fill memory cache on hit."""
+        redis = await RedisPool.get_instance()
+        if redis is None:
+            logger.warning("Redis unavailable, cache lookup failed")
             return None
 
-        except (RedisError, ConnectionError, json.JSONDecodeError) as ex:
-            logger.error(f"Error reading from Redis cache: {ex}")
-            return None
+        cached_value = await redis.get(key)
+        if cached_value is not None:
+            value = json.loads(cached_value)
+            logger.debug(f"Redis cache hit: {key}")
+            await self._set_memory(key, value, ttl=self.default_ttl)
+            return value
+
+        logger.debug(f"Cache miss (both tiers): {key}")
+        return None
 
     async def set(self, key: str, value: Any, ttl: int | None = None) -> None:
         """
@@ -196,21 +191,19 @@ class CacheManager:
         await self._set_memory(key, value, ttl=ttl)
 
         # Set in Redis cache (L2)
-        try:
-            redis = await RedisPool.get_instance()
-            if redis is None:
-                logger.warning(
-                    "Redis unavailable, value cached in memory only"
-                )
-                return
+        await self._set_in_redis(key, value, ttl)
 
-            serialized = json.dumps(value)
-            await redis.setex(key, ttl, serialized)
-            logger.debug(f"Cached in both tiers: {key} (TTL: {ttl}s)")
+    @redis_safe(fail_value=None, operation_name="cache_manager_set_redis")
+    async def _set_in_redis(self, key: str, value: Any, ttl: int) -> None:
+        """Persist value to Redis (L2)."""
+        redis = await RedisPool.get_instance()
+        if redis is None:
+            logger.warning("Redis unavailable, value cached in memory only")
+            return
 
-        except (RedisError, ConnectionError, TypeError) as ex:
-            logger.error(f"Error writing to Redis cache: {ex}")
-            # Value still cached in memory
+        serialized = json.dumps(value)
+        await redis.setex(key, ttl, serialized)
+        logger.debug(f"Cached in both tiers: {key} (TTL: {ttl}s)")
 
     async def invalidate(self, key: str) -> None:
         """
@@ -229,20 +222,21 @@ class CacheManager:
                 logger.debug(f"Invalidated memory cache: {key}")
 
         # Invalidate Redis cache (L2)
-        try:
-            redis = await RedisPool.get_instance()
-            if redis is None:
-                logger.warning(
-                    "Redis unavailable, memory cache invalidated only"
-                )
-                return
+        await self._invalidate_in_redis(key)
 
-            deleted = await redis.delete(key)
-            if deleted:
-                logger.debug(f"Invalidated Redis cache: {key}")
+    @redis_safe(
+        fail_value=None, operation_name="cache_manager_invalidate_redis"
+    )
+    async def _invalidate_in_redis(self, key: str) -> None:
+        """Remove a single key from Redis (L2)."""
+        redis = await RedisPool.get_instance()
+        if redis is None:
+            logger.warning("Redis unavailable, memory cache invalidated only")
+            return
 
-        except (RedisError, ConnectionError) as ex:
-            logger.error(f"Error invalidating Redis cache: {ex}")
+        deleted = await redis.delete(key)
+        if deleted:
+            logger.debug(f"Invalidated Redis cache: {key}")
 
     async def invalidate_pattern(self, pattern: str) -> int:
         """
@@ -266,35 +260,33 @@ class CacheManager:
             logger.info("Cleared entire memory cache (pattern invalidation)")
 
         # Invalidate matching keys in Redis
-        try:
-            redis = await RedisPool.get_instance()
-            if redis is None:
-                logger.warning(
-                    "Redis unavailable, pattern invalidation failed"
-                )
-                return 0
+        return await self._invalidate_pattern_in_redis(pattern)
 
-            cursor = 0
-            deleted_count = 0
-
-            while True:
-                cursor, keys = await redis.scan(
-                    cursor, match=pattern, count=100
-                )
-                if keys:
-                    deleted_count += await redis.delete(*keys)
-
-                if cursor == 0:
-                    break
-
-            logger.info(
-                f"Invalidated {deleted_count} keys matching pattern: {pattern}"
-            )
-            return deleted_count
-
-        except (RedisError, ConnectionError) as ex:
-            logger.error(f"Error invalidating pattern in Redis: {ex}")
+    @redis_safe(
+        fail_value=0, operation_name="cache_manager_invalidate_pattern_redis"
+    )
+    async def _invalidate_pattern_in_redis(self, pattern: str) -> int:
+        """SCAN and delete all Redis keys matching *pattern*."""
+        redis = await RedisPool.get_instance()
+        if redis is None:
+            logger.warning("Redis unavailable, pattern invalidation failed")
             return 0
+
+        cursor = 0
+        deleted_count = 0
+
+        while True:
+            cursor, keys = await redis.scan(cursor, match=pattern, count=100)
+            if keys:
+                deleted_count += await redis.delete(*keys)
+
+            if cursor == 0:
+                break
+
+        logger.info(
+            f"Invalidated {deleted_count} keys matching pattern: {pattern}"
+        )
+        return deleted_count
 
     async def clear(self) -> None:
         """Clear both memory and Redis caches entirely."""

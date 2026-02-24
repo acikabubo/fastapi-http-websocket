@@ -33,11 +33,17 @@ from typing import Any
 
 from app.logging import logger
 from app.storage.redis import get_redis_connection
+from app.utils.redis_safe import redis_safe
 
 # Token cache buffer: expire cache 30s before token expiration to prevent stale data
 TOKEN_CACHE_BUFFER_SECONDS = 30
 
 
+@redis_safe(
+    fail_value=None,
+    log_level="warning",
+    operation_name="get_cached_token_claims",
+)
 async def get_cached_token_claims(token: str) -> dict[str, Any] | None:
     """
     Retrieve cached token claims from Redis.
@@ -58,46 +64,35 @@ async def get_cached_token_claims(token: str) -> dict[str, Any] | None:
         >>> if claims:
         ...     user_id = claims["sub"]
     """
+    redis = await get_redis_connection()
+    if not redis:
+        return None
 
-    try:
-        redis = await get_redis_connection()
-        if not redis:
-            return None
+    # Use hash of token as cache key to avoid storing full token
+    token_hash = hashlib.sha256(token.encode()).hexdigest()
+    cache_key = f"token:claims:{token_hash}"
 
-        # Use hash of token as cache key to avoid storing full token
-        token_hash = hashlib.sha256(token.encode()).hexdigest()
-        cache_key = f"token:claims:{token_hash}"
+    cached_data = await redis.get(cache_key)
 
-        cached_data = await redis.get(cache_key)
-
-        if cached_data:
-            # Track cache hit
-            from app.utils.metrics import MetricsCollector
-
-            MetricsCollector.record_token_cache_hit()
-            logger.debug(f"Token claims cache hit: {token_hash[:8]}...")
-            return json.loads(cached_data)
-
-        # Track cache miss
+    if cached_data:
+        # Track cache hit
         from app.utils.metrics import MetricsCollector
 
-        MetricsCollector.record_token_cache_miss()
-        logger.debug(f"Token claims cache miss: {token_hash[:8]}...")
-        return None
+        MetricsCollector.record_token_cache_hit()
+        logger.debug(f"Token claims cache hit: {token_hash[:8]}...")
+        return json.loads(cached_data)
 
-    except (json.JSONDecodeError, TypeError, ValueError) as e:
-        # json.JSONDecodeError: Cached data is not valid JSON
-        # TypeError: Cached data is wrong type
-        # ValueError: Invalid JSON structure
-        logger.warning(f"Error decoding cached token data: {e}")
-        return None
-    except Exception as e:  # noqa: BLE001
-        # Catch-all for Redis errors and unexpected issues
-        # (fail-open: return None to proceed without cache)
-        logger.warning(f"Unexpected error retrieving cached token: {e}")
-        return None
+    # Track cache miss
+    from app.utils.metrics import MetricsCollector
+
+    MetricsCollector.record_token_cache_miss()
+    logger.debug(f"Token claims cache miss: {token_hash[:8]}...")
+    return None
 
 
+@redis_safe(
+    fail_value=None, log_level="warning", operation_name="cache_token_claims"
+)
 async def cache_token_claims(
     token: str,
     claims: dict[str, Any],
@@ -123,39 +118,31 @@ async def cache_token_claims(
         >>> await cache_token_claims(token, claims)
         # Cache will expire automatically with token
     """
-    try:
-        redis = await get_redis_connection()
-        if not redis:
-            return
+    redis = await get_redis_connection()
+    if not redis:
+        return
 
-        # Calculate TTL from token expiration with buffer
-        if ttl is None and "exp" in claims:
-            ttl = max(
-                claims["exp"] - int(time.time()) - TOKEN_CACHE_BUFFER_SECONDS,
-                0,
-            )
+    # Calculate TTL from token expiration with buffer
+    if ttl is None and "exp" in claims:
+        ttl = max(
+            claims["exp"] - int(time.time()) - TOKEN_CACHE_BUFFER_SECONDS,
+            0,
+        )
 
-        if ttl and ttl > 0:
-            token_hash = hashlib.sha256(token.encode()).hexdigest()
-            cache_key = f"token:claims:{token_hash}"
+    if ttl and ttl > 0:
+        token_hash = hashlib.sha256(token.encode()).hexdigest()
+        cache_key = f"token:claims:{token_hash}"
 
-            await redis.setex(cache_key, ttl, json.dumps(claims))
+        await redis.setex(cache_key, ttl, json.dumps(claims))
 
-            logger.debug(
-                f"Cached token claims: {token_hash[:8]}... (TTL: {ttl}s)"
-            )
-
-    except (TypeError, ValueError, OverflowError) as e:
-        # TypeError: Invalid data type for claims
-        # ValueError: Invalid TTL value or JSON serialization issue
-        # OverflowError: TTL value too large
-        logger.warning(f"Error serializing token claims: {e}")
-    except Exception as e:  # noqa: BLE001
-        # Catch-all for Redis errors and unexpected issues
-        # (fail-open: failures don't prevent authentication)
-        logger.warning(f"Unexpected error caching token: {e}")
+        logger.debug(f"Cached token claims: {token_hash[:8]}... (TTL: {ttl}s)")
 
 
+@redis_safe(
+    fail_value=None,
+    log_level="warning",
+    operation_name="invalidate_token_cache",
+)
 async def invalidate_token_cache(token: str) -> None:
     """
     Explicitly invalidate cached token claims.
@@ -175,18 +162,12 @@ async def invalidate_token_cache(token: str) -> None:
         >>> await invalidate_token_cache(user_token)
         # Token can no longer be authenticated from cache
     """
-    try:
-        redis = await get_redis_connection()
-        if not redis:
-            return
+    redis = await get_redis_connection()
+    if not redis:
+        return
 
-        token_hash = hashlib.sha256(token.encode()).hexdigest()
-        cache_key = f"token:claims:{token_hash}"
+    token_hash = hashlib.sha256(token.encode()).hexdigest()
+    cache_key = f"token:claims:{token_hash}"
 
-        await redis.delete(cache_key)
-        logger.debug(f"Invalidated token cache: {token_hash[:8]}...")
-
-    except Exception as e:  # noqa: BLE001
-        # Catch-all for Redis errors and unexpected issues
-        # (fail-open: failures don't prevent logout/invalidation)
-        logger.warning(f"Unexpected error invalidating token cache: {e}")
+    await redis.delete(cache_key)
+    logger.debug(f"Invalidated token cache: {token_hash[:8]}...")

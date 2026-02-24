@@ -13,6 +13,7 @@ from redis.exceptions import RedisError as SyncRedisError
 from app.logging import logger
 from app.settings import app_settings
 from app.utils.redis_mixin import RedisClientMixin
+from app.utils.redis_safe import redis_safe
 
 
 class RateLimiter(RedisClientMixin):
@@ -136,6 +137,7 @@ class RateLimiter(RedisClientMixin):
             # Programming error - fail closed
             return False, 0
 
+    @redis_safe(fail_value=None, operation_name="reset_rate_limit")
     async def reset_limit(self, key: str) -> None:
         """
         Reset rate limit for a specific key.
@@ -143,18 +145,12 @@ class RateLimiter(RedisClientMixin):
         Args:
             key: The rate limit key to reset.
         """
-        try:
-            redis = await self._get_redis()
-            if redis is None:
-                logger.error("Redis connection not available")
-                return
-
-            redis_key = f"rate_limit:{key}"
-            await redis.delete(redis_key)
-        except (AsyncRedisError, SyncRedisError) as ex:
-            logger.error(
-                f"Redis error resetting rate limit for key {key}: {ex}"
-            )
+        redis = await self._get_redis()
+        if redis is None:
+            logger.error("Redis connection not available")
+            return
+        redis_key = f"rate_limit:{key}"
+        await redis.delete(redis_key)
 
 
 class ConnectionLimiter(RedisClientMixin):
@@ -169,6 +165,7 @@ class ConnectionLimiter(RedisClientMixin):
         super().__init__()
         self.max_connections = app_settings.WS_MAX_CONNECTIONS_PER_USER
 
+    @redis_safe(fail_value=False, operation_name="add_ws_connection")
     async def add_connection(self, user_id: str, connection_id: str) -> bool:
         """
         Add a new connection for a user.
@@ -180,47 +177,36 @@ class ConnectionLimiter(RedisClientMixin):
         Returns:
             True if connection was added, False if limit exceeded.
         """
-        try:
-            redis = await self._get_redis()
-            if redis is None:
-                logger.error("Redis connection not available")
-                return False
-
-            redis_key = f"ws_connections:{user_id}"
-
-            # Get current connection count
-            connection_count = await redis.scard(redis_key)
-
-            if connection_count >= self.max_connections:
-                logger.warning(
-                    f"User {user_id} exceeded max connections limit "
-                    f"({self.max_connections})"
-                )
-                return False
-
-            # Add connection to set
-            await redis.sadd(redis_key, connection_id)
-
-            # Set expiration (cleanup stale connections)
-            await redis.expire(redis_key, 3600)  # 1 hour
-
-            logger.info(
-                f"Added connection {connection_id} for user {user_id}. "
-                f"Total: {connection_count + 1}/{self.max_connections}"
-            )
-            return True
-
-        except (AsyncRedisError, SyncRedisError) as ex:
-            logger.error(
-                f"Redis error adding connection for user {user_id}: {ex}"
-            )
-            # SECURITY: Fail closed - deny connection on Redis errors
-            return False
-        except (ValueError, TypeError) as ex:
-            logger.error(f"Invalid parameters for user {user_id}: {ex}")
-            # Programming error - deny connection and investigate
+        redis = await self._get_redis()
+        if redis is None:
+            logger.error("Redis connection not available")
             return False
 
+        redis_key = f"ws_connections:{user_id}"
+
+        # Get current connection count
+        connection_count = await redis.scard(redis_key)
+
+        if connection_count >= self.max_connections:
+            logger.warning(
+                f"User {user_id} exceeded max connections limit "
+                f"({self.max_connections})"
+            )
+            return False
+
+        # Add connection to set
+        await redis.sadd(redis_key, connection_id)
+
+        # Set expiration (cleanup stale connections)
+        await redis.expire(redis_key, 3600)  # 1 hour
+
+        logger.info(
+            f"Added connection {connection_id} for user {user_id}. "
+            f"Total: {connection_count + 1}/{self.max_connections}"
+        )
+        return True
+
+    @redis_safe(fail_value=None, operation_name="remove_ws_connection")
     async def remove_connection(
         self, user_id: str, connection_id: str
     ) -> None:
@@ -231,22 +217,16 @@ class ConnectionLimiter(RedisClientMixin):
             user_id: The unique user identifier.
             connection_id: Unique identifier for the connection to remove.
         """
-        try:
-            redis = await self._get_redis()
-            if redis is None:
-                logger.error("Redis connection not available")
-                return
+        redis = await self._get_redis()
+        if redis is None:
+            logger.error("Redis connection not available")
+            return
 
-            redis_key = f"ws_connections:{user_id}"
-            await redis.srem(redis_key, connection_id)
-            logger.info(
-                f"Removed connection {connection_id} for user {user_id}"
-            )
-        except (AsyncRedisError, SyncRedisError) as ex:
-            logger.error(
-                f"Redis error removing connection for user {user_id}: {ex}"
-            )
+        redis_key = f"ws_connections:{user_id}"
+        await redis.srem(redis_key, connection_id)
+        logger.info(f"Removed connection {connection_id} for user {user_id}")
 
+    @redis_safe(fail_value=0, operation_name="get_ws_connection_count")
     async def get_connection_count(self, user_id: str) -> int:
         """
         Get the current number of connections for a user.
@@ -257,19 +237,13 @@ class ConnectionLimiter(RedisClientMixin):
         Returns:
             Number of active connections for the user.
         """
-        try:
-            redis = await self._get_redis()
-            if redis is None:
-                logger.error("Redis connection not available")
-                return 0
-
-            redis_key = f"ws_connections:{user_id}"
-            return await redis.scard(redis_key)
-        except (AsyncRedisError, SyncRedisError) as ex:
-            logger.error(
-                f"Redis error getting connection count for user {user_id}: {ex}"
-            )
+        redis = await self._get_redis()
+        if redis is None:
+            logger.error("Redis connection not available")
             return 0
+
+        redis_key = f"ws_connections:{user_id}"
+        return await redis.scard(redis_key)
 
 
 # Singleton instances
