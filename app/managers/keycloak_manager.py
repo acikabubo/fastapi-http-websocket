@@ -8,7 +8,7 @@ from fastapi_keycloak_rbac.manager import (
 from keycloak.exceptions import KeycloakAuthenticationError
 from pybreaker import CircuitBreaker
 
-from app.listeners.metrics import CircuitBreakerMetricsListener
+from fastapi_telemetry import CircuitBreakerMetricsListener
 from app.logging import logger
 from app.settings import app_settings
 from app.utils.metrics import (

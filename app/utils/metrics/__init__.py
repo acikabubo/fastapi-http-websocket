@@ -18,10 +18,7 @@ New code should use the MetricsCollector facade for better maintainability:
     MetricsCollector.record_ws_message_received()
 """
 
-from app.utils.metrics._helpers import (
-    _get_or_create_counter,
-    _get_or_create_gauge,
-)
+from fastapi_telemetry import get_or_create_counter, get_or_create_gauge
 from app.utils.metrics.collector import MetricsCollector
 
 # Import all metrics from submodules
@@ -34,7 +31,7 @@ from app.utils.metrics.audit import (
     audit_logs_written_total,
     audit_queue_size,
 )
-from app.utils.metrics.circuit_breaker import (
+from fastapi_telemetry.circuit_breaker import (
     circuit_breaker_failures_total,
     circuit_breaker_state,
     circuit_breaker_state_changes_total,
@@ -81,13 +78,13 @@ from app.utils.metrics.websocket import (
 )
 
 # Application-level metrics (defined here since they don't fit into a specific category)
-app_errors_total = _get_or_create_counter(
+app_errors_total = get_or_create_counter(
     "app_errors_total",
     "Total application errors",
     ["error_type", "handler"],  # error_type: validation, database, auth, etc
 )
 
-app_info = _get_or_create_gauge(
+app_info = get_or_create_gauge(
     "app_info",
     "Application information",
     ["version", "python_version", "environment"],

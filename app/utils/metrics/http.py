@@ -5,20 +5,20 @@ This module defines metrics for tracking HTTP request rates, durations,
 and in-progress requests.
 """
 
-from app.utils.metrics._helpers import (
-    _get_or_create_counter,
-    _get_or_create_gauge,
-    _get_or_create_histogram,
+from fastapi_telemetry import (
+    get_or_create_counter,
+    get_or_create_gauge,
+    get_or_create_histogram,
 )
 
 # HTTP Request Metrics
-http_requests_total = _get_or_create_counter(
+http_requests_total = get_or_create_counter(
     "http_requests_total",
     "Total HTTP requests",
     ["method", "endpoint", "status_code"],
 )
 
-http_request_duration_seconds = _get_or_create_histogram(
+http_request_duration_seconds = get_or_create_histogram(
     "http_request_duration_seconds",
     "HTTP request duration in seconds",
     ["method", "endpoint"],
@@ -40,7 +40,7 @@ http_request_duration_seconds = _get_or_create_histogram(
     ),
 )
 
-http_requests_in_progress = _get_or_create_gauge(
+http_requests_in_progress = get_or_create_gauge(
     "http_requests_in_progress",
     "Number of HTTP requests currently being processed",
     ["method", "endpoint"],

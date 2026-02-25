@@ -13,11 +13,13 @@ from fastapi import FastAPI
 from starlette.middleware.authentication import AuthenticationMiddleware
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
+from fastapi_correlation import (
+    CorrelationIDMiddleware,
+    LoggingContextMiddleware,
+)
+
 from app.middlewares.audit_middleware import AuditMiddleware
-from app.middlewares.correlation_id import CorrelationIDMiddleware
-from app.middlewares.logging_context import LoggingContextMiddleware
-from app.middlewares.pipeline import MiddlewarePipeline
-from app.middlewares.prometheus import PrometheusMiddleware
+from app.middlewares.pipeline import MiddlewarePipeline, PrometheusMiddleware
 from app.middlewares.rate_limit import RateLimitMiddleware
 from app.middlewares.request_size_limit import RequestSizeLimitMiddleware
 from app.middlewares.security_headers import SecurityHeadersMiddleware

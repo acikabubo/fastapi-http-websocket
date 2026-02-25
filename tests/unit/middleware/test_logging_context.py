@@ -12,7 +12,7 @@ from fastapi import FastAPI
 from starlette.requests import Request
 from starlette.responses import Response
 
-from app.middlewares.logging_context import LoggingContextMiddleware
+from fastapi_correlation import LoggingContextMiddleware
 
 
 @pytest.fixture
@@ -50,7 +50,7 @@ class TestLoggingContextMiddleware:
         call_next = AsyncMock(return_value=Response(status_code=200))
 
         with patch(
-            "app.middlewares.logging_context.set_log_context"
+            "fastapi_correlation.context_middleware.set_log_context"
         ) as mock_set:
             response = await middleware.dispatch(request, call_next)
 
@@ -74,7 +74,7 @@ class TestLoggingContextMiddleware:
         call_next = AsyncMock(return_value=Response(status_code=200))
 
         with patch(
-            "app.middlewares.logging_context.set_log_context"
+            "fastapi_correlation.context_middleware.set_log_context"
         ) as mock_set:
             response = await middleware.dispatch(request, call_next)
 
@@ -91,7 +91,7 @@ class TestLoggingContextMiddleware:
         call_next = AsyncMock(return_value=Response(status_code=200))
 
         with patch(
-            "app.middlewares.logging_context.set_log_context"
+            "fastapi_correlation.context_middleware.set_log_context"
         ) as mock_set:
             response = await middleware.dispatch(request, call_next)
 
@@ -113,7 +113,7 @@ class TestLoggingContextMiddleware:
         call_next = AsyncMock(return_value=Response(status_code=201))
 
         with patch(
-            "app.middlewares.logging_context.set_log_context"
+            "fastapi_correlation.context_middleware.set_log_context"
         ) as mock_set:
             response = await middleware.dispatch(request, call_next)
 
@@ -130,7 +130,7 @@ class TestLoggingContextMiddleware:
         call_next = AsyncMock(return_value=Response(status_code=200))
 
         with patch(
-            "app.middlewares.logging_context.clear_log_context"
+            "fastapi_correlation.context_middleware.clear_log_context"
         ) as mock_clear:
             response = await middleware.dispatch(request, call_next)
 

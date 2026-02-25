@@ -5,32 +5,32 @@ This module defines metrics for tracking WebSocket connections, message rates,
 and message processing durations.
 """
 
-from app.utils.metrics._helpers import (
-    _get_or_create_counter,
-    _get_or_create_gauge,
-    _get_or_create_histogram,
+from fastapi_telemetry import (
+    get_or_create_counter,
+    get_or_create_gauge,
+    get_or_create_histogram,
 )
 
 # WebSocket Connection Metrics
-ws_connections_active = _get_or_create_gauge(
+ws_connections_active = get_or_create_gauge(
     "ws_connections_active", "Number of active WebSocket connections"
 )
 
-ws_connections_total = _get_or_create_counter(
+ws_connections_total = get_or_create_counter(
     "ws_connections_total",
     "Total WebSocket connections",
     ["status"],  # accepted, rejected_auth, rejected_limit
 )
 
-ws_messages_received_total = _get_or_create_counter(
+ws_messages_received_total = get_or_create_counter(
     "ws_messages_received_total", "Total WebSocket messages received"
 )
 
-ws_messages_sent_total = _get_or_create_counter(
+ws_messages_sent_total = get_or_create_counter(
     "ws_messages_sent_total", "Total WebSocket messages sent"
 )
 
-ws_message_processing_duration_seconds = _get_or_create_histogram(
+ws_message_processing_duration_seconds = get_or_create_histogram(
     "ws_message_processing_duration_seconds",
     "WebSocket message processing duration in seconds",
     ["pkg_id"],

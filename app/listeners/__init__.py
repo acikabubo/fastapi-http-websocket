@@ -14,7 +14,7 @@ The listener pattern allows:
 Example:
     ```python
     from pybreaker import CircuitBreaker
-    from app.listeners.metrics import CircuitBreakerMetricsListener
+    from fastapi_telemetry import CircuitBreakerMetricsListener
 
 
     circuit_breaker = CircuitBreaker(
@@ -24,6 +24,6 @@ Example:
     ```
 """
 
-from app.listeners.metrics import CircuitBreakerMetricsListener
+from fastapi_telemetry import CircuitBreakerMetricsListener
 
 __all__ = ["CircuitBreakerMetricsListener"]

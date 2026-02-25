@@ -11,11 +11,8 @@ import pytest
 from starlette.requests import Request
 from starlette.responses import Response
 
-from app.middlewares.correlation_id import (
-    CorrelationIDMiddleware,
-    correlation_id,
-    get_correlation_id,
-)
+from fastapi_correlation import CorrelationIDMiddleware, get_correlation_id
+from fastapi_correlation.correlation import correlation_id
 
 
 class TestCorrelationIDMiddleware:

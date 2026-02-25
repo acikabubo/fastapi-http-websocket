@@ -12,7 +12,7 @@ from fastapi import FastAPI
 from starlette.requests import Request
 from starlette.responses import Response
 
-from app.middlewares.prometheus import PrometheusMiddleware
+from app.middlewares.pipeline import PrometheusMiddleware
 
 
 @pytest.fixture
@@ -32,8 +32,6 @@ class TestPrometheusMiddleware:
     @pytest.mark.asyncio
     async def test_middleware_tracks_successful_request(self, app):
         """Test that middleware tracks metrics for successful requests."""
-        middleware = PrometheusMiddleware(app)
-
         request = MagicMock(spec=Request)
         request.url.path = "/api/authors"
         request.method = "GET"
@@ -42,12 +40,13 @@ class TestPrometheusMiddleware:
 
         with (
             patch(
-                "app.middlewares.prometheus.MetricsCollector.record_http_request_start"
+                "app.middlewares.pipeline.MetricsCollector.record_http_request_start"
             ) as mock_start,
             patch(
-                "app.middlewares.prometheus.MetricsCollector.record_http_request_end"
+                "app.middlewares.pipeline.MetricsCollector.record_http_request_end"
             ) as mock_end,
         ):
+            middleware = PrometheusMiddleware(app)
             response = await middleware.dispatch(request, call_next)
 
             assert response.status_code == 200
@@ -67,8 +66,6 @@ class TestPrometheusMiddleware:
     @pytest.mark.asyncio
     async def test_middleware_tracks_error_response(self, app):
         """Test that middleware tracks metrics for error responses."""
-        middleware = PrometheusMiddleware(app)
-
         request = MagicMock(spec=Request)
         request.url.path = "/api/authors"
         request.method = "POST"
@@ -77,12 +74,13 @@ class TestPrometheusMiddleware:
 
         with (
             patch(
-                "app.middlewares.prometheus.MetricsCollector.record_http_request_start"
+                "app.middlewares.pipeline.MetricsCollector.record_http_request_start"
             ) as mock_start,
             patch(
-                "app.middlewares.prometheus.MetricsCollector.record_http_request_end"
+                "app.middlewares.pipeline.MetricsCollector.record_http_request_end"
             ) as mock_end,
         ):
+            middleware = PrometheusMiddleware(app)
             response = await middleware.dispatch(request, call_next)
 
             assert response.status_code == 500
@@ -98,8 +96,6 @@ class TestPrometheusMiddleware:
     @pytest.mark.asyncio
     async def test_middleware_tracks_exception(self, app):
         """Test that middleware tracks metrics when exception is raised."""
-        middleware = PrometheusMiddleware(app)
-
         request = MagicMock(spec=Request)
         request.url.path = "/api/crash"
         request.method = "DELETE"
@@ -109,12 +105,14 @@ class TestPrometheusMiddleware:
 
         with (
             patch(
-                "app.middlewares.prometheus.MetricsCollector.record_http_request_start"
+                "app.middlewares.pipeline.MetricsCollector.record_http_request_start"
             ) as mock_start,
             patch(
-                "app.middlewares.prometheus.MetricsCollector.record_http_request_end"
+                "app.middlewares.pipeline.MetricsCollector.record_http_request_end"
             ) as mock_end,
         ):
+            middleware = PrometheusMiddleware(app)
+
             # Should re-raise the exception
             with pytest.raises(ValueError, match="Test error"):
                 await middleware.dispatch(request, call_next)
@@ -132,8 +130,6 @@ class TestPrometheusMiddleware:
     @pytest.mark.asyncio
     async def test_middleware_different_http_methods(self, app):
         """Test that middleware tracks different HTTP methods correctly."""
-        middleware = PrometheusMiddleware(app)
-
         methods = ["GET", "POST", "PUT", "PATCH", "DELETE"]
 
         for method in methods:
@@ -145,12 +141,13 @@ class TestPrometheusMiddleware:
 
             with (
                 patch(
-                    "app.middlewares.prometheus.MetricsCollector.record_http_request_start"
+                    "app.middlewares.pipeline.MetricsCollector.record_http_request_start"
                 ) as mock_start,
                 patch(
-                    "app.middlewares.prometheus.MetricsCollector.record_http_request_end"
+                    "app.middlewares.pipeline.MetricsCollector.record_http_request_end"
                 ) as mock_end,
             ):
+                middleware = PrometheusMiddleware(app)
                 response = await middleware.dispatch(request, call_next)
 
                 assert response.status_code == 200
@@ -166,8 +163,6 @@ class TestPrometheusMiddleware:
     @pytest.mark.asyncio
     async def test_middleware_different_endpoints(self, app):
         """Test that middleware tracks different endpoints correctly."""
-        middleware = PrometheusMiddleware(app)
-
         endpoints = ["/api/authors", "/api/books", "/health", "/metrics"]
 
         for endpoint in endpoints:
@@ -179,12 +174,13 @@ class TestPrometheusMiddleware:
 
             with (
                 patch(
-                    "app.middlewares.prometheus.MetricsCollector.record_http_request_start"
+                    "app.middlewares.pipeline.MetricsCollector.record_http_request_start"
                 ) as mock_start,
                 patch(
-                    "app.middlewares.prometheus.MetricsCollector.record_http_request_end"
+                    "app.middlewares.pipeline.MetricsCollector.record_http_request_end"
                 ) as mock_end,
             ):
+                middleware = PrometheusMiddleware(app)
                 response = await middleware.dispatch(request, call_next)
 
                 assert response.status_code == 200

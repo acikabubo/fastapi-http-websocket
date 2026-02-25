@@ -9,7 +9,9 @@ dependencies = [
     "alembic>=1.18.4",
     "asyncpg>=0.30.0",
     "fastapi>=0.129.0",
+    "fastapi-correlation",
     "fastapi-keycloak-rbac>=0.1.1",
+    "fastapi-telemetry",
     "greenlet>=3.3.1",
     "grpcio-tools>=1.78.1",
     "jsonschema>=4.26.0",
@@ -58,6 +60,10 @@ docs = [
 profiling = [
     "scalene>=2.1.4",
 ]
+
+[tool.uv.sources]
+fastapi-correlation = { path = "../fastapi-correlation", editable = true }
+fastapi-telemetry = { path = "../fastapi-telemetry", editable = true }
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

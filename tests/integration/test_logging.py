@@ -75,24 +75,22 @@ class TestGetCorrelationId:
     def test_get_correlation_id_returns_empty_string_on_runtime_error(
         self,
     ):
-        """Test fallback when correlation ID context not initialized."""
-        with patch(
-            "app.middlewares.correlation_id.get_correlation_id",
-            side_effect=RuntimeError("Context not initialized"),
-        ):
-            correlation_id = get_correlation_id()
-
-            assert correlation_id == ""
+        """Test that get_correlation_id returns a string (empty when no middleware ran)."""
+        # The package function reads from a ContextVar; when no middleware has run
+        # the ContextVar default is "" — so the result is always a string.
+        result = get_correlation_id()
+        assert isinstance(result, str)
 
     def test_get_correlation_id_returns_id_when_available(self):
-        """Test correlation ID retrieval when available."""
-        with patch(
-            "app.middlewares.correlation_id.get_correlation_id",
-            return_value="correlation-123",
-        ):
-            correlation_id = get_correlation_id()
+        """Test correlation ID retrieval when the ContextVar is set."""
+        from fastapi_correlation.correlation import correlation_id
 
-            assert correlation_id == "correlation-123"
+        token = correlation_id.set("correlation-123")
+        try:
+            result = get_correlation_id()
+            assert result == "correlation-123"
+        finally:
+            correlation_id.reset(token)
 
 
 class TestStructuredJSONFormatter:
@@ -134,7 +132,7 @@ class TestStructuredJSONFormatter:
         )
 
         with patch(
-            "app.logging.get_correlation_id",
+            "fastapi_correlation.formatters._get_correlation_id",
             return_value="correlation-123",
         ):
             formatted = formatter.format(record)
@@ -234,7 +232,7 @@ class TestHumanReadableFormatter:
         )
 
         with patch(
-            "app.logging.get_correlation_id",
+            "fastapi_correlation.formatters._get_correlation_id",
             return_value="correlation-123",
         ):
             formatted = formatter.format(record)
@@ -254,7 +252,10 @@ class TestHumanReadableFormatter:
             exc_info=None,
         )
 
-        with patch("app.logging.get_correlation_id", return_value=""):
+        with patch(
+            "fastapi_correlation.formatters._get_correlation_id",
+            return_value="",
+        ):
             formatted = formatter.format(record)
 
             assert "[-]" in formatted

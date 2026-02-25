@@ -15,14 +15,33 @@ from fastapi import FastAPI
 from starlette.middleware.authentication import AuthenticationMiddleware
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
+from fastapi_correlation import (
+    CorrelationIDMiddleware,
+    LoggingContextMiddleware,
+)
+from fastapi_telemetry import PrometheusMiddleware as _FTPrometheusMiddleware
+
 from app.logging import logger
 from app.middlewares.audit_middleware import AuditMiddleware
-from app.middlewares.correlation_id import CorrelationIDMiddleware
-from app.middlewares.logging_context import LoggingContextMiddleware
-from app.middlewares.prometheus import PrometheusMiddleware
 from app.middlewares.rate_limit import RateLimitMiddleware
 from app.middlewares.request_size_limit import RequestSizeLimitMiddleware
 from app.middlewares.security_headers import SecurityHeadersMiddleware
+from app.utils.metrics import MetricsCollector
+
+
+class PrometheusMiddleware(_FTPrometheusMiddleware):  # type: ignore[misc]
+    """PrometheusMiddleware pre-wired with this app's MetricsCollector callbacks."""
+
+    def __init__(self, app: Any) -> None:
+        super().__init__(
+            app,
+            request_start_callback=MetricsCollector.record_http_request_start,
+            request_end_callback=MetricsCollector.record_http_request_end,
+            error_callback=lambda error_type,
+            path: MetricsCollector.record_app_error(
+                error_type=error_type, handler=path
+            ),
+        )
 
 
 class MiddlewarePipeline:

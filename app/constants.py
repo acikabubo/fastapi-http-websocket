@@ -75,7 +75,3 @@ LOKI_BUFFER_MAX_SIZE = 1000
 # Timeout (seconds) to wait before flushing buffered logs to Loki
 # Ensures logs don't stay in buffer too long even with low traffic
 LOKI_BATCH_TIMEOUT_SECONDS = 5.0
-
-# Maximum size (bytes) of a single log record sent to Loki
-# Prevents memory issues with very large log messages
-LOKI_MAX_LOG_SIZE_BYTES = 102400  # 100KB

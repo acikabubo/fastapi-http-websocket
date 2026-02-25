@@ -9,7 +9,7 @@ from redis.asyncio import ConnectionPool, Redis
 from redis.exceptions import RedisError
 
 from app.constants import KC_SESSION_EXPIRY_BUFFER_SECONDS
-from app.listeners.metrics import CircuitBreakerMetricsListener
+from fastapi_telemetry import CircuitBreakerMetricsListener
 from app.logging import logger
 from fastapi_keycloak_rbac.models import UserModel
 from app.settings import app_settings
