@@ -66,7 +66,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):  # type: ignore[misc]
         )
 
         if not is_allowed:
-            user: UserModel = getattr(request, "user", None)  # type: ignore[assignment]
+            user: UserModel = getattr(request, "user", None)
             if user and user.username:
                 set_log_context(user_id=user.username)
             logger.warning(
