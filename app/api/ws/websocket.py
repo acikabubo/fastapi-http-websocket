@@ -9,7 +9,7 @@ from starlette.authentication import UnauthenticatedUser
 from starlette.endpoints import WebSocketEndpoint
 from starlette.websockets import WebSocket, WebSocketDisconnect
 
-from app.logging import logger
+from app.logging import logger, set_log_context
 from app.managers.websocket_connection_manager import connection_manager
 from app.schemas.response import BroadcastDataModel, ResponseModel
 from app.schemas.user import UserModel
@@ -261,6 +261,13 @@ class PackageAuthWebSocketEndpoint(WebSocketEndpoint):  # type: ignore[misc]
             correlation_id_from_header[:8]
             if correlation_id_from_header
             else self.connection_id[:8]
+        )
+
+        # Set log context for all subsequent WS logs on this connection
+        set_log_context(
+            endpoint="/web",
+            user_id=self.user.username,
+            request_id=self.correlation_id,
         )
 
         # Check connection limit

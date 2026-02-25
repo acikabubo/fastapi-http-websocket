@@ -491,7 +491,7 @@
         "type": "loki",
         "uid": "loki"
       },
-      "description": "WebSocket connection and message logs. Filter by pkg_id and user. LogQL: {service=~\"shell|hw-server\"} | json | logger=~\"app.api.ws.*\" | user_id=~\"$user_id\"",
+      "description": "WebSocket connection and message logs. LogQL: {service=~\"shell|hw-server\"} | json | endpoint=\"/web\" | user_id=~\"$user_id\"",
       "gridPos": {
         "h": 10,
         "w": 24,
@@ -502,12 +502,12 @@
       "options": {
         "dedupStrategy": "none",
         "enableLogDetails": true,
-        "prettifyLogMessage": true,
+        "prettifyLogMessage": false,
         "showCommonLabels": false,
-        "showLabels": true,
+        "showLabels": false,
         "showTime": true,
         "sortOrder": "Descending",
-        "wrapLogMessage": true
+        "wrapLogMessage": false
       },
       "targets": [
         {
@@ -516,7 +516,7 @@
             "uid": "loki"
           },
           "editorMode": "code",
-          "expr": "{service=~\"shell|hw-server\"} | json | logger=~\"app.api.ws.*\" | user_id=~\"$user_id\"",
+          "expr": "{service=~\"shell|hw-server\"} | json | endpoint=\"/web\" | user_id=~\"$user_id\" | line_format \"{{.message}} | user={{.user_id}} pkg={{.pkg_id}} req={{.request_id}}\"",
           "queryType": "range",
           "refId": "A"
         }
