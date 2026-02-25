@@ -9,7 +9,7 @@ from fastapi_keycloak_rbac.models import UserModel
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import ASGIApp
 
-from app.logging import logger
+from app.logging import logger, set_log_context
 from app.settings import app_settings
 from app.utils.ip_utils import get_client_ip
 from app.utils.metrics import MetricsCollector
