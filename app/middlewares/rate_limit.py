@@ -11,6 +11,7 @@ from starlette.types import ASGIApp
 
 from app.logging import logger, set_log_context
 from app.settings import app_settings
+from fastapi_keycloak_rbac.models import UserModel
 from app.utils.ip_utils import get_client_ip
 from app.utils.metrics import MetricsCollector
 from app.utils.rate_limiter import rate_limiter
