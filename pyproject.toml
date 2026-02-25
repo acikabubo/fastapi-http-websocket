@@ -8,11 +8,11 @@ requires-python = ">=3.13"
 dependencies = [
     "alembic>=1.18.4",
     "asyncpg>=0.30.0",
-    "fastapi>=0.129.0",
-    "fastapi-correlation",
-    "fastapi-keycloak-rbac>=0.1.1",
-    "fastapi-telemetry",
-    "greenlet>=3.3.1",
+    "fastapi>=0.133.1",
+    "fastapi-correlation>=0.0.2",
+    "fastapi-keycloak-rbac>=0.2.1",
+    "fastapi-telemetry>=0.0.2",
+    "greenlet>=3.3.2",
     "grpcio-tools>=1.78.1",
     "jsonschema>=4.26.0",
     "prometheus-client>=0.24.1",
@@ -20,8 +20,8 @@ dependencies = [
     "pybreaker>=1.4.1",
     "pydantic-settings>=2.13.1",
     "python-keycloak>=7.1.1",
-    "redis>=7.2.0",
-    "sqlmodel>=0.0.34",
+    "redis>=7.2.1",
+    "sqlmodel>=0.0.37",
     "urllib3>=2.6.3",
     "uvicorn>=0.41.0",
     "websockets>=16.0",
@@ -29,7 +29,7 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-    "bandit>=1.9.3",
+    "bandit>=1.9.4",
     "black>=26.1.0",
     "hypothesis>=6.151.9",
     "interrogate>=1.7.0",
@@ -46,13 +46,13 @@ dev = [
     "ruff>=0.15.2",
     "skjold>=0.6.2",
     "testcontainers>=4.14.1",
-    "typer>=0.24.0",
+    "typer>=0.24.1",
     "typos>=1.43.5",
     "vulture>=2.14",
 ]
 docs = [
     "mkdocs>=1.6.0",
-    "mkdocs-material>=9.7.2",
+    "mkdocs-material>=9.7.3",
     "mkdocstrings[python]>=1.0.3",
     "mkdocs-git-revision-date-localized-plugin>=1.3.0",
     "mkdocs-minify-plugin>=0.8.0",
@@ -60,10 +60,6 @@ docs = [
 profiling = [
     "scalene>=2.1.4",
 ]
-
-[tool.uv.sources]
-fastapi-correlation = { path = "../fastapi-correlation", editable = true }
-fastapi-telemetry = { path = "../fastapi-telemetry", editable = true }
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
