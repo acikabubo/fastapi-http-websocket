@@ -20,10 +20,11 @@ RUN apt install -my \
     tzdata \
     vim
 
-# Set timezone
-RUN cp /usr/share/zoneinfo/Europe/Skopje /etc/localtime
-RUN echo "Europe/Skopje" > /etc/timezone
-ENV TZ=Europe/Skopje
+# Set timezone (override at build time with --build-arg TZ=Europe/Skopje)
+ARG TZ=UTC
+RUN cp /usr/share/zoneinfo/${TZ} /etc/localtime
+RUN echo "${TZ}" > /etc/timezone
+ENV TZ=${TZ}
 
 # Setup normal user. If not passed as build argument use 'devel' as default
 RUN addgroup --gid 1000 devel && \
@@ -65,6 +66,6 @@ EXPOSE 8000
 ENV PYTHONPATH=/project
 
 # Export local user executables for python scripts
-ENV PATH "$PATH:.venv/bin/:home/devel/.local/bin"
+ENV PATH="$PATH:.venv/bin/:home/devel/.local/bin"
 
 ENTRYPOINT ["fixuid"]

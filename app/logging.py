@@ -12,6 +12,7 @@ import json
 import logging
 import sys
 from contextvars import ContextVar
+from datetime import datetime, timezone
 from typing import Any
 
 from app.constants import LOKI_MAX_LOG_SIZE_BYTES
@@ -98,9 +99,12 @@ class StructuredJSONFormatter(logging.Formatter):
         Returns:
             JSON string with structured log data.
         """
-        # Base log structure
+        # Base log structure — RFC3339 UTC timestamp for Loki/Alloy compatibility
         log_data = {
-            "timestamp": self.formatTime(record, self.datefmt),
+            "timestamp": datetime.fromtimestamp(
+                record.created, tz=timezone.utc
+            ).strftime("%Y-%m-%dT%H:%M:%S.")
+            + f"{record.msecs:03.0f}Z",
             "level": record.levelname,
             "logger": record.name,
             "message": record.getMessage(),

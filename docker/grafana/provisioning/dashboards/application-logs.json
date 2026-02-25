@@ -117,20 +117,22 @@
         "type": "loki",
         "uid": "loki"
       },
-      "description": "Breakdown of logs by severity level",
+      "description": "Log volume over time broken down by severity level. Spikes in ERROR or WARNING indicate incidents.",
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "palette-classic"
           },
           "custom": {
-            "hideFrom": {
-              "tooltip": false,
-              "viz": false,
-              "legend": false
+            "drawStyle": "bars",
+            "fillOpacity": 80,
+            "gradientMode": "none",
+            "lineWidth": 0,
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
             }
-          },
-          "mappings": []
+          }
         },
         "overrides": [
           {
@@ -177,6 +179,21 @@
                 }
               }
             ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "DEBUG"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "gray",
+                  "mode": "fixed"
+                }
+              }
+            ]
           }
         ]
       },
@@ -188,27 +205,14 @@
       },
       "id": 2,
       "options": {
-        "displayLabels": [
-          "percent"
-        ],
         "legend": {
-          "displayMode": "table",
-          "placement": "right",
-          "showLegend": true,
-          "values": [
-            "value"
-          ]
-        },
-        "pieType": "donut",
-        "reduceOptions": {
-          "values": false,
-          "calcs": [
-            "lastNotNull"
-          ]
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
         },
         "tooltip": {
-          "mode": "single",
-          "sort": "none"
+          "mode": "multi",
+          "sort": "desc"
         }
       },
       "targets": [
@@ -218,21 +222,21 @@
             "uid": "loki"
           },
           "editorMode": "code",
-          "expr": "sum by (level) (count_over_time({job=\"docker\"} | json | __error__=\"\" [$__range]))",
+          "expr": "sum by (level) (count_over_time({service=~\"shell|hw-server\"} | json | __error__=\"\" [$__interval]))",
           "legendFormat": "{{level}}",
-          "queryType": "instant",
+          "queryType": "range",
           "refId": "A"
         }
       ],
-      "title": "Log Level Distribution",
-      "type": "piechart"
+      "title": "Log Level Distribution Over Time",
+      "type": "timeseries"
     },
     {
       "datasource": {
         "type": "loki",
         "uid": "loki"
       },
-      "description": "Application error logs from FastAPI service. LogQL: {service=~\"shell|hw-server\"} | json | level=\"ERROR\"",
+      "description": "Application error logs from FastAPI service. Click a row to expand full details including traceback.",
       "gridPos": {
         "h": 10,
         "w": 24,
@@ -245,10 +249,10 @@
         "enableLogDetails": true,
         "prettifyLogMessage": false,
         "showCommonLabels": false,
-        "showLabels": false,
+        "showLabels": true,
         "showTime": true,
         "sortOrder": "Descending",
-        "wrapLogMessage": true
+        "wrapLogMessage": false
       },
       "targets": [
         {
@@ -257,7 +261,7 @@
             "uid": "loki"
           },
           "editorMode": "code",
-          "expr": "{service=~\"shell|hw-server\"} | json | level=\"ERROR\"",
+          "expr": "{service=~\"shell|hw-server\"} | json | level=\"ERROR\" | line_format \"[{{.logger}}] {{.message}} | endpoint={{.endpoint}} method={{.method}} status={{.status_code}} req={{.request_id}}\"",
           "queryType": "range",
           "refId": "A"
         }
@@ -353,7 +357,7 @@
             "uid": "loki"
           },
           "editorMode": "code",
-          "expr": "sum by (service) (count_over_time({job=\"docker\"} |~ \"(?i)(error|exception|failed)\" [$__interval]))",
+          "expr": "sum by (service) (count_over_time({service=~\"shell|hw-server\"} | json | level=\"ERROR\" [$__interval]))",
           "legendFormat": "{{service}}",
           "queryType": "range",
           "refId": "A"
@@ -434,7 +438,7 @@
             "uid": "loki"
           },
           "editorMode": "code",
-          "expr": "topk(10, sum by (service) (count_over_time({job=\"docker\"} |~ \"(?i)(error|exception)\" [$__range])))",
+          "expr": "topk(10, sum by (service) (count_over_time({service=~\"shell|hw-server\"} | json | level=\"ERROR\" [$__range])))",
           "legendFormat": "{{service}}",
           "queryType": "instant",
           "refId": "A"
@@ -449,88 +453,12 @@
         "type": "loki",
         "uid": "loki"
       },
-      "description": "PostgreSQL database logs",
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 26
-      },
-      "id": 7,
-      "options": {
-        "dedupStrategy": "none",
-        "enableLogDetails": true,
-        "prettifyLogMessage": false,
-        "showCommonLabels": false,
-        "showLabels": true,
-        "showTime": true,
-        "sortOrder": "Descending",
-        "wrapLogMessage": true
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "loki",
-            "uid": "loki"
-          },
-          "editorMode": "code",
-          "expr": "{service=\"hw-db\"}",
-          "queryType": "range",
-          "refId": "A"
-        }
-      ],
-      "title": "Database Logs",
-      "type": "logs"
-    },
-    {
-      "datasource": {
-        "type": "loki",
-        "uid": "loki"
-      },
-      "description": "Keycloak authentication service logs",
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 26
-      },
-      "id": 8,
-      "options": {
-        "dedupStrategy": "none",
-        "enableLogDetails": true,
-        "prettifyLogMessage": false,
-        "showCommonLabels": false,
-        "showLabels": true,
-        "showTime": true,
-        "sortOrder": "Descending",
-        "wrapLogMessage": true
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "loki",
-            "uid": "loki"
-          },
-          "editorMode": "code",
-          "expr": "{service=\"hw-keycloak\"}",
-          "queryType": "range",
-          "refId": "A"
-        }
-      ],
-      "title": "Keycloak Logs",
-      "type": "logs"
-    },
-    {
-      "datasource": {
-        "type": "loki",
-        "uid": "loki"
-      },
       "description": "HTTP requests with status codes, methods, and endpoints. Filter by endpoint and user. LogQL: {service=~\"shell|hw-server\"} | json | endpoint!=\"\" | method=~\"$method\" | endpoint=~\".*$endpoint.*\" | status_code=~\"$status_code\"",
       "gridPos": {
         "h": 10,
         "w": 24,
         "x": 0,
-        "y": 34
+        "y": 26
       },
       "id": 9,
       "options": {
@@ -538,10 +466,10 @@
         "enableLogDetails": true,
         "prettifyLogMessage": false,
         "showCommonLabels": false,
-        "showLabels": true,
+        "showLabels": false,
         "showTime": true,
         "sortOrder": "Descending",
-        "wrapLogMessage": true
+        "wrapLogMessage": false
       },
       "targets": [
         {
@@ -550,7 +478,7 @@
             "uid": "loki"
           },
           "editorMode": "code",
-          "expr": "{service=~\"shell|hw-server\"} | json | endpoint!=\"\" | method=~\"$method\" | endpoint=~\".*$endpoint.*\" | status_code=~\"$status_code\" | user_id=~\"$user_id\"",
+          "expr": "{service=~\"shell|hw-server\"} | json | endpoint!=\"\" | endpoint!=\"/health\" | endpoint!=\"/metrics\" | method=~\"$method\" | endpoint=~\".*$endpoint.*\" | status_code=~\"$status_code\" | user_id=~\"$user_id\" | line_format \"{{.method}} {{.endpoint}} → {{.status_code}} | user={{.user_id}} req={{.request_id}}\"",
           "queryType": "range",
           "refId": "A"
         }
@@ -574,7 +502,7 @@
       "options": {
         "dedupStrategy": "none",
         "enableLogDetails": true,
-        "prettifyLogMessage": false,
+        "prettifyLogMessage": true,
         "showCommonLabels": false,
         "showLabels": true,
         "showTime": true,
@@ -614,10 +542,10 @@
         "enableLogDetails": true,
         "prettifyLogMessage": false,
         "showCommonLabels": false,
-        "showLabels": true,
+        "showLabels": false,
         "showTime": true,
         "sortOrder": "Descending",
-        "wrapLogMessage": true
+        "wrapLogMessage": false
       },
       "targets": [
         {
@@ -626,7 +554,7 @@
             "uid": "loki"
           },
           "editorMode": "code",
-          "expr": "{service=~\"shell|hw-server\"} |~ \"(?i)(rate.?limit|too many requests|\\\"status_code\\\": 429|HTTP/[0-9.]+ 429)\"",
+          "expr": "{service=~\"shell|hw-server\"} | json | message=~\"(?i)rate limit exceeded.*\" | line_format \"{{.message}} | user={{.user_id}} req={{.request_id}}\"",
           "queryType": "range",
           "refId": "A"
         }
@@ -650,7 +578,7 @@
       "options": {
         "dedupStrategy": "none",
         "enableLogDetails": true,
-        "prettifyLogMessage": false,
+        "prettifyLogMessage": true,
         "showCommonLabels": false,
         "showLabels": true,
         "showTime": true,
@@ -688,7 +616,7 @@
       "options": {
         "dedupStrategy": "none",
         "enableLogDetails": true,
-        "prettifyLogMessage": false,
+        "prettifyLogMessage": true,
         "showCommonLabels": false,
         "showLabels": true,
         "showTime": true,
@@ -728,10 +656,10 @@
         "enableLogDetails": true,
         "prettifyLogMessage": false,
         "showCommonLabels": false,
-        "showLabels": true,
+        "showLabels": false,
         "showTime": true,
         "sortOrder": "Descending",
-        "wrapLogMessage": true
+        "wrapLogMessage": false
       },
       "targets": [
         {
@@ -740,9 +668,19 @@
             "uid": "loki"
           },
           "editorMode": "code",
-          "expr": "{service=~\"shell|hw-server\"} | json |~ \"(?i)(permission denied|unauthorized|forbidden)\"",
+          "expr": "{service=~\"shell|hw-server\"} |~ \"(?i)(permission denied|unauthorized|forbidden)\" | json | http_method != \"\" | regexp \"\\\"missing_roles\\\": (?P<missing>[^\\\\]]+\\\\])\" | line_format \"HTTP {{.http_method}} {{.endpoint}} | user={{.user_id}} missing={{.missing}} req={{.request_id}}\"",
           "queryType": "range",
           "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "editorMode": "code",
+          "expr": "{service=~\"shell|hw-server\"} |~ \"(?i)(permission denied|unauthorized|forbidden)\" | json | http_method = \"\" | pkg_id != \"\" | regexp \"\\\"missing_roles\\\": (?P<missing>[^\\\\]]+\\\\])\" | line_format \"WS pkg_id={{.pkg_id}} | user={{.user_id}} missing={{.missing}} req={{.request_id}}\"",
+          "queryType": "range",
+          "refId": "B"
         }
       ],
       "title": "Permission Denied Events",
@@ -783,9 +721,9 @@
       },
       {
         "current": {
-          "selected": false,
-          "text": "INFO",
-          "value": "INFO"
+          "selected": true,
+          "text": "All",
+          "value": "$__all"
         },
         "datasource": {
           "type": "loki",

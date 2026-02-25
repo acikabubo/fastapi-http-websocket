@@ -649,6 +649,44 @@
       ],
       "title": "Database Connection Pool",
       "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "description": "Keycloak authentication and token error events. Shows login errors, token validation failures, and OAuth issues. Click a row to expand full details.",
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 100
+      },
+      "id": 99,
+      "options": {
+        "dedupStrategy": "none",
+        "enableLogDetails": true,
+        "prettifyLogMessage": false,
+        "showCommonLabels": false,
+        "showLabels": true,
+        "showTime": true,
+        "sortOrder": "Descending",
+        "wrapLogMessage": false
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "editorMode": "code",
+          "expr": "{service=\"hw-keycloak\"} |~ \"type=\\\"[A-Z_]*ERROR\\\"\" | pattern `<ts> <level> <logger> <thread> type=\"<type>\", realmName=\"<realm>\", clientId=\"<client>\", userId=\"<user>\", ipAddress=\"<ip>\", error=\"<error>\", reason=\"<reason>\"<_>` | line_format \"[{{.level}}] {{.type}} | realm={{.realm}} client={{.client}} user={{.user}} ip={{.ip}} | error={{.error}} reason={{.reason}}\"",
+          "queryType": "range",
+          "refId": "A"
+        }
+      ],
+      "title": "Keycloak Auth Events",
+      "type": "logs"
     }
   ],
   "refresh": "10s",

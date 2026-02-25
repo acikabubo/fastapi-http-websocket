@@ -7,14 +7,13 @@
         }
     },
     "formatters": {
-        "access": {
-            "()": "uvicorn.logging.AccessFormatter",
-            "format": "%(asctime)s - %(levelname)s - %(message)s"
+        "json": {
+            "()": "app.logging.StructuredJSONFormatter"
         }
     },
     "handlers": {
         "access": {
-            "formatter": "access",
+            "formatter": "json",
             "class": "logging.StreamHandler",
             "stream": "ext://sys.stdout",
             "filters": ["exclude_metrics"]

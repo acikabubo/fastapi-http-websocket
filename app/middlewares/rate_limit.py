@@ -8,7 +8,7 @@ from fastapi import Request, Response, status
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import ASGIApp
 
-from app.logging import logger
+from app.logging import logger, set_log_context
 from app.schemas.user import UserModel
 from app.settings import app_settings
 from app.utils.ip_utils import get_client_ip
@@ -66,6 +66,9 @@ class RateLimitMiddleware(BaseHTTPMiddleware):  # type: ignore[misc]
         )
 
         if not is_allowed:
+            user: UserModel = getattr(request, "user", None)  # type: ignore[assignment]
+            if user and user.username:
+                set_log_context(user_id=user.username)
             logger.warning(
                 f"Rate limit exceeded for {rate_limit_key} "
                 f"on {request.method} {request.url.path}"

@@ -89,11 +89,16 @@ loki.process "docker" {
   // Parse JSON logs if present
   stage.json {
     expressions = {
-      level     = "level",
-      timestamp = "timestamp",
-      logger    = "logger",
-      message   = "message",
-      error     = "error",
+      level       = "level",
+      timestamp   = "timestamp",
+      logger      = "logger",
+      message     = "message",
+      error       = "error",
+      request_id  = "request_id",
+      user_id     = "user_id",
+      endpoint    = "endpoint",
+      status_code = "status_code",
+      environment = "environment",
     }
   }
 
@@ -102,15 +107,20 @@ loki.process "docker" {
     expression = "^(?P<time>\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}[,\\.]\\d{3}) (?P<level>\\w+) "
   }
 
-  // Set log level as label
+  // Set log level and other structured fields as labels for fast querying
   stage.labels {
     values = {
-      level  = "",
-      logger = "",
+      level       = "",
+      logger      = "",
+      request_id  = "",
+      user_id     = "",
+      status_code = "",
+      environment = "",
+      endpoint    = "",
     }
   }
 
-  // Parse timestamp
+  // Parse timestamp (app now logs RFC3339 UTC)
   stage.timestamp {
     source = "timestamp"
     format = "RFC3339"
@@ -118,11 +128,18 @@ loki.process "docker" {
       "2006-01-02 15:04:05.000",
       "2006-01-02 15:04:05,000",
     ]
+    location = "UTC"
   }
 
-  // Drop health check logs to reduce noise
+  // Drop health check and metrics access logs to reduce noise
+  // Only matches uvicorn access log lines (contain the HTTP method + path literally)
   stage.drop {
-    expression  = ".*GET /health.*"
+    expression  = "\"GET /health HTTP"
+    drop_counter_reason = "health_check"
+  }
+
+  stage.drop {
+    expression  = "\"GET /metrics HTTP"
     drop_counter_reason = "health_check"
   }
 

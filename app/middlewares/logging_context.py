@@ -41,16 +41,14 @@ class LoggingContextMiddleware(BaseHTTPMiddleware):  # type: ignore[misc]
             method=request.method,
         )
 
-        # Add user_id if authenticated
-        if hasattr(request.state, "user") and request.state.user:
-            user = request.state.user
-            if hasattr(user, "user_id"):
-                set_log_context(user_id=str(user.user_id))
-            elif hasattr(user, "sub"):
-                set_log_context(user_id=user.sub)
-
         # Process request
         response = await call_next(request)
+
+        # Add user_id after call_next so AuthenticationMiddleware has already run
+        if "user" in request.scope:
+            user = request.user
+            if hasattr(user, "username") and user.username:
+                set_log_context(user_id=user.username)
 
         # Add status code to context
         set_log_context(status_code=response.status_code)

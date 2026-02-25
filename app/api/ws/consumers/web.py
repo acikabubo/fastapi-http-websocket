@@ -10,7 +10,7 @@ from starlette import status
 from app.api.ws.formats import select_message_format_strategy
 from app.api.ws.handlers import load_handlers
 from app.api.ws.websocket import PackageAuthWebSocketEndpoint
-from app.logging import logger
+from app.logging import logger, set_log_context
 from app.routing import pkg_router
 from app.settings import app_settings
 from app.types import RequestId, UserId, Username
@@ -94,6 +94,9 @@ class Web(PackageAuthWebSocketEndpoint):
             )
 
             if not is_allowed:
+                set_log_context(
+                    user_id=self.user.username, request_id=self.correlation_id
+                )
                 logger.warning(
                     f"WebSocket message rate limit exceeded for user {self.user.username}"
                 )
