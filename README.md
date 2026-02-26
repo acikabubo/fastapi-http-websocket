@@ -45,8 +45,8 @@ A comprehensive FastAPI template with **HTTP REST API** and **WebSocket** real-t
 - ⚡ **Code Generation**: Template-based WebSocket handler generator with AST validation
 
 ### 🚀 Production Features
-- 📊 **Monitoring**: Prometheus metrics with Grafana dashboards (HTTP, WebSocket, DB, Redis, Keycloak, Circuit Breakers)
-- 📋 **Logging**: Structured JSON logging with Grafana Loki integration via Alloy
+- 📊 **Monitoring**: Prometheus metrics with Grafana dashboards (HTTP, WebSocket, DB, Redis, Keycloak, Circuit Breakers) — powered by [`fastapi-telemetry`](https://pypi.org/project/fastapi-telemetry/)
+- 📋 **Logging**: Structured JSON logging with correlation IDs and Grafana Loki integration via Alloy — powered by [`fastapi-correlation`](https://pypi.org/project/fastapi-correlation/)
 - 🔔 **Alerting**: Prometheus alerting rules for critical system events (errors, downtime, circuit breakers)
 - 🔒 **Security**: Security headers middleware, request size limits, IP spoofing protection
 - 🔄 **Resilience**: Circuit breaker pattern for Keycloak and Redis with fail-fast protection
@@ -413,6 +413,13 @@ async def get_authors_handler(request: RequestModel) -> ResponseModel:
 - `login_async(username, password)` - Returns access token
 - `decode_token(token)` - Decodes and validates a JWT token
 - Configured via environment variables
+
+#### Observability Middleware
+
+[app/middlewares/pipeline.py](app/middlewares/pipeline.py) — middleware stack powered by two in-house packages:
+
+- [`fastapi-correlation`](https://github.com/acikabubo/fastapi-correlation) ([PyPI](https://pypi.org/project/fastapi-correlation/)) — `CorrelationIDMiddleware` (injects `X-Correlation-ID` per request), `LoggingContextMiddleware` (enriches every log record with `endpoint`, `method`, `status_code`, `user_id`), `StructuredJSONFormatter` / `HumanReadableFormatter`
+- [`fastapi-telemetry`](https://github.com/acikabubo/fastapi-telemetry) ([PyPI](https://pypi.org/project/fastapi-telemetry/)) — `PrometheusMiddleware` (HTTP request duration/count/in-progress metrics via injectable callbacks), `CircuitBreakerMetricsListener` (exports pybreaker state to Prometheus), safe `get_or_create_*` metric helpers
 
 #### WebSocket Connection Manager
 
