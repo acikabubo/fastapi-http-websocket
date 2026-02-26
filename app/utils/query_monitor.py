@@ -5,13 +5,15 @@ Provides SQLAlchemy event listeners for tracking query execution times,
 identifying slow queries, and collecting performance metrics.
 """
 
+import logging
 import time
 
 from sqlalchemy import event
 from sqlalchemy.engine import Engine
 
-from app.logging import logger
 from app.utils.metrics import MetricsCollector
+
+logger = logging.getLogger("app.storage.query_monitor")
 
 # Slow query threshold in seconds (default: 100ms)
 SLOW_QUERY_THRESHOLD = 0.1
@@ -94,15 +96,18 @@ def after_cursor_execute(  # type: ignore[no-untyped-def]
 
     # Log slow query details if threshold exceeded
     if duration > SLOW_QUERY_THRESHOLD:
-        # Log slow query details
-        # Truncate statement for logging (first 500 chars)
         statement_preview = (
             statement[:500] + "..." if len(statement) > 500 else statement
         )
 
         logger.warning(
-            f"Slow query detected: {duration:.3f}s [{operation.upper()}] "
-            f"Statement: {statement_preview}"
+            "Slow query detected",
+            extra={
+                "duration_ms": round(duration * 1000),
+                "operation": operation.upper(),
+                "statement": statement_preview,
+                "threshold_ms": round(SLOW_QUERY_THRESHOLD * 1000),
+            },
         )
 
 
