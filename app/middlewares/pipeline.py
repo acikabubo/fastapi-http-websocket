@@ -37,9 +37,10 @@ class PrometheusMiddleware(_FTPrometheusMiddleware):  # type: ignore[misc]
             app,
             request_start_callback=MetricsCollector.record_http_request_start,
             request_end_callback=MetricsCollector.record_http_request_end,
-            error_callback=lambda error_type,
-            path: MetricsCollector.record_app_error(
-                error_type=error_type, handler=path
+            error_callback=lambda error_type, path: (
+                MetricsCollector.record_app_error(
+                    error_type=error_type, handler=path
+                )
             ),
         )
 
