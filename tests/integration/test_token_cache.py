@@ -14,13 +14,13 @@ Test Coverage:
 - Token hash as cache key (security)
 """
 
-import hashlib
 import json
 import time
 from unittest.mock import AsyncMock, patch
 
 import pytest
 
+from app.utils.cache_keys import CacheKeyFactory
 from app.utils.token_cache import (
     TOKEN_CACHE_BUFFER_SECONDS,
     cache_token_claims,
@@ -47,8 +47,7 @@ async def test_token_cache_hit():
     assert cached_claims == claims
 
     # Verify Redis was queried with correct key
-    token_hash = hashlib.sha256(token.encode()).hexdigest()
-    cache_key = f"token:claims:{token_hash}"
+    cache_key = CacheKeyFactory.generate_with_hash("token:claims", token)
     mock_redis.get.assert_called_once_with(cache_key)
 
 
@@ -84,8 +83,7 @@ async def test_token_cache_stores_claims():
         await cache_token_claims(token, claims)
 
     # Verify Redis setex was called
-    token_hash = hashlib.sha256(token.encode()).hexdigest()
-    cache_key = f"token:claims:{token_hash}"
+    cache_key = CacheKeyFactory.generate_with_hash("token:claims", token)
 
     mock_redis.setex.assert_called_once()
     call_args = mock_redis.setex.call_args[0]
@@ -157,8 +155,7 @@ async def test_token_cache_invalidation():
         await invalidate_token_cache(token)
 
     # Verify Redis delete was called with correct key
-    token_hash = hashlib.sha256(token.encode()).hexdigest()
-    cache_key = f"token:claims:{token_hash}"
+    cache_key = CacheKeyFactory.generate_with_hash("token:claims", token)
     mock_redis.delete.assert_called_once_with(cache_key)
 
 
@@ -267,8 +264,7 @@ async def test_token_hash_as_cache_key():
         await cache_token_claims(token, claims)
 
     # Verify cache key uses hash, not token
-    token_hash = hashlib.sha256(token.encode()).hexdigest()
-    expected_key = f"token:claims:{token_hash}"
+    expected_key = CacheKeyFactory.generate_with_hash("token:claims", token)
 
     call_args = mock_redis.setex.call_args[0]
     assert call_args[0] == expected_key

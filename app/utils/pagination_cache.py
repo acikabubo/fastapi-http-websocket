@@ -5,12 +5,11 @@ Provides Redis-based caching of expensive COUNT queries used in pagination.
 Cache keys are based on model name and filter parameters.
 """
 
-import hashlib
-import json
 from typing import Any
 
 from app.logging import logger
 from app.storage.redis import RedisPool
+from app.utils.cache_keys import CacheKeyFactory
 from app.utils.redis_safe import redis_safe
 
 
@@ -147,11 +146,7 @@ def _generate_count_cache_key(
         Redis cache key string.
     """
     if filters:
-        # Sort filters for consistent hashing
-        sorted_filters = json.dumps(filters, sort_keys=True)
-        filter_hash = hashlib.md5(
-            sorted_filters.encode(), usedforsecurity=False
-        ).hexdigest()[:8]
-        return f"pagination:count:{model_name}:{filter_hash}"
-    else:
-        return f"pagination:count:{model_name}:all"
+        return CacheKeyFactory.generate(
+            "pagination:count", model_name, hash_dict=filters
+        )
+    return f"pagination:count:{model_name}:all"

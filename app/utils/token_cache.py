@@ -26,13 +26,13 @@ Example:
     ...     await cache_token_claims(token, claims)
 """
 
-import hashlib
 import json
 import time
 from typing import Any
 
 from app.logging import logger
 from app.storage.redis import get_redis_connection
+from app.utils.cache_keys import CacheKeyFactory
 from app.utils.redis_safe import redis_safe
 
 # Token cache buffer: expire cache 30s before token expiration to prevent stale data
@@ -69,8 +69,7 @@ async def get_cached_token_claims(token: str) -> dict[str, Any] | None:
         return None
 
     # Use hash of token as cache key to avoid storing full token
-    token_hash = hashlib.sha256(token.encode()).hexdigest()
-    cache_key = f"token:claims:{token_hash}"
+    cache_key = CacheKeyFactory.generate_with_hash("token:claims", token)
 
     cached_data = await redis.get(cache_key)
 
@@ -79,14 +78,14 @@ async def get_cached_token_claims(token: str) -> dict[str, Any] | None:
         from app.utils.metrics import MetricsCollector
 
         MetricsCollector.record_token_cache_hit()
-        logger.debug(f"Token claims cache hit: {token_hash[:8]}...")
+        logger.debug(f"Token claims cache hit: {cache_key[-8:]}...")
         return json.loads(cached_data)
 
     # Track cache miss
     from app.utils.metrics import MetricsCollector
 
     MetricsCollector.record_token_cache_miss()
-    logger.debug(f"Token claims cache miss: {token_hash[:8]}...")
+    logger.debug(f"Token claims cache miss: {cache_key[-8:]}...")
     return None
 
 
@@ -130,12 +129,11 @@ async def cache_token_claims(
         )
 
     if ttl and ttl > 0:
-        token_hash = hashlib.sha256(token.encode()).hexdigest()
-        cache_key = f"token:claims:{token_hash}"
+        cache_key = CacheKeyFactory.generate_with_hash("token:claims", token)
 
         await redis.setex(cache_key, ttl, json.dumps(claims))
 
-        logger.debug(f"Cached token claims: {token_hash[:8]}... (TTL: {ttl}s)")
+        logger.debug(f"Cached token claims: {cache_key[-8:]}... (TTL: {ttl}s)")
 
 
 @redis_safe(
@@ -166,8 +164,7 @@ async def invalidate_token_cache(token: str) -> None:
     if not redis:
         return
 
-    token_hash = hashlib.sha256(token.encode()).hexdigest()
-    cache_key = f"token:claims:{token_hash}"
+    cache_key = CacheKeyFactory.generate_with_hash("token:claims", token)
 
     await redis.delete(cache_key)
-    logger.debug(f"Invalidated token cache: {token_hash[:8]}...")
+    logger.debug(f"Invalidated token cache: {cache_key[-8:]}...")

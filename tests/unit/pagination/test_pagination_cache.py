@@ -31,12 +31,11 @@ class TestGenerateCountCacheKey:
         filters = {"status": "active", "page": 1}
         key = _generate_count_cache_key("Author", filters)
 
-        # Should contain model name and hash
+        # Should contain model name and SHA-256 hash (64 chars)
         assert key.startswith("pagination:count:Author:")
         assert key != "pagination:count:Author:all"
-        # Hash should be 8 characters
         hash_part = key.split(":")[-1]
-        assert len(hash_part) == 8
+        assert len(hash_part) == 64
 
     def test_generate_key_deterministic(self):
         """Test that same filters produce same key."""
