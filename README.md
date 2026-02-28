@@ -95,6 +95,9 @@ make serve
 - 📋 **Loki**: `http://loki.localhost` (requires BasicAuth: admin/admin)
 - 🔐 **Keycloak**: `http://localhost:8080` (admin/admin)
 
+**🗺️ Services Hub:** Open `docker/hub.html` in your browser (or run `make hub`) to get a quick-launch page with links to all local services.
+> Some cards show a `⚠ run: make <command>` hint when a service needs to be started separately (e.g. `make serve`, `make start-server`, `make docs-serve`).
+
 ## 💻 Installation
 
 ### 🏠 Local Development Setup

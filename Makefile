@@ -32,6 +32,9 @@ start: ## Start all services (uses pre-built image from GHCR, override with IMAG
 stop: ## Stop all Docker services
 	docker compose -f docker/docker-compose.yml down
 
+hub: ## Open the local services hub page in the browser
+	@xdg-open docker/hub.html 2>/dev/null || open docker/hub.html 2>/dev/null || echo "Open docker/hub.html in your browser"
+
 run-server-service-command = \
 	docker compose -f docker/docker-compose.yml run --rm --name hw-server --service-ports shell
 
