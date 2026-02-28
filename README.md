@@ -605,6 +605,68 @@ make start
 docker-compose logs -f
 ```
 
+#### 🐘 PostgreSQL Major Version Upgrade
+
+**Problem**: Container exits immediately after upgrading PostgreSQL image (e.g. 13 → 18)
+
+**Root cause**: PostgreSQL data format is incompatible across major versions. The old data volume cannot be read by the new engine.
+
+**💡 Solution — dump & restore**:
+
+```bash
+# 1. Revert to old version temporarily
+#    Edit docker/docker-compose.yml → set postgres image back to old version
+
+# 2. Start the old container and dump ALL databases (app + Keycloak)
+make start-server
+docker exec hw-db pg_dump -U postgres hw       > hw_backup.sql
+docker exec hw-db pg_dump -U postgres keycloak > keycloak_backup.sql
+
+# 3. Stop containers and delete the old data volume
+make stop
+docker volume rm fastapi-http-websocket_postgres-hw-data
+
+# 4. Update to new postgres version in docker/docker-compose.yml
+#    Also update the volume mount path:
+#      OLD: /var/lib/postgresql/data
+#      NEW: /var/lib/postgresql   (required for PostgreSQL 15+)
+
+# 5. Start fresh container and restore both databases
+make start-server
+cat hw_backup.sql       | docker exec -i hw-db psql -U postgres hw
+cat keycloak_backup.sql | docker exec -i hw-db psql -U postgres keycloak
+
+# 6. Run migrations to catch up any schema changes
+make migrate
+```
+
+> **Note:** Dumping the `keycloak` database preserves all realms, users, roles, clients,
+> and signing keys. Skipping this step will cause Keycloak to regenerate its RSA keys on
+> first boot, invalidating all existing tokens (see [Keycloak Major Version Upgrade](#-keycloak-major-version-upgrade) below).
+
+#### 🔐 Keycloak Major Version Upgrade
+
+**Problem**: After upgrading Keycloak image, `JWTMissingKey` errors appear in the app
+
+**Root cause**: Keycloak regenerates RSA signing keys on first startup with a new version (or after DB wipe). The app and Redis hold stale cached tokens/JWKS signed by the old keys.
+
+**💡 Solution**:
+
+```bash
+# 1. Clear the Redis token cache (forces fresh JWKS fetch)
+docker exec hw-redis redis-cli FLUSHDB
+
+# 2. Restart the app server to reload keys
+docker compose -f docker/docker-compose.yml restart hw-server
+
+# 3. Clear browser storage to remove stale tokens
+#    Chrome/Firefox: DevTools (F12) → Application → Local Storage → Clear All
+#    Or simply open an Incognito/Private window
+
+# 4. Log out of all clients (browser, Grafana, etc.) and log back in
+#    Existing JWTs were signed with the old key and cannot be reused
+```
+
 #### 🔐 Keycloak Authentication Failures
 
 **Problem**: `401 Unauthorized` or invalid token errors

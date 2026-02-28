@@ -478,7 +478,7 @@
             "uid": "loki"
           },
           "editorMode": "code",
-          "expr": "{service=~\"shell|hw-server\"} | json | endpoint!=\"\" | endpoint!=\"/health\" | endpoint!=\"/metrics\" | method=~\"$method\" | endpoint=~\".*$endpoint.*\" | status_code=~\"$status_code\" | user_id=~\"$user_id\" | line_format \"{{.method}} {{.endpoint}} → {{.status_code}} | user={{.user_id}} req={{.request_id}}\"",
+          "expr": "{service=~\"shell|hw-server\"} | json | logger=\"uvicorn.access\" | endpoint!=\"\" | endpoint!=\"/health\" | endpoint!=\"/metrics\" | method=~\"$method\" | endpoint=~\".*$endpoint.*\" | status_code=~\"$status_code\" | user_id=~\"$user_id\" | line_format \"{{.method}} {{.endpoint}} \u2192 {{.status_code}} | user={{.user_id}} req={{.request_id}}\"",
           "queryType": "range",
           "refId": "A"
         }
