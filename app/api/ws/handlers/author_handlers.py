@@ -26,6 +26,7 @@ from app.commands.author_commands import (
 from app.models.author import Author
 from app.repositories.author_repository import AuthorRepository
 from app.routing import pkg_router
+from app.security.roles import Role
 from app.schemas.filters import AuthorFilters
 from app.schemas.generic_typing import JsonSchemaType
 from app.schemas.request import RequestModel
@@ -53,7 +54,7 @@ get_authors_schema: JsonSchemaType = {
     PkgID.GET_AUTHORS,
     json_schema=get_authors_schema,
     validator_callback=validator,
-    roles=["get-authors"],
+    roles=[Role.GET_AUTHORS],
 )
 @handle_ws_errors
 async def get_authors_handler(request: RequestModel) -> ResponseModel[Author]:
@@ -136,7 +137,7 @@ get_paginated_authors_schema: JsonSchemaType = {
     PkgID.GET_PAGINATED_AUTHORS,
     json_schema=get_paginated_authors_schema,
     validator_callback=validator,
-    roles=["get-authors"],
+    roles=[Role.GET_AUTHORS],
 )
 @handle_ws_errors
 async def get_paginated_authors_handler(
@@ -248,7 +249,7 @@ create_author_schema: JsonSchemaType = {
     PkgID.CREATE_AUTHOR,
     json_schema=create_author_schema,
     validator_callback=validator,
-    roles=["create-author"],
+    roles=[Role.CREATE_AUTHOR],
 )
 @handle_ws_errors
 async def create_author_handler(

@@ -28,6 +28,7 @@ from app.commands.author_commands import (
 )
 from app.dependencies import AuthorRepoDep
 from fastapi_keycloak_rbac.dependencies import require_roles
+from app.security.roles import Role
 from app.models.author import Author
 from app.schemas.response import PaginatedResponseModel
 from app.settings import app_settings
@@ -42,7 +43,7 @@ router = APIRouter(prefix="/authors", tags=["authors"])
     response_model=list[Author],
     summary="Get all authors",
     description="Get authors using Repository + Command pattern",
-    dependencies=[Depends(require_roles("get-authors"))],
+    dependencies=[Depends(require_roles(Role.GET_AUTHORS))],
 )
 @handle_http_errors
 async def get_authors(
@@ -85,7 +86,7 @@ async def get_authors(
     status_code=status.HTTP_201_CREATED,
     summary="Create a new author",
     description="Create author using Repository + Command pattern",
-    dependencies=[Depends(require_roles("create-author"))],
+    dependencies=[Depends(require_roles(Role.CREATE_AUTHOR))],
 )
 @handle_http_errors
 async def create_author(
@@ -125,7 +126,7 @@ async def create_author(
     response_model=Author,
     summary="Update an author",
     description="Update author using Repository + Command pattern",
-    dependencies=[Depends(require_roles("update-author"))],
+    dependencies=[Depends(require_roles(Role.UPDATE_AUTHOR))],
 )
 @handle_http_errors
 async def update_author(
@@ -165,7 +166,7 @@ async def update_author(
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Delete an author",
     description="Delete author using Repository + Command pattern",
-    dependencies=[Depends(require_roles("delete-author"))],
+    dependencies=[Depends(require_roles(Role.DELETE_AUTHOR))],
 )
 @handle_http_errors
 async def delete_author(
@@ -196,7 +197,7 @@ async def delete_author(
     response_model=PaginatedResponseModel[Author],
     summary="Get paginated list of authors",
     description="Get paginated authors with offset or cursor pagination",
-    dependencies=[Depends(require_roles("get-authors"))],
+    dependencies=[Depends(require_roles(Role.GET_AUTHORS))],
 )
 @handle_http_errors
 async def get_paginated_authors(
