@@ -22,18 +22,17 @@ os.environ.setdefault("DB_USER", "test-user")
 os.environ.setdefault("DB_PASSWORD", "test-password")
 
 # Import app modules after setting environment variables
+from fastapi_keycloak_rbac.models import UserModel
 from keycloak import KeycloakAdmin
 from starlette.responses import Response
 from testcontainers.keycloak import KeycloakContainer
 
+# Load WebSocket handlers to register them with the router
+from app.api.ws.handlers import load_handlers
 from app.managers.keycloak_manager import KeycloakManager
 from app.models.author import Author
 from app.schemas.request import RequestModel
 from app.schemas.response import ResponseModel
-from fastapi_keycloak_rbac.models import UserModel
-
-# Load WebSocket handlers to register them with the router
-from app.api.ws.handlers import load_handlers
 
 load_handlers()  # type: ignore[no-untyped-call]
 
@@ -410,11 +409,12 @@ async def setup_test_db(postgres_container):
             # app.storage.db.async_session now points to testcontainer
             await log_user_action(...)
     """
-    import app.storage.db as db_module
     from sqlalchemy.ext.asyncio import create_async_engine
     from sqlalchemy.orm import sessionmaker
     from sqlmodel import SQLModel
     from sqlmodel.ext.asyncio.session import AsyncSession
+
+    import app.storage.db as db_module
 
     # Import all models so SQLModel.metadata is populated
     from app.models.author import Author  # noqa: F401
@@ -485,7 +485,11 @@ def keycloak_container():
     """
     # Start Keycloak container with test realm
     # Using official Docker Hub image (faster and more reliable than quay.io)
-    container = KeycloakContainer("keycloak/keycloak:26.0.0")
+    # Keycloak 26+ can take >120s to start on slower machines, increase timeout
+    import os
+
+    os.environ.setdefault("TESTCONTAINERS_TIMEOUT", "240")
+    container = KeycloakContainer("keycloak/keycloak:26.5")
     container.start()
 
     try:

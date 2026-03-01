@@ -1,5 +1,3 @@
-please don't use latest in docker compose
-
 # Famous design principles
 - SOLID -> Single Responsibility Principle (SRP)
         -> Open-Closed Principle (OCP)
@@ -9,3 +7,5 @@ please don't use latest in docker compose
 - DRY   -> Don't Repeat Yourself
 - YAGNI -> You Aren't Gonna Need It
 - KISS  -> Keep It Simple Stupid
+
+Test docker production setup

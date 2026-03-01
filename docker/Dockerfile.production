@@ -71,6 +71,9 @@ WORKDIR /app
 # Copy application code (exclude dev files via .dockerignore)
 COPY --chown=app:app . .
 
+# Create logs directory
+RUN mkdir -p /app/logs && chown app:app /app/logs
+
 # Switch to non-root user
 USER app
 

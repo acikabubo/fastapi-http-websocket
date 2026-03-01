@@ -5,7 +5,6 @@ Tests the f-string-based code generation system that replaces Jinja2 templates.
 """
 
 import ast
-from pathlib import Path
 
 import pytest
 
@@ -13,20 +12,9 @@ from generate_ws_handler import HandlerGenerator
 
 
 @pytest.fixture
-def generator():
-    """Create a handler generator instance for testing."""
-    return HandlerGenerator(handlers_dir="test_handlers")
-
-
-@pytest.fixture(autouse=True)
-def cleanup_test_handlers():
-    """Clean up test handler files after each test."""
-    yield
-    test_dir = Path("test_handlers")
-    if test_dir.exists():
-        for file in test_dir.glob("*.py"):
-            file.unlink()
-        test_dir.rmdir()
+def generator(tmp_path):
+    """Create a handler generator instance with an isolated temp directory."""
+    return HandlerGenerator(handlers_dir=str(tmp_path))
 
 
 class TestHandlerGenerator:
