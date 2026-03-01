@@ -49,13 +49,7 @@ LABEL org.opencontainers.image.source="https://github.com/acikabubo/fastapi-http
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq5 \
     curl \
-    tzdata \
     && rm -rf /var/lib/apt/lists/*
-
-# Set timezone
-ENV TZ=Europe/Skopje
-RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && \
-    echo $TZ > /etc/timezone
 
 # Create non-root user
 RUN groupadd --gid 1000 app && \

@@ -22,9 +22,8 @@ RUN apt install -my \
 
 # Set timezone (override at build time with --build-arg TZ=Europe/Skopje)
 ARG TZ=UTC
-RUN cp /usr/share/zoneinfo/${TZ} /etc/localtime
-RUN echo "${TZ}" > /etc/timezone
 ENV TZ=${TZ}
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 # Setup normal user. If not passed as build argument use 'devel' as default
 RUN addgroup --gid 1000 devel && \
