@@ -53,9 +53,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Set timezone
-RUN cp /usr/share/zoneinfo/Europe/Skopje /etc/localtime && \
-    echo "Europe/Skopje" > /etc/timezone
 ENV TZ=Europe/Skopje
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && \
+    echo $TZ > /etc/timezone
 
 # Create non-root user
 RUN groupadd --gid 1000 app && \
