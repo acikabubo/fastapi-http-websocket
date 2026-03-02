@@ -83,7 +83,7 @@ repos:
     hooks:
       - id: check-rbac-coverage
         name: "check-rbac: Verify RBAC protection on endpoints"
-        entry: uv run python scripts/check_rbac_coverage.py
+        entry: uv run --frozen python scripts/check_rbac_coverage.py
         language: system
         pass_filenames: false
         files: ^app/api/(http|ws/handlers)/.*\.py$
