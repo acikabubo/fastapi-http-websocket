@@ -197,11 +197,18 @@ class RBACChecker(ast.NodeVisitor):
         return None
 
     def _extract_roles_from_args(self, args: list[ast.expr]) -> list[str]:
-        """Extract role strings from function arguments."""
+        """Extract role strings from function arguments.
+
+        Handles both string literals (``"admin"``) and enum attribute access
+        (``Role.ADMIN``).
+        """
         roles = []
         for arg in args:
             if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
                 roles.append(arg.value)
+            elif isinstance(arg, ast.Attribute):
+                # e.g. Role.ADMIN → "Role.ADMIN"
+                roles.append(f"{ast.unparse(arg)}")
         return roles
 
     def _extract_roles_from_list(self, node: ast.expr) -> list[str] | None:
