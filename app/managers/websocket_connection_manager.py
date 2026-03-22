@@ -15,6 +15,20 @@ class ConnectionManager:
     Tracks connected WebSocket clients using session keys for O(1) lookups
     and provides broadcast capabilities for sending messages to all active
     connections.
+
+    .. warning:: **Single-worker only.**
+        This manager stores WebSocket objects in process memory. Running
+        multiple uvicorn workers (``--workers N``) or multiple replicas means
+        each process has its own independent instance — ``broadcast()`` will
+        only reach clients connected to *that* worker, and
+        ``connect``/``disconnect`` state won't be visible across workers.
+
+        Always run with a single worker::
+
+            uvicorn app:application --workers 1
+
+        Multi-worker broadcast support requires a Redis Pub/Sub backend
+        (tracked in issue #192).
     """
 
     def __init__(self) -> None:
