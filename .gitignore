@@ -1,6 +1,8 @@
 build.log
 !logs/.gitkeep
 .coverage
+coverage.xml
+htmlcov/
 .env
 .security_reports/*
 .worktree
