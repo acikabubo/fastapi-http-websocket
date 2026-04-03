@@ -174,7 +174,11 @@ services:
       traefik:
         condition: service_healthy
 
-    command: "uvicorn app:application --host 0.0.0.0 --port 8000 --log-config /project/uvicorn_logging.json"
+    # IMPORTANT: --workers 1 is required. ConnectionManager stores WebSocket
+    # objects in process memory; multiple workers would give each process its
+    # own instance and broadcast() would only reach clients on that worker.
+    # Multi-worker support requires a Redis Pub/Sub backend (see issue #192).
+    command: "uvicorn app:application --host 0.0.0.0 --port 8000 --workers 1 --log-config /project/uvicorn_logging.json"
 
     restart: unless-stopped
 

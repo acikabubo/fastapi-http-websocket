@@ -149,6 +149,12 @@ async def create_author_ws(request: RequestModel) -> ResponseModel:
 - `broadcast(message)` sends to all connected clients
 - Connection tracking with logging
 
+> **⚠️ Single-worker constraint**: `ConnectionManager` stores WebSocket objects
+> in process memory. Always run with `--workers 1` (enforced in docker-compose).
+> Running multiple workers or replicas means each process has its own instance —
+> `broadcast()` only reaches clients on *that* worker. Multi-worker support
+> requires a Redis Pub/Sub backend (tracked in issue #192).
+
 ### Database
 
 **Location**: `app/storage/db.py`
