@@ -251,8 +251,11 @@ def default_apply_filters(
             if isinstance(value, (list, tuple)):
                 query = query.filter(attr.in_(value))
             elif isinstance(value, str):
-                # Use case-insensitive ILIKE for string filters
-                query = query.filter(attr.ilike(f"%{value}%"))
+                # Strip leading/trailing wildcards to prevent logical injection
+                # (e.g. "%a%b%" turning a cheap filter into a full-table scan)
+                # and enforce a max length to limit DB load.
+                sanitized = value.strip("%")[:255]
+                query = query.filter(attr.ilike(f"%{sanitized}%"))
             else:
                 query = query.filter(attr == value)
         else:
