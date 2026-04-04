@@ -70,6 +70,7 @@ from app.utils.metrics.redis import (
 from app.utils.metrics.websocket import (
     get_active_websocket_connections,
     get_websocket_health_info,
+    ws_broadcast_errors_total,
     ws_connections_active,
     ws_connections_total,
     ws_message_processing_duration_seconds,
@@ -104,6 +105,7 @@ __all__ = [
     "ws_messages_received_total",
     "ws_messages_sent_total",
     "ws_message_processing_duration_seconds",
+    "ws_broadcast_errors_total",
     "get_active_websocket_connections",
     "get_websocket_health_info",
     # Database metrics

@@ -37,6 +37,11 @@ ws_message_processing_duration_seconds = get_or_create_histogram(
     buckets=(0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0),
 )
 
+ws_broadcast_errors_total = get_or_create_counter(
+    "ws_broadcast_errors_total",
+    "Total unexpected errors during WebSocket broadcast (connection skipped, not disconnected)",
+)
+
 
 # Helper Functions
 
@@ -81,6 +86,7 @@ __all__ = [
     "ws_messages_received_total",
     "ws_messages_sent_total",
     "ws_message_processing_duration_seconds",
+    "ws_broadcast_errors_total",
     "get_active_websocket_connections",
     "get_websocket_health_info",
 ]
