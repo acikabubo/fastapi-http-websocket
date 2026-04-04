@@ -532,6 +532,49 @@ class TestGetPaginatedResults:
             # Should complete successfully but log warning
             assert len(results) == 1
 
+    @pytest.mark.asyncio
+    async def test_pagination_uses_provided_session(self):
+        """When session= is passed, get_paginated_results uses it instead of opening a new one."""
+        from unittest.mock import AsyncMock, MagicMock, patch
+
+        from app.models.author import Author
+        from app.storage.db import get_paginated_results
+
+        mock_authors = [Author(id=1, name="Author 1")]
+
+        mock_count_result = MagicMock()
+        mock_count_result.one.return_value = 1
+
+        mock_data_result = MagicMock()
+        mock_data_result.all.return_value = mock_authors
+
+        mock_session = AsyncMock()
+        mock_session.exec = AsyncMock(
+            side_effect=[mock_count_result, mock_data_result]
+        )
+
+        mock_session_factory = MagicMock()  # should NOT be called
+
+        with (
+            patch("app.storage.db.async_session", mock_session_factory),
+            patch(
+                "app.storage.pagination.offset.get_cached_count",
+                AsyncMock(return_value=None),
+            ),
+            patch(
+                "app.storage.pagination.offset.set_cached_count", AsyncMock()
+            ),
+        ):
+            results, meta = await get_paginated_results(
+                Author, page=1, per_page=1, session=mock_session
+            )
+
+        # Provided session was used
+        mock_session.exec.assert_called()
+        # async_session() was NOT called — no new session opened
+        mock_session_factory.assert_not_called()
+        assert len(results) == 1
+
 
 class TestDefaultApplyFilters:
     """Tests for default_apply_filters function."""

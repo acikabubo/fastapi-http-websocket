@@ -213,14 +213,16 @@ async def get_paginated_authors_handler(
             )
 
     # Get paginated results with type-safe filters
-    authors, meta = await get_paginated_results(
-        Author,
-        page=page,
-        per_page=per_page,
-        filters=filters,
-        cursor=cursor,
-        eager_load=eager_load,
-    )
+    async with async_session() as session:
+        authors, meta = await get_paginated_results(
+            Author,
+            page=page,
+            per_page=per_page,
+            session=session,
+            filters=filters,
+            cursor=cursor,
+            eager_load=eager_load,
+        )
 
     return ResponseModel(
         pkg_id=request.pkg_id,
