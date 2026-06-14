@@ -1,7 +1,9 @@
 """Tests for package routing functionality."""
 
+import pytest
+
 from app.api.ws.constants import PkgID
-from app.routing import PackageRouter, collect_subrouters
+from app.routing import PackageRouter, collect_subrouters, pkg_router
 from app.schemas.request import RequestModel
 from app.schemas.response import ResponseModel
 
@@ -93,6 +95,20 @@ class TestPackageRouter:
 
 class TestCollectSubrouters:
     """Test HTTP and WebSocket router collection."""
+
+    @pytest.fixture(autouse=True)
+    def restore_pkg_router(self):
+        """Restore global pkg_router registries after each test."""
+        handlers = dict(pkg_router.handlers_registry)
+        validators = dict(pkg_router.validators_registry)
+        permissions = dict(pkg_router.permissions_registry)
+        yield
+        pkg_router.handlers_registry.clear()
+        pkg_router.handlers_registry.update(handlers)
+        pkg_router.validators_registry.clear()
+        pkg_router.validators_registry.update(validators)
+        pkg_router.permissions_registry.clear()
+        pkg_router.permissions_registry.update(permissions)
 
     def test_collect_subrouters_returns_api_router(self):
         """Test that collect_subrouters returns an APIRouter instance."""

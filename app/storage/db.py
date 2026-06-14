@@ -75,7 +75,12 @@ async def wait_and_init_db(
 
 async def get_session() -> AsyncSession:
     """
-    Get an asynchronous session from the SQLAlchemy session factory.
+    Get an asynchronous write session from the SQLAlchemy session factory.
+
+    Commits on success, rolls back on IntegrityError or SQLAlchemyError.
+    Use for handlers that write to the database.
+    For read-only handlers use :func:`get_read_session` to avoid the
+    unnecessary commit round-trip.
 
     Yields:
         AsyncSession: An asynchronous SQLAlchemy session.
@@ -88,6 +93,26 @@ async def get_session() -> AsyncSession:
             await session.rollback()
             logger.error(f"Database integrity error: {ex}")
             raise
+        except SQLAlchemyError as ex:
+            await session.rollback()
+            logger.error(f"Database error: {ex}")
+            raise
+
+
+async def get_read_session() -> AsyncSession:
+    """
+    Get an asynchronous read-only session from the SQLAlchemy session factory.
+
+    Does NOT commit after the request — avoids a no-op transaction round-trip
+    to PostgreSQL for handlers that only read data (e.g. GET endpoints).
+    Rolls back on any SQLAlchemy error to release the connection cleanly.
+
+    Yields:
+        AsyncSession: An asynchronous SQLAlchemy session.
+    """
+    async with async_session() as session:
+        try:
+            yield session
         except SQLAlchemyError as ex:
             await session.rollback()
             logger.error(f"Database error: {ex}")

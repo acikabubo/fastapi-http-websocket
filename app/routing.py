@@ -1,7 +1,8 @@
 import os
 import pkgutil
+import sys
 from collections.abc import Callable
-from importlib import import_module
+from importlib import import_module, reload
 from typing import Any
 
 from fastapi import APIRouter
@@ -126,15 +127,6 @@ class PackageRouter:
 
         def decorator(func: HandlerCallableType) -> HandlerCallableType:
             for pkg_id in pkg_ids:
-                # Check if handler is already registered (idempotent for reload)
-                if pkg_id in self.handlers_registry:
-                    # Skip if same handler, raise if different
-                    if self.handlers_registry[pkg_id] != func:
-                        raise ValueError(
-                            f"Different handler already registered for pkg_id {pkg_id}"
-                        )
-                    continue
-
                 self.handlers_registry[pkg_id] = func
 
                 # Only store validators if both schema and callback are provided
@@ -305,11 +297,6 @@ class PackageRouter:
 pkg_router = PackageRouter()
 
 
-# Track registered modules to prevent duplicate logging
-_registered_http_modules: set[str] = set()
-_registered_ws_modules: set[str] = set()
-
-
 def collect_subrouters() -> APIRouter:
     """
     Collects and registers all API and WebSocket routers for the application.
@@ -320,6 +307,11 @@ def collect_subrouters() -> APIRouter:
 
     The main `APIRouter` instance is then returned, allowing it to be used as the entry point for the application's API.
     """
+    # Clear registries so hot-reload gets fresh handler references (#196)
+    pkg_router.handlers_registry.clear()
+    pkg_router.validators_registry.clear()
+    pkg_router.permissions_registry.clear()
+
     # Initialize main router
     main_router: APIRouter = APIRouter()
 
@@ -329,30 +321,26 @@ def collect_subrouters() -> APIRouter:
 
     # Get API routers
     for _, module, _ in pkgutil.iter_modules([f"{app_dir}/api/http"]):
-        # Get api module
-        api = import_module(f".{module}", package=f"{app_name}.api.http")
-
-        # Add api router to main router
+        full_name = f"{app_name}.api.http.{module}"
+        api = (
+            reload(sys.modules[full_name])
+            if full_name in sys.modules
+            else import_module(f".{module}", package=f"{app_name}.api.http")
+        )
         main_router.include_router(api.router)
-
-        # Only log on first registration
-        if module not in _registered_http_modules:
-            logger.info(f'Register "{module}" api')
-            _registered_http_modules.add(module)
+        logger.info(f'Register "{module}" api')
 
     # Get WS routers
     for _, module, _ in pkgutil.iter_modules([f"{app_dir}/api/ws/consumers"]):
-        # Get ws module
-        ws_consumer = import_module(
-            f".{module}", package=f"{app_name}.api.ws.consumers"
+        full_name = f"{app_name}.api.ws.consumers.{module}"
+        ws_consumer = (
+            reload(sys.modules[full_name])
+            if full_name in sys.modules
+            else import_module(
+                f".{module}", package=f"{app_name}.api.ws.consumers"
+            )
         )
-
-        # Add ws router to main router
         main_router.include_router(ws_consumer.router)
-
-        # Only log on first registration
-        if module not in _registered_ws_modules:
-            logger.info(f'Register "{module}" websocket consumer')
-            _registered_ws_modules.add(module)
+        logger.info(f'Register "{module}" websocket consumer')
 
     return main_router
