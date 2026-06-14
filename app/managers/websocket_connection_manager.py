@@ -6,6 +6,7 @@ from starlette.websockets import WebSocketDisconnect
 
 from app.logging import logger
 from app.schemas.response import BroadcastDataModel
+from app.utils.metrics import MetricsCollector
 
 
 class ConnectionManager:
@@ -110,21 +111,21 @@ class ConnectionManager:
             try:
                 await connection.send_json(message.model_dump(mode="json"))
             except (WebSocketDisconnect, ConnectionError, RuntimeError) as e:
-                # WebSocketDisconnect: Client disconnected
-                # ConnectionError: Network errors
-                # RuntimeError: WebSocket in invalid state
+                # Fatal connection errors — client is gone, clean up
                 logger.warning(
                     f"Failed to send to connection {id(connection)} "
                     f"(key: {session_key}): {e}"
                 )
                 self.disconnect(session_key)
             except Exception as e:  # noqa: BLE001
-                # Catch-all for unexpected send errors
-                logger.warning(
-                    f"Unexpected error sending to connection {id(connection)} "
-                    f"(key: {session_key}): {e}"
+                # Transient/unexpected error — log and skip, do NOT disconnect.
+                # The connection may still be valid; disconnecting here would
+                # drop healthy clients on serialization errors or buffer blips.
+                MetricsCollector.record_ws_broadcast_error()
+                logger.error(
+                    f"Unexpected broadcast error for connection {id(connection)} "
+                    f"(key: {session_key}), skipping send: {e}"
                 )
-                self.disconnect(session_key)
 
         await asyncio.gather(
             *[safe_send(key, conn) for key, conn in connections_snapshot],

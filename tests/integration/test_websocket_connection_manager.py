@@ -5,10 +5,11 @@ This module tests the ConnectionManager functionality including
 connection tracking and broadcasting.
 """
 
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi import WebSocket
+from starlette.websockets import WebSocketDisconnect
 
 from app.managers.websocket_connection_manager import ConnectionManager
 from app.schemas.response import BroadcastDataModel
@@ -145,15 +146,41 @@ class TestConnectionManager:
         mock_ws3.send_json.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_broadcast_handles_send_error(self):
-        """Test broadcast handles send errors gracefully."""
+    async def test_broadcast_disconnects_on_websocket_disconnect(self):
+        """Fatal WebSocketDisconnect errors remove the connection."""
         manager = ConnectionManager()
         mock_ws1 = MagicMock(spec=WebSocket)
         mock_ws2 = MagicMock(spec=WebSocket)
 
-        # First connection will fail to send
+        mock_ws1.send_json = AsyncMock(side_effect=WebSocketDisconnect())
+        mock_ws2.send_json = AsyncMock()
+
+        manager.connect("session:test1", mock_ws1)
+        manager.connect("session:test2", mock_ws2)
+
+        broadcast_msg = BroadcastDataModel(
+            pkg_id=1, status_code=0, data={"message": "test"}
+        )
+
+        await manager.broadcast(broadcast_msg)
+
+        # Disconnected client removed
+        assert "session:test1" not in manager.connections
+        # Healthy client still connected and received message
+        mock_ws2.send_json.assert_called_once()
+        assert "session:test2" in manager.connections
+
+    @pytest.mark.asyncio
+    async def test_broadcast_skips_on_unexpected_error_without_disconnecting(
+        self,
+    ):
+        """Unexpected errors skip the send but keep the connection alive."""
+        manager = ConnectionManager()
+        mock_ws1 = MagicMock(spec=WebSocket)
+        mock_ws2 = MagicMock(spec=WebSocket)
+
         mock_ws1.send_json = AsyncMock(
-            side_effect=Exception("Connection closed")
+            side_effect=ValueError("serialization error")
         )
         mock_ws2.send_json = AsyncMock()
 
@@ -161,17 +188,18 @@ class TestConnectionManager:
         manager.connect("session:test2", mock_ws2)
 
         broadcast_msg = BroadcastDataModel(
-            pkg_id=1,
-            status_code=0,
-            data={"message": "test"},
+            pkg_id=1, status_code=0, data={"message": "test"}
         )
 
-        # Should not raise exception
-        await manager.broadcast(broadcast_msg)
+        with patch(
+            "app.managers.websocket_connection_manager.MetricsCollector.record_ws_broadcast_error"
+        ) as mock_metric:
+            await manager.broadcast(broadcast_msg)
 
-        # Failed connection should be disconnected
-        assert "session:test1" not in manager.connections
-
-        # Second connection should still receive message
+        # Connection NOT removed — error was transient
+        assert "session:test1" in manager.connections
+        # Metric incremented
+        mock_metric.assert_called_once()
+        # Other connection still received message
         mock_ws2.send_json.assert_called_once()
         assert "session:test2" in manager.connections
