@@ -33,29 +33,35 @@ class TestWebSocketAuthentication:
         """
         Test that WebSocket connections without valid auth are rejected.
 
+        Auth is now deferred to the first-message handshake (on_first_message).
+        on_connect no longer closes for UnauthenticatedUser — it sets user to
+        UnauthenticatedUser and defers rejection to on_first_message.
+
         Args:
             mock_user_data: Fixture providing mock user data
         """
-        # Create a mock websocket endpoint with proper scope
-        scope = {"type": "websocket", "user": UnauthenticatedUser()}
+        scope = {"type": "websocket"}
         endpoint = PackageAuthWebSocketEndpoint(
             scope=scope, receive=None, send=None
         )  # type: ignore
 
-        # Mock the websocket
         mock_websocket = create_mock_websocket()
 
-        # Mock Redis connection
-        with patch(
-            "app.api.ws.websocket.get_auth_redis_connection"
-        ) as mock_redis:
+        with (
+            patch(
+                "app.api.ws.websocket.get_auth_redis_connection"
+            ) as mock_redis,
+            patch(
+                "app.api.ws.websocket.WebSocketEndpoint.on_connect",
+                new_callable=AsyncMock,
+            ),
+        ):
             mock_redis.return_value = AsyncMock()
-
-            # Call on_connect
             await endpoint.on_connect(mock_websocket)
 
-            # Verify websocket was closed for unauthenticated user
-            mock_websocket.close.assert_called_once()
+        # on_connect no longer rejects — user starts as UnauthenticatedUser
+        assert isinstance(endpoint.user, UnauthenticatedUser)
+        mock_websocket.close.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_websocket_accepts_authenticated_connection(
@@ -64,29 +70,28 @@ class TestWebSocketAuthentication:
         """
         Test that WebSocket connections with valid auth are accepted.
 
+        Authentication now happens in on_first_message + _post_auth_setup.
+        on_connect only initialises Redis and sets user to UnauthenticatedUser.
+
         Args:
             mock_user_data: Fixture providing mock user data
         """
         user = UserModel(**mock_user_data)
 
-        # Create a mock websocket endpoint with proper scope
-        scope = {"type": "websocket", "user": user}
+        scope = {"type": "websocket"}
         endpoint = PackageAuthWebSocketEndpoint(
             scope=scope, receive=None, send=None
         )  # type: ignore
+        # Simulate state after successful token validation
+        endpoint.user = user
 
-        # Mock the websocket
         mock_websocket = create_mock_websocket()
 
-        # Mock Redis connection and connection manager
         mock_redis = AsyncMock()
         mock_redis.add_kc_user_session = AsyncMock()
+        endpoint.r = mock_redis
 
         with (
-            patch(
-                "app.api.ws.websocket.get_auth_redis_connection",
-                return_value=mock_redis,
-            ),
             patch(
                 "app.api.ws.websocket.connection_manager",
                 create_mock_connection_manager(),
@@ -94,22 +99,20 @@ class TestWebSocketAuthentication:
             patch(
                 "app.api.ws.websocket.connection_limiter"
             ) as mock_conn_limiter,
+            patch("app.api.ws.websocket.set_log_context"),
+            patch("app.api.ws.websocket.MetricsCollector"),
+            patch("app.api.ws.websocket.app_settings") as mock_settings,
         ):
             mock_conn_limiter.add_connection = AsyncMock(return_value=True)
+            mock_settings.USER_SESSION_REDIS_KEY_PREFIX = "session:"
+            result = await endpoint._post_auth_setup(mock_websocket)
 
-            # Call on_connect
-            await endpoint.on_connect(mock_websocket)
-
-            # Verify websocket was NOT closed
-            mock_websocket.close.assert_not_called()
-
-            # Verify user session was added to Redis
-            mock_redis.add_kc_user_session.assert_called_once_with(user)
-
-            # Verify connection was registered
-            mock_cm.connect.assert_called_once_with(
-                "session:testuser", mock_websocket
-            )
+        assert result is True
+        mock_websocket.close.assert_not_called()
+        mock_redis.add_kc_user_session.assert_called_once_with(user)
+        mock_cm.connect.assert_called_once_with(
+            "session:testuser", mock_websocket
+        )
 
     @pytest.mark.asyncio
     async def test_websocket_disconnect_cleanup(self, mock_user_data):
@@ -439,23 +442,34 @@ class TestWebSocketEdgeCases:
 
     @pytest.mark.asyncio
     async def test_websocket_with_null_user(self):
-        """Test WebSocket behavior when user is None."""
-        scope = {"type": "websocket", "user": None}
+        """Test WebSocket behavior when user is None.
+
+        on_connect no longer handles user validation — it defers to
+        on_first_message. The user always starts as UnauthenticatedUser
+        after on_connect completes.
+        """
+        scope = {"type": "websocket"}
         endpoint = PackageAuthWebSocketEndpoint(
             scope=scope, receive=None, send=None
         )  # type: ignore
 
         mock_websocket = create_mock_websocket()
 
-        with patch(
-            "app.api.ws.websocket.get_auth_redis_connection"
-        ) as mock_redis:
+        with (
+            patch(
+                "app.api.ws.websocket.get_auth_redis_connection"
+            ) as mock_redis,
+            patch(
+                "app.api.ws.websocket.WebSocketEndpoint.on_connect",
+                new_callable=AsyncMock,
+            ),
+        ):
             mock_redis.return_value = AsyncMock()
-
             await endpoint.on_connect(mock_websocket)
 
-            # Should close connection for None user
-            mock_websocket.close.assert_called_once()
+        # on_connect sets user to UnauthenticatedUser regardless
+        assert isinstance(endpoint.user, UnauthenticatedUser)
+        mock_websocket.close.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_handler_exception_handling(self, mock_user):
@@ -602,16 +616,21 @@ class TestWebSocketOriginValidation:
             )
 
     @pytest.mark.asyncio
-    async def test_origin_allowed_connection_proceeds(self, mock_user_data):
-        """Test that allowed origin proceeds with normal connection flow."""
-        user = UserModel(**mock_user_data)
-        scope = {"type": "websocket", "user": user}
+    async def test_origin_allowed_connection_proceeds(self):
+        """Test that allowed origin proceeds with normal connection flow.
+
+        on_connect now only validates origin and attaches Redis.
+        Full connection setup (session, limiter, connection manager) happens
+        in _post_auth_setup after token validation in on_first_message.
+        """
+        scope = {"type": "websocket"}
         endpoint = PackageAuthWebSocketEndpoint(
             scope=scope, receive=None, send=None
         )  # type: ignore
 
         mock_websocket = create_mock_websocket()
         mock_websocket.headers = {"origin": "https://app.example.com"}
+        mock_websocket.query_params = {}
 
         mock_redis = AsyncMock()
         mock_redis.add_kc_user_session = AsyncMock()
@@ -623,21 +642,15 @@ class TestWebSocketOriginValidation:
                 return_value=mock_redis,
             ),
             patch(
-                "app.api.ws.websocket.connection_manager",
-                create_mock_connection_manager(),
+                "app.api.ws.websocket.WebSocketEndpoint.on_connect",
+                new_callable=AsyncMock,
             ),
-            patch(
-                "app.api.ws.websocket.connection_limiter"
-            ) as mock_conn_limiter,
         ):
             mock_settings.ALLOWED_WS_ORIGINS = ["https://app.example.com"]
-            mock_settings.USER_SESSION_REDIS_KEY_PREFIX = "session:"
-            mock_conn_limiter.add_connection = AsyncMock(return_value=True)
 
             await endpoint.on_connect(mock_websocket)
 
-            # Verify websocket was NOT closed (connection proceeded)
+            # on_connect accepts the connection (no close) — auth deferred
             mock_websocket.close.assert_not_called()
-
-            # Verify user session was added (connection fully established)
-            mock_redis.add_kc_user_session.assert_called_once_with(user)
+            # user starts as UnauthenticatedUser until on_first_message succeeds
+            assert isinstance(endpoint.user, UnauthenticatedUser)

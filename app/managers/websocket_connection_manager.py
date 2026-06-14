@@ -6,6 +6,7 @@ from starlette.websockets import WebSocketDisconnect
 
 from app.logging import logger
 from app.schemas.response import BroadcastDataModel
+from app.utils.metrics import MetricsCollector
 
 
 class ConnectionManager:
@@ -15,6 +16,20 @@ class ConnectionManager:
     Tracks connected WebSocket clients using session keys for O(1) lookups
     and provides broadcast capabilities for sending messages to all active
     connections.
+
+    .. warning:: **Single-worker only.**
+        This manager stores WebSocket objects in process memory. Running
+        multiple uvicorn workers (``--workers N``) or multiple replicas means
+        each process has its own independent instance — ``broadcast()`` will
+        only reach clients connected to *that* worker, and
+        ``connect``/``disconnect`` state won't be visible across workers.
+
+        Always run with a single worker::
+
+            uvicorn app:application --workers 1
+
+        Multi-worker broadcast support requires a Redis Pub/Sub backend
+        (tracked in issue #192).
     """
 
     def __init__(self) -> None:
@@ -96,21 +111,21 @@ class ConnectionManager:
             try:
                 await connection.send_json(message.model_dump(mode="json"))
             except (WebSocketDisconnect, ConnectionError, RuntimeError) as e:
-                # WebSocketDisconnect: Client disconnected
-                # ConnectionError: Network errors
-                # RuntimeError: WebSocket in invalid state
+                # Fatal connection errors — client is gone, clean up
                 logger.warning(
                     f"Failed to send to connection {id(connection)} "
                     f"(key: {session_key}): {e}"
                 )
                 self.disconnect(session_key)
             except Exception as e:  # noqa: BLE001
-                # Catch-all for unexpected send errors
-                logger.warning(
-                    f"Unexpected error sending to connection {id(connection)} "
-                    f"(key: {session_key}): {e}"
+                # Transient/unexpected error — log and skip, do NOT disconnect.
+                # The connection may still be valid; disconnecting here would
+                # drop healthy clients on serialization errors or buffer blips.
+                MetricsCollector.record_ws_broadcast_error()
+                logger.error(
+                    f"Unexpected broadcast error for connection {id(connection)} "
+                    f"(key: {session_key}), skipping send: {e}"
                 )
-                self.disconnect(session_key)
 
         await asyncio.gather(
             *[safe_send(key, conn) for key, conn in connections_snapshot],

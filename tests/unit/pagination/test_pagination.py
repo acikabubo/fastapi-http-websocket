@@ -532,6 +532,49 @@ class TestGetPaginatedResults:
             # Should complete successfully but log warning
             assert len(results) == 1
 
+    @pytest.mark.asyncio
+    async def test_pagination_uses_provided_session(self):
+        """When session= is passed, get_paginated_results uses it instead of opening a new one."""
+        from unittest.mock import AsyncMock, MagicMock, patch
+
+        from app.models.author import Author
+        from app.storage.db import get_paginated_results
+
+        mock_authors = [Author(id=1, name="Author 1")]
+
+        mock_count_result = MagicMock()
+        mock_count_result.one.return_value = 1
+
+        mock_data_result = MagicMock()
+        mock_data_result.all.return_value = mock_authors
+
+        mock_session = AsyncMock()
+        mock_session.exec = AsyncMock(
+            side_effect=[mock_count_result, mock_data_result]
+        )
+
+        mock_session_factory = MagicMock()  # should NOT be called
+
+        with (
+            patch("app.storage.db.async_session", mock_session_factory),
+            patch(
+                "app.storage.pagination.offset.get_cached_count",
+                AsyncMock(return_value=None),
+            ),
+            patch(
+                "app.storage.pagination.offset.set_cached_count", AsyncMock()
+            ),
+        ):
+            results, meta = await get_paginated_results(
+                Author, page=1, per_page=1, session=mock_session
+            )
+
+        # Provided session was used
+        mock_session.exec.assert_called()
+        # async_session() was NOT called — no new session opened
+        mock_session_factory.assert_not_called()
+        assert len(results) == 1
+
 
 class TestDefaultApplyFilters:
     """Tests for default_apply_filters function."""
@@ -621,6 +664,45 @@ class TestDefaultApplyFilters:
 
         assert filtered_query is not None
         assert isinstance(filtered_query, Select)
+
+    def test_filter_strips_leading_trailing_wildcards(self):
+        """Wildcard characters at start/end of string values are stripped."""
+        import re
+
+        from sqlmodel import select
+
+        query = select(PaginationTestModel)
+        filters = {"name": "%a%b%c%"}
+
+        filtered_query = default_apply_filters(
+            query, PaginationTestModel, filters
+        )
+
+        compiled = str(
+            filtered_query.compile(compile_kwargs={"literal_binds": True})
+        )
+        # SQLAlchemy compiles ILIKE as lower(...) LIKE lower(...)
+        # Wildcard-stripped value %a%b%c% should appear, not %%a%b%c%%
+        assert re.search(r"lower\('%a%b%c%'\)", compiled)
+        assert "%%a%b%c%%" not in compiled
+
+    def test_filter_truncates_long_string_values(self):
+        """String filter values longer than 255 chars are truncated."""
+        from sqlmodel import select
+
+        long_value = "a" * 300
+        query = select(PaginationTestModel)
+        filters = {"name": long_value}
+
+        filtered_query = default_apply_filters(
+            query, PaginationTestModel, filters
+        )
+
+        compiled = str(
+            filtered_query.compile(compile_kwargs={"literal_binds": True})
+        )
+        # The bound value should be at most 255 chars (plus surrounding % wildcards)
+        assert "a" * 256 not in compiled
 
     def test_filter_empty_dict(self):
         """

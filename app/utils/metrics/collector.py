@@ -61,6 +61,13 @@ class MetricsCollector:
         ws_messages_sent_total.inc()
 
     @staticmethod
+    def record_ws_broadcast_error() -> None:
+        """Record unexpected broadcast error (connection skipped, not disconnected)."""
+        from app.utils.metrics import ws_broadcast_errors_total
+
+        ws_broadcast_errors_total.inc()
+
+    @staticmethod
     def record_ws_message_processing(pkg_id: int, duration: float) -> None:
         """
         Record WebSocket message processing duration.

@@ -26,7 +26,7 @@ from app.commands.author_commands import (
     UpdateAuthorCommand,
     UpdateAuthorInput,
 )
-from app.dependencies import AuthorRepoDep
+from app.dependencies import AuthorRepoDep, ReadAuthorRepoDep
 from fastapi_keycloak_rbac.dependencies import require_roles
 from app.security.roles import Role
 from app.models.author import Author
@@ -47,7 +47,7 @@ router = APIRouter(prefix="/authors", tags=["authors"])
 )
 @handle_http_errors
 async def get_authors(
-    repo: AuthorRepoDep,
+    repo: ReadAuthorRepoDep,
     id: int | None = None,
     name: str | None = None,
     search: str | None = None,
@@ -201,7 +201,6 @@ async def delete_author(
 )
 @handle_http_errors
 async def get_paginated_authors(
-    repo: AuthorRepoDep,
     page: int = 1,
     per_page: int = app_settings.DEFAULT_PAGE_SIZE,
     cursor: str | None = None,

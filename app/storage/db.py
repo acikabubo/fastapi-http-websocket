@@ -75,7 +75,12 @@ async def wait_and_init_db(
 
 async def get_session() -> AsyncSession:
     """
-    Get an asynchronous session from the SQLAlchemy session factory.
+    Get an asynchronous write session from the SQLAlchemy session factory.
+
+    Commits on success, rolls back on IntegrityError or SQLAlchemyError.
+    Use for handlers that write to the database.
+    For read-only handlers use :func:`get_read_session` to avoid the
+    unnecessary commit round-trip.
 
     Yields:
         AsyncSession: An asynchronous SQLAlchemy session.
@@ -88,6 +93,26 @@ async def get_session() -> AsyncSession:
             await session.rollback()
             logger.error(f"Database integrity error: {ex}")
             raise
+        except SQLAlchemyError as ex:
+            await session.rollback()
+            logger.error(f"Database error: {ex}")
+            raise
+
+
+async def get_read_session() -> AsyncSession:
+    """
+    Get an asynchronous read-only session from the SQLAlchemy session factory.
+
+    Does NOT commit after the request — avoids a no-op transaction round-trip
+    to PostgreSQL for handlers that only read data (e.g. GET endpoints).
+    Rolls back on any SQLAlchemy error to release the connection cleanly.
+
+    Yields:
+        AsyncSession: An asynchronous SQLAlchemy session.
+    """
+    async with async_session() as session:
+        try:
+            yield session
         except SQLAlchemyError as ex:
             await session.rollback()
             logger.error(f"Database error: {ex}")
@@ -131,6 +156,7 @@ async def get_paginated_results(
     page: int = 1,
     per_page: int | None = None,
     *,
+    session: AsyncSession | None = None,
     filters: dict[str, Any] | PydanticBaseModel | None = None,
     apply_filters: (
         Callable[[Select, Type[GenericSQLModelType], dict[str, Any]], Select]
@@ -159,6 +185,9 @@ async def get_paginated_results(
         model (Type[GenericSQLModelType]): The SQLModel class to query.
         page (int, optional): The page number to retrieve (offset pagination). Defaults to 1.
         per_page (int | None, optional): The number of results to return per page. Defaults to app_settings.DEFAULT_PAGE_SIZE. Capped at MAX_PAGE_SIZE.
+        session (AsyncSession | None, optional): Existing DB session to reuse. When provided,
+            pagination runs in the same transaction as the caller — uncommitted writes are
+            visible to the query. When None (default), a new session is opened internally.
         filters (dict[str, Any] | PydanticBaseModel | None, optional): Filters to apply to the query. Can be a dict (legacy) or Pydantic BaseModel (type-safe). Pydantic models should inherit from app.schemas.filters.BaseFilter.
         apply_filters (Callable[[Select, Type[GenericSQLModelType], dict[str, Any]], Select] | None, optional): A custom function to apply filters to the query. If not provided, the `default_apply_filters` function will be used.
         skip_count (bool, optional): Skip the count query for performance. When True, total will be 0. Defaults to False.
@@ -211,18 +240,28 @@ async def get_paginated_results(
     # Build query with filters and eager loading
     query = build_query(model, filter_dict, apply_filters, eager_load)
 
-    # Select and execute pagination strategy
-    async with async_session() as session:
+    # Select and execute pagination strategy.
+    # If the caller passes a session, reuse it so pagination runs in the same
+    # transaction — uncommitted writes remain visible to the query.
+    # Otherwise open a new session (backward-compatible default).
+    async def _run(
+        s: AsyncSession,
+    ) -> tuple[list[GenericSQLModelType], MetadataModel]:
         strategy = select_strategy(
-            session=session,
+            session=s,
             cursor=cursor,
             page=page,
             skip_count=skip_count,
             filter_dict=filter_dict,
             apply_filters_func=apply_filters,
         )
-
         return await strategy.paginate(query, model, per_page)
+
+    if session is not None:
+        return await _run(session)
+
+    async with async_session() as new_session:
+        return await _run(new_session)
 
 
 def default_apply_filters(
@@ -251,8 +290,11 @@ def default_apply_filters(
             if isinstance(value, (list, tuple)):
                 query = query.filter(attr.in_(value))
             elif isinstance(value, str):
-                # Use case-insensitive ILIKE for string filters
-                query = query.filter(attr.ilike(f"%{value}%"))
+                # Strip leading/trailing wildcards to prevent logical injection
+                # (e.g. "%a%b%" turning a cheap filter into a full-table scan)
+                # and enforce a max length to limit DB load.
+                sanitized = value.strip("%")[:255]
+                query = query.filter(attr.ilike(f"%{sanitized}%"))
             else:
                 query = query.filter(attr == value)
         else:
