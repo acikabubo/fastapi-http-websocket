@@ -622,6 +622,45 @@ class TestDefaultApplyFilters:
         assert filtered_query is not None
         assert isinstance(filtered_query, Select)
 
+    def test_filter_strips_leading_trailing_wildcards(self):
+        """Wildcard characters at start/end of string values are stripped."""
+        import re
+
+        from sqlmodel import select
+
+        query = select(PaginationTestModel)
+        filters = {"name": "%a%b%c%"}
+
+        filtered_query = default_apply_filters(
+            query, PaginationTestModel, filters
+        )
+
+        compiled = str(
+            filtered_query.compile(compile_kwargs={"literal_binds": True})
+        )
+        # SQLAlchemy compiles ILIKE as lower(...) LIKE lower(...)
+        # Wildcard-stripped value %a%b%c% should appear, not %%a%b%c%%
+        assert re.search(r"lower\('%a%b%c%'\)", compiled)
+        assert "%%a%b%c%%" not in compiled
+
+    def test_filter_truncates_long_string_values(self):
+        """String filter values longer than 255 chars are truncated."""
+        from sqlmodel import select
+
+        long_value = "a" * 300
+        query = select(PaginationTestModel)
+        filters = {"name": long_value}
+
+        filtered_query = default_apply_filters(
+            query, PaginationTestModel, filters
+        )
+
+        compiled = str(
+            filtered_query.compile(compile_kwargs={"literal_binds": True})
+        )
+        # The bound value should be at most 255 chars (plus surrounding % wildcards)
+        assert "a" * 256 not in compiled
+
     def test_filter_empty_dict(self):
         """
         Test empty filters dict returns query unchanged.
